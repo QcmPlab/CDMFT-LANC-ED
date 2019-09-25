@@ -74,10 +74,10 @@ subroutine break_symmetry_bath_site(bath_,field,sign,save)
   do ibath=1,Nbath
      do ilat=1,Nlat
         do iorb=1,Norb
-           dmft_bath(ibath)%h(ilat,ilat,1,1,iorb,iorb)        = &
-                dmft_bath(ibath)%h(ilat,ilat,1,1,iorb,iorb)         + sign*field
-           dmft_bath(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb)= &
-                dmft_bath(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb) + sign*field
+           dmft_bath%item(ibath)%h(ilat,ilat,1,1,iorb,iorb)        = &
+                dmft_bath%item(ibath)%h(ilat,ilat,1,1,iorb,iorb)         + sign*field
+           dmft_bath%item(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb)= &
+                dmft_bath%item(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb) + sign*field
         enddo
      enddo
   enddo
@@ -106,8 +106,8 @@ subroutine spin_symmetrize_bath_site(bath_,save)
   do ibath=1,Nbath
      do ilat=1,Nlat
         do iorb=1,Norb
-           dmft_bath(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb) = dmft_bath(ibath)%h(ilat,ilat,1,1,iorb,iorb)
-           dmft_bath(ibath)%v(ilat,Nspin,iorb)                 = dmft_bath(ibath)%v(     ilat,  1,     iorb)
+           dmft_bath%item(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb) = dmft_bath%item(ibath)%h(ilat,ilat,1,1,iorb,iorb)
+           dmft_bath%item(ibath)%v(ilat,Nspin,iorb)                 = dmft_bath%item(ibath)%v(     ilat,  1,     iorb)
         enddo
      enddo
   enddo
@@ -121,7 +121,6 @@ end subroutine spin_symmetrize_bath_site
 
 subroutine orb_equality_bath_site(bath_,indx,save)
   real(8),dimension(:)   :: bath_
-  type(effective_bath)   :: dmft_bath
   integer,optional       :: indx
   logical,optional       :: save
   integer                :: indx_
@@ -140,8 +139,8 @@ subroutine orb_equality_bath_site(bath_,indx,save)
   do ibath=1,Nbath
      do iorb=1,Norb
         if(iorb==indx_)cycle
-        dmft_bath(ibath)%h(:,:,:,:,iorb,iorb)=dmft_bath(ibath)%h(:,:,:,:,indx_,indx_)
-        dmft_bath(ibath)%v(:,iorb,:)         =dmft_bath(ibath)%v(:,indx_,:)
+        dmft_bath%item(ibath)%h(:,:,:,:,iorb,iorb)=dmft_bath%item(ibath)%h(:,:,:,:,indx_,indx_)
+        dmft_bath%item(ibath)%v(:,iorb,:)         =dmft_bath%item(ibath)%v(:,indx_,:)
      enddo
   enddo
   !
@@ -154,7 +153,6 @@ end subroutine orb_equality_bath_site
 
 subroutine ph_symmetrize_bath_site(bath_,save)
   real(8),dimension(:)   :: bath_
-  type(effective_bath)   :: dmft_bath
   integer                :: ibath
   logical,optional       :: save
   logical                :: save_
@@ -169,15 +167,15 @@ subroutine ph_symmetrize_bath_site(bath_,save)
            !
            if(mod(Nbath,2)==0)then
               do ibath=1,Nbath/2
-                 dmft_bath(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
-                 dmft_bath(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath(ibath)%v(ilat,ispin,iorb)
+                 dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+                 dmft_bath%item(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath%item(ibath)%v(ilat,ispin,iorb)
               enddo
            else
               do ibath=1,(Nbath-1)/2
-                 dmft_bath(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
-                 dmft_bath(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath(ibath)%v(ilat,ispin,iorb)
+                 dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+                 dmft_bath%item(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath%item(ibath)%v(ilat,ispin,iorb)
               enddo
-              dmft_bath((Nbath-1)/2+1)%h(ilat,ilat,ispin,ispin,iorb,iorb)=0d0
+              dmft_bath%item((Nbath-1)/2+1)%h(ilat,ilat,ispin,ispin,iorb,iorb)=0d0
            endif
            !
         enddo
