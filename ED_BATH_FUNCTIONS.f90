@@ -243,12 +243,12 @@ contains
         !
         invH_k(:,:,i) = zeye(Nlat*Nspin*Norb) * x(i) - invH_k(:,:,i)
         call inv(invH_k(:,:,i))
-        invH_knn(:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
+        invH_knn(:,:,:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
         !
       enddo
       !
       do ibath=1,Nbath
-        Delta(:,:,:,:,:,:,,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
+        Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
       enddo
     enddo
   !
@@ -269,13 +269,13 @@ contains
     integer,intent(in)                                            :: iorb,jorb,ispin,jspin
     complex(8),dimension(:),intent(in)                            :: x
     complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
-    complex(8),dimension(:,:,Nspin,Nspin,Norb,Norb,size(x))       :: Delta
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
     Delta = delta_bath_mats_main(x)
     G0out = Delta(:,:,ispin,jspin,iorb,jorb,:)
   end function delta_bath_mats_ispin_jspin_iorb_jorb
 
 
-  function delta_bath_mats_main_(x) result(Delta)
+  function delta_bath_mats_main_(x,bath_) result(Delta)
     complex(8),dimension(:),intent(in)                            :: x
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
     real(8),dimension(:)                                          :: bath_
@@ -374,12 +374,12 @@ contains
         !
         invH_k(:,:,i) = zeye(Nlat*Nspin*Norb) * x(i) - invH_k(:,:,i)
         call inv(invH_k(:,:,i))
-        invH_knn(:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
+        invH_knn(:,:,:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
         !
       enddo
       !
       do ibath=1,Nbath
-        Delta(:,:,:,:,:,:,,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
+        Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
       enddo
     enddo
     !
@@ -400,13 +400,13 @@ contains
     integer,intent(in)                                                :: iorb,jorb,ispin,jspin
     complex(8),dimension(:),intent(in)                                :: x
     complex(8),dimension(Nlat,Nlat,size(x))                           :: G0out
-    complex(8),dimension(:,:,Nspin,Nspin,Norb,Norb,size(x))           :: Delta
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x))     :: Delta
     Delta = delta_bath_mats_main(x)
     G0out = Delta(:,:,ispin,jspin,iorb,jorb,:)
   end function delta_bath_real_ispin_jspin_iorb_jorb
 
 
-  function delta_bath_real_main_(x) result(Delta)
+  function delta_bath_real_main_(x,bath_) result(Delta)
     complex(8),dimension(:),intent(in)                            :: x
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
     real(8),dimension(:)                                          :: bath_
@@ -684,11 +684,11 @@ contains
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
   function invg0_bath_mats_main(x) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
-    integer                                             :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
-    !complex(8),dimension(size(x))                      :: fg,ff
-    complex(8),dimension(:,:),allocatable               :: zeta!,fgorb
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
+    integer                                                       :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
+    !complex(8),dimension(size(x))                                :: fg,ff
+    complex(8),dimension(:,:),allocatable                         :: zeta!,fgorb
     !
     G0and = zero
     !
@@ -697,8 +697,8 @@ contains
     allocate(zeta(Nlat*Norb,Nlat*Norb))
     Delta = delta_bath_mats(x)
     do i=1,L
-      zeta = lso2nnn_reshape((x(i)+xmu)*eye(Nlat*Norb))
-      G0and(:,:,:,:,:,:,i) = zeta-impHloc-Delta(:,:,:,:,:,,i)
+      zeta = (x(i)+xmu)*eye(Nlat**Nspin*Norb)
+      G0and(:,:,:,:,:,:,i) = lso2nnn_reshape(zeta,Nlat,Nspin,Norb)-impHloc-Delta(:,:,:,:,:,:,i)
     enddo
     deallocate(zeta)
     !
@@ -738,7 +738,7 @@ contains
     call deallocate_dmft_bath()
   end function invg0_bath_mats_main_
 
-  function invg0_bath_mats_ispin_jspin_(ispin,jspin,x) result(G0out)
+  function invg0_bath_mats_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
     integer,intent(in)                                :: ispin,jspin
     complex(8),dimension(:),intent(in)                :: x
     complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
@@ -786,11 +786,11 @@ contains
 
 
   function invg0_bath_real_main(x) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
-    integer                                             :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
-    !complex(8),dimension(size(x))                      :: fg,ff
-    complex(8),dimension(:,:),allocatable               :: zeta!,fgorb
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
+    integer                                                       :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
+    !complex(8),dimension(size(x))                                :: fg,ff
+    complex(8),dimension(:,:),allocatable                         :: zeta!,fgorb
     !
     G0and = zero
     !
@@ -799,8 +799,8 @@ contains
     allocate(zeta(Nlat*Norb,Nlat*Norb))
     Delta = delta_bath_mats(x)
     do i=1,L
-      zeta = lso2nnn_reshape((x(i)+xmu)*eye(Nlat*Norb))
-      G0and(:,:,:,:,:,:,i) = zeta-impHloc-Delta(:,:,:,:,:,,i)
+      zeta = (x(i)+xmu)*eye(Nlat*Nspin*Norb)
+      G0and(:,:,:,:,:,:,i) = lso2nnn_reshape(zeta,Nlat,Nspin,Norb)-impHloc-Delta(:,:,:,:,:,:,i)
     enddo
     deallocate(zeta)
     !
@@ -840,7 +840,7 @@ contains
     call deallocate_dmft_bath()
   end function invg0_bath_real_main_
 
-  function invg0_bath_real_ispin_jspin_(ispin,jspin,x) result(G0out)
+  function invg0_bath_real_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
     integer,intent(in)                                :: ispin,jspin
     complex(8),dimension(:),intent(in)                :: x
     complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
