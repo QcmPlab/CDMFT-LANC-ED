@@ -26,7 +26,7 @@ end subroutine ed_get_sigma_matsubara_2
 
 subroutine ed_get_sigma_matsubara_3(Smats,ilat,jlat,ispin,jspin,iorb,jorb)
   complex(8),dimension(Lmats),intent(inout) :: Smats
-  integer                          :: ilat,jlatiorb,jorb,ispin,jspin
+  integer                          :: ilat,jlat,iorb,jorb,ispin,jspin
   Smats(:) = impSmats(ilat,jlat,ispin,jspin,iorb,jorb,:)
 end subroutine ed_get_sigma_matsubara_3
 

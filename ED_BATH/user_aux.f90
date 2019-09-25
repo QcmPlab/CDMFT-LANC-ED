@@ -3,36 +3,24 @@
 ! the bath array in the calling program.
 !+-------------------------------------------------------------------+
 function get_bath_dimension(Hloc_nn) result(bath_size)
-  complex(8),optional,intent(in) :: Hloc_nn(:,:,:,:,:,:)
-  integer                        :: bath_size,ndx,ilat,jlat,ispin,iorb,jorb,io,jo
-  real(8),allocatable            :: Hloc(:,:,:,:,:,:)
+  complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb),optional,intent(in) :: Hloc_nn
+  integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,iorb,jorb,io,jo
+  real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hloc
+  logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hmask
   !
   !off-diagonal non-vanishing elements
   if(present(Hloc_nn))then
-     allocate(Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc=dreal(Hloc_nn)
+     Hloc=dreal(Hloc_nn)
   elseif(allocated(impHloc))then
-     allocate(Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc=impHloc
+     Hloc=impHloc
   else
      stop "ERROR: get_bath_dimension: neither Hloc_nn present nor impHloc allocated"
   endif
   !
-  ndx=0
-
-  do ispin=1,Nspin
-     do ilat=1,Nlat
-        do jlat=1,Nlat
-           do iorb=1,Norb
-              do jorb=1,Norb
-                 io = index_stride_lso(ilat,ispin,iorb)
-                 jo = index_stride_lso(jlat,ispin,jorb)
-                 if( (io<jo) .AND. (abs(Hloc(ilat,jlat,ispin,ispin,iorb,jorb))>1d-6) )ndx=ndx+1
-              endif
-           enddo
-        enddo
-     enddo
-  enddo
-  !Real diagonal elements (always assumed)
-  ndx = ndx + Nspin*Nlat*Norb
+  ! !Real diagonal elements (always assumed) + Only Upper triangular part
+  Hmask = mask_hloc(Hloc,wdiag=.true.,uplo=.true.)
+  ndx   = count(Hmask)          !all elements
+  !
   !number of non vanishing elements for each replica
   ndx = ndx * Nbath
   !diagonal hybridizations: Vs
@@ -44,6 +32,21 @@ end function get_bath_dimension
 
 
 
+!+-------------------------------------------------------------------+
+!PURPOSE  : Check if the dimension of the bath array are consistent
+!+-------------------------------------------------------------------+
+function check_bath_dimension(bath_,Hloc_nn) result(bool)
+  real(8),dimension(:)        :: bath_
+  integer                     :: Ntrue
+  logical                     :: bool
+  real(8),optional,intent(in) :: Hloc_nn(:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:]
+  if (present(Hloc_nn))then
+     Ntrue = get_bath_dimension(one*Hloc_nn)
+  else
+     Ntrue = get_bath_dimension()
+  endif
+  bool  = ( size(bath_) == Ntrue )
+end function check_bath_dimension
 
 
 !##################################################################
@@ -92,7 +95,6 @@ subroutine spin_symmetrize_bath_site(bath_,save)
   real(8),dimension(:)   :: bath_
   logical,optional       :: save
   logical                :: save_
-  integer
   save_=.true.;if(present(save))save_=save
   if(Nspin==1)then
      write(LOGfile,"(A)")"spin_symmetrize_bath: Nspin=1 nothing to symmetrize"
@@ -107,7 +109,6 @@ subroutine spin_symmetrize_bath_site(bath_,save)
      do ilat=1,Nlat
         do iorb=1,Norb
            dmft_bath%item(ibath)%h(ilat,ilat,Nspin,Nspin,iorb,iorb) = dmft_bath%item(ibath)%h(ilat,ilat,1,1,iorb,iorb)
-           dmft_bath%item(ibath)%v(ilat,Nspin,iorb)                 = dmft_bath%item(ibath)%v(     ilat,  1,     iorb)
         enddo
      enddo
   enddo
@@ -123,7 +124,7 @@ subroutine orb_equality_bath_site(bath_,indx,save)
   real(8),dimension(:)   :: bath_
   integer,optional       :: indx
   logical,optional       :: save
-  integer                :: indx_
+  integer                :: indx_,ibath,iorb
   logical                :: save_
   indx_=1     ;if(present(indx))indx_=indx
   save_=.true.;if(present(save))save_=save
@@ -140,7 +141,6 @@ subroutine orb_equality_bath_site(bath_,indx,save)
      do iorb=1,Norb
         if(iorb==indx_)cycle
         dmft_bath%item(ibath)%h(:,:,:,:,iorb,iorb)=dmft_bath%item(ibath)%h(:,:,:,:,indx_,indx_)
-        dmft_bath%item(ibath)%v(:,iorb,:)         =dmft_bath%item(ibath)%v(:,indx_,:)
      enddo
   enddo
   !
@@ -153,7 +153,7 @@ end subroutine orb_equality_bath_site
 
 subroutine ph_symmetrize_bath_site(bath_,save)
   real(8),dimension(:)   :: bath_
-  integer                :: ibath
+  integer                :: ibath,ilat,ispin,iorb
   logical,optional       :: save
   logical                :: save_
   save_=.true.;if(present(save))save_=save
@@ -161,26 +161,23 @@ subroutine ph_symmetrize_bath_site(bath_,save)
   call set_dmft_bath(bath_)
   if(Nbath==1)return
   !
-  do ilat=1,Nlat
-     do ispin=1,Nspin
-        do iorb=1,Norb
-           !
-           if(mod(Nbath,2)==0)then
-              do ibath=1,Nbath/2
-                 dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
-                 dmft_bath%item(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath%item(ibath)%v(ilat,ispin,iorb)
-              enddo
-           else
-              do ibath=1,(Nbath-1)/2
-                 dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
-                 dmft_bath%item(Nbath+1-ibath)%v(ilat,ispin,iorb)= dmft_bath%item(ibath)%v(ilat,ispin,iorb)
-              enddo
-              dmft_bath%item((Nbath-1)/2+1)%h(ilat,ilat,ispin,ispin,iorb,iorb)=0d0
-           endif
-           !
-        enddo
+
+  !
+  if(mod(Nbath,2)==0)then
+     do ibath=1,Nbath/2
+        forall(ilat=1:Nlat,ispin=1:Nspin,iorb=1:Norb)&
+             dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+        dmft_bath%item(Nbath+1-ibath)%v= dmft_bath%item(ibath)%v
      enddo
-  enddo
+  else
+     do ibath=1,(Nbath-1)/2
+        forall(ilat=1:Nlat,ispin=1:Nspin,iorb=1:Norb)&
+             dmft_bath%item(Nbath+1-ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)=-dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+        dmft_bath%item(Nbath+1-ibath)%v= dmft_bath%item(ibath)%v
+     enddo
+     dmft_bath%item((Nbath-1)/2+1)%h(ilat,ilat,ispin,ispin,iorb,iorb)=0d0
+  endif
+  !
   if(save_)call save_dmft_bath()
   call get_dmft_bath(bath_)
   call deallocate_dmft_bath()

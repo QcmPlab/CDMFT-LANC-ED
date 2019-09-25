@@ -60,7 +60,6 @@ MODULE ED_BATH
   public :: allocate_dmft_bath               !INTERNAL (for effective_bath)
   public :: deallocate_dmft_bath             !INTERNAL (for effective_bath)
   public :: init_dmft_bath                   !INTERNAL (for effective_bath)
-  public :: init_dmft_bath_mask              !INTERNAL (for effective_bath)
   public :: write_dmft_bath                  !INTERNAL (for effective_bath)
   public :: save_dmft_bath                   !INTERNAL (for effective_bath)
   public :: set_dmft_bath                    !INTERNAL (for effective_bath)
@@ -80,6 +79,49 @@ MODULE ED_BATH
 contains
 
 
+  function mask_hloc(hloc,wdiag,uplo) result(Hmask)
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+    logical,optional                                   :: wdiag,uplo
+    logical                                            :: wdiag_,uplo_
+    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+    integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
+    !
+    wdiag_=.false.;if(wdiag)wdiag_=wdiag
+    uplo_ =.false.;if(uplo)  uplo_=uplo
+    !
+    Hmask=.false.
+    where(abs(Hloc)>1d-6)Hmask=.true.
+    !
+    if(wdiag_)then
+       do ispin=1,Nspin
+          do ilat=1,Nlat
+             do iorb=1,Norb
+                Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
+             enddo
+          enddo
+       enddo
+    endif
+    !
+    if(uplo_)then
+       do ispin=1,Nspin
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      io = index_stride_lso(ilat,ispin,iorb)
+                      jo = index_stride_lso(jlat,ispin,jorb)
+                      if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    !
+  end function mask_hloc
+
+
+
   !##################################################################
   !
   !     USER BATH ROUTINES:
@@ -97,27 +139,6 @@ contains
   include 'ED_BATH/dmft_aux.f90'
 
 
-
-  !##################################################################
-  !
-  !     USER BATH CHECKS:
-  !
-  !##################################################################
-  !+-------------------------------------------------------------------+
-  !PURPOSE  : Check if the dimension of the bath array are consistent
-  !+-------------------------------------------------------------------+
-  function check_bath_dimension(bath_,Hloc_nn) result(bool)
-    real(8),dimension(:)        :: bath_
-    integer                     :: Ntrue
-    logical                     :: bool
-    real(8),optional,intent(in) :: Hloc_nn(:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:]
-    if (present(Hloc_nn))then
-       Ntrue = get_bath_dimension(one*Hloc_nn)
-    else
-       Ntrue = get_bath_dimension()
-    endif
-    bool  = ( size(bath_) == Ntrue )
-  end function check_bath_dimension
 
 
 END MODULE ED_BATH

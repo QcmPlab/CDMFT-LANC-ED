@@ -11,8 +11,6 @@ module ED_EIGENSPACE
   end type full_espace
 
 
-
-
   type sparse_estate
      integer                      :: sector        !index of the sector
      real(8)                      :: e             !energy of the eigen-state
@@ -600,7 +598,7 @@ contains        !some routine to perform simple operation on the lists
           write(unit_,"(A10,I5)")   "Sector  : ",c%sector
           write(unit_,"(A10,3L3)")  "Twin    : ",c%itwin,associated(c%cvec)
           write(unit_,"(A10,I5)")   "Size    : ",getdim(c%sector)!size(c%vec)
-          write(unit_,"(A10,f18.9)")"Energy  : ",c%e
+          write(unit_,"(A10,3F18.9)")"Energy  : ",c%e,space%emax,space%emin
           if(wvec_)then
              write(unit_,"(A10)")"Vec     : "
              do i=1,size(c%cvec)

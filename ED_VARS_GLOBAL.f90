@@ -1,7 +1,6 @@
 MODULE ED_VARS_GLOBAL
   USE SF_CONSTANTS
   USE ED_SPARSE_MATRIX
-  USE ED_INPUT_VARS
 #ifdef _MPI
   USE MPI
   USE SF_MPI
@@ -10,13 +9,17 @@ MODULE ED_VARS_GLOBAL
 
 
   !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
-  type effective_bath
-     real(8),dimension(:,:,:),allocatable          :: v     !spin-keep hyb. [Nlat][Nspin][Norb]
+  type effective_bath_component
+     real(8)                                       :: v     !spin-keep hyb.
      real(8),dimension(:,:,:,:,:,:),allocatable    :: h     !Replica hamilt [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-     logical(8),dimension(:,:,:,:,:,:),allocatable :: mask  !impHloc mask   [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-     logical                                       :: status=.false.
-  end type effective_bath
+  end type effective_bath_component
 
+  type effective_bath
+     integer                                                 :: Nmask
+     type(effective_bath_component),dimension(:),allocatable :: item
+     logical(8),dimension(:,:,:,:,:,:),allocatable           :: mask  !impHloc mask   [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+     logical                                                 :: status=.false.
+  end type effective_bath
 
 
 
@@ -83,7 +86,8 @@ MODULE ED_VARS_GLOBAL
   integer,save                                       :: Ns_orb
   integer,save                                       :: Ns_ud
   integer                                            :: Nlat     !# size of cluster
-
+  !
+  integer                                            :: Nlso
 
   !local part of the Hamiltonian
   !INTERNAL USE (accessed thru functions)
@@ -97,15 +101,15 @@ MODULE ED_VARS_GLOBAL
   integer,allocatable,dimension(:)                   :: getDim             ! [Nsectors]
   integer,allocatable,dimension(:,:,:)               :: getCsector         ! [1/Norb,2,NSectors]
   integer,allocatable,dimension(:,:,:)               :: getCDGsector       ! [1/Norb,2,NSectors]
-  integer,allocatable,dimension(:,:)                 :: getBathStride
-  integer,allocatable,dimension(:,:)                 :: impIndex
+  integer,allocatable,dimension(:,:,:)               :: getBathStride
+  ! integer,allocatable,dimension(:,:)                 :: impIndex
   logical,allocatable,dimension(:)                   :: twin_mask
   logical,allocatable,dimension(:)                   :: sectors_mask
 
   !Effective Bath used in the ED code (this is opaque to user)
   !PRIVATE
   !=========================================================
-  type(effective_bath),dimension(:),allocatable      :: dmft_bath
+  type(effective_bath)                               :: dmft_bath
 
 
   !Variables for DIAGONALIZATION
@@ -203,11 +207,8 @@ MODULE ED_VARS_GLOBAL
   !Local energies and generalized double occupancies
   !PRIVATE (now public but accessible thru routine)
   !=========================================================
-  real(8)                                            :: ed_Epot
-  real(8)                                            :: ed_Eint
-  real(8)                                            :: ed_Ehartree
-  real(8)                                            :: ed_Eknot
-  real(8)                                            :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
+  real(8),dimension(:),allocatable                     :: ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot
+  real(8),dimension(:),allocatable                     :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
   ! real(8),dimension(:,:),allocatable,save            :: ddii,eii
 
@@ -229,7 +230,7 @@ MODULE ED_VARS_GLOBAL
   integer                                            :: site_indx_padding=4
   logical                                            :: Jhflag              !spin-exchange and pair-hopping flag.
   logical                                            :: offdiag_gf_flag=.false.
-  ! character(len=200)                                 :: ed_input_file=""
+  character(len=200)                                 :: ed_input_file=""
 
 
   !This is the internal Mpi Communicator and variables.
@@ -260,15 +261,6 @@ MODULE ED_VARS_GLOBAL
 
 contains
 
-
-  !> Get stride position in the one-particle many-body space 
-  function index_stride_lso(ilat,ispin,iorb) result(indx)
-    integer :: ilat
-    integer :: iorb
-    integer :: ispin
-    integer :: indx
-    indx = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat
-  end function index_stride_lso
 
 
 
