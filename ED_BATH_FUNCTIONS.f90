@@ -199,171 +199,122 @@ contains
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
-  function delta_bath_mats_main(x,dmft_bath_) result(Delta)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    integer                                             :: i,ih,L
-    integer                                             :: iorb,jorb,ispin,jspin,ibath
-    integer                                             :: io,jo
-    real(8),dimension(Nbath)                            :: eps,dps,vps
-    real(8),dimension(Norb,Nbath)                       :: vops
+  function delta_bath_mats_main(x) result(Delta)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
+    integer                                                       :: i,ih,L
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,ibath
+    integer                                                       :: io,jo
+    real(8),dimension(Nbath)                                      :: eps,dps,vps
+    real(8),dimension(Norb,Nbath)                                 :: vops
     !
-    real(8),dimension(Nspin,Nbath)                      :: ehel
-    real(8),dimension(Nspin,Nspin,Nbath)                :: whel
-    real(8),dimension(Nspin,Nspin,Norb,Nbath)           :: wohel
+    real(8),dimension(Nspin,Nbath)                                :: ehel
+    real(8),dimension(Nspin,Nspin,Nbath)                          :: whel
+    real(8),dimension(Nspin,Nspin,Norb,Nbath)                     :: wohel
     !
-    complex(8),dimension(Nspin*Norb,Nspin*Norb,size(x)) :: invH_k
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,Nbath)   :: invH_knn
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,size(x)) :: invH_k
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)   :: invH_knn
     !
     !
     Delta=zero
     !
     L = size(x)
     !
-    select case(bath_type)
-    case default                !normal: only _{aa} are allowed (no inter-orbital local mixing)
-       !
-       !\Delta_{aa} = \sum_k [ V_{a}(k) * V_{a}(k)/(iw_n - E_{a}(k)) ]
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             eps = dmft_bath_%e(ispin,iorb,1:Nbath)
-             vps = dmft_bath_%v(ispin,iorb,1:Nbath)
-             do i=1,L
-                Delta(ispin,ispin,iorb,iorb,i) = sum( vps(:)*vps(:)/(x(i) - eps(:)) )
-             enddo
-          enddo
-       enddo
-       !
-
-       !
-    case ("hybrid")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-
-       !\Delta_{ab} = \sum_k [ V_{a}(k) * V_{b}(k)/(iw_n - E(k)) ]
-       do ispin=1,Nspin
-          eps  = dmft_bath_%e(ispin,1     ,1:Nbath)
-          vops = dmft_bath_%v(ispin,1:Norb,1:Nbath)
-          do iorb=1,Norb
-             do jorb=1,Norb
-                do i=1,L
-                   Delta(ispin,ispin,iorb,jorb,i) = sum( vops(iorb,:)*vops(jorb,:)/(x(i) - eps(:)) )
+    invH_k=zero
+    do i=1,L
+      invH_knn=zero
+      do ibath=1,Nbath
+      !
+        do ilat=1,Nlat
+          do jlat=1,Nlat
+            do ispin=1,Nspin
+              do jspin=1,Nspin
+                do iorb=1,Norb
+                  do jorb=1,Norb
+                    io = index_stride_lso(ilat,ispin,iorb)
+                    jo = index_stride_lso(jlat,jspin,jorb)
+                    invH_k(io,jo,i)=dmft_bath%item(ibath)%h(ilat,jlat,ispin,jspin,iorb,jorb)
+                  enddo
                 enddo
-             enddo
+              enddo
+            enddo
           enddo
-       enddo
-
-       !
-    case ("replica")
-       !
-
-       invH_k=zero
-       do i=1,L
-          invH_knn=zero
-          do ibath=1,Nbath
-             !
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         io = iorb + (ispin-1) * Norb
-                         jo = jorb + (jspin-1) * Norb
-                         invH_k(io,jo,i)=dmft_bath_%h(ispin,jspin,iorb,jorb,ibath)
-                      enddo
-                   enddo
-                enddo
-             enddo
-             !
-             invH_k(:,:,i) = zeye(Nspin*Norb) * x(i) - invH_k(:,:,i)
-             call inv(invH_k(:,:,i))
-             invH_knn(:,:,:,:,ibath)=so2nn_reshape(invH_k(:,:,i),Nspin,Norb)
-             !
-          enddo
-          !
-          do ibath=1,Nbath
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         Delta(ispin,jspin,iorb,jorb,i)=Delta(ispin,jspin,iorb,jorb,i)+ &
-                              (dmft_bath_%vr(ibath)) * invH_knn(ispin,jspin,iorb,jorb,ibath) * dmft_bath_%vr(ibath)
-                      enddo
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-
-       !
-    end select
+        enddo
+        !
+        invH_k(:,:,i) = zeye(Nlat*Nspin*Norb) * x(i) - invH_k(:,:,i)
+        call inv(invH_k(:,:,i))
+        invH_knn(:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
+        !
+      enddo
+      !
+      do ibath=1,Nbath
+        Delta(:,:,:,:,:,:,,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
+      enddo
+    enddo
+  !
   end function delta_bath_mats_main
 
 
-  function delta_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    Delta = delta_bath_mats_main(x,dmft_bath_)
-    G0out = Delta(ispin,jspin,:,:,:)
+  function delta_bath_mats_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                                      :: ispin,jspin
+    complex(8),dimension(:),intent(in)                                      :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x))           :: Delta
+    Delta = delta_bath_mats_main(x)
+    G0out = Delta(:,:,ispin,jspin,:,:,:)
   end function delta_bath_mats_ispin_jspin
 
 
-  function delta_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(size(x))                       :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    Delta = delta_bath_mats_main(x,dmft_bath_)
-    G0out = Delta(ispin,jspin,iorb,jorb,:)
+  function delta_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    complex(8),dimension(:,:,Nspin,Nspin,Norb,Norb,size(x))       :: Delta
+    Delta = delta_bath_mats_main(x)
+    G0out = Delta(:,:,ispin,jspin,iorb,jorb,:)
   end function delta_bath_mats_ispin_jspin_iorb_jorb
 
 
-  function delta_bath_mats_main_(x,bath_) result(Delta)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+  function delta_bath_mats_main_(x) result(Delta)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "delta_bath_mats_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    Delta = delta_bath_mats_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    Delta = delta_bath_mats_main(x)
+    call deallocate_dmft_bath()
   end function delta_bath_mats_main_
 
 
   function delta_bath_mats_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(:),intent(in)      :: x
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
-    real(8),dimension(:)                    :: bath_
-    logical                                 :: check
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "delta_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = delta_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = delta_bath_mats_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
   end function delta_bath_mats_ispin_jspin_
 
   function delta_bath_mats_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    type(effective_bath)               :: dmft_bath_
-    complex(8),dimension(:),intent(in) :: x
-    complex(8),dimension(size(x))      :: G0out
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
+    integer,intent(in)                           :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)           :: x
+    complex(8),dimension(Nlat,Nlat,size(x))      :: G0out
+    real(8),dimension(:)                         :: bath_
+    logical                                      :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "delta_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = delta_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = delta_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function delta_bath_mats_ispin_jspin_iorb_jorb_
 
 
@@ -379,189 +330,123 @@ contains
   ! Delta_ : normal
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
-  function delta_bath_real_main(x,dmft_bath_) result(Delta)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    integer                                             :: i,ih,L
-    integer                                             :: iorb,jorb,ispin,jspin,ibath
-    integer                                             :: io,jo
-    real(8),dimension(Nbath)                            :: eps,dps,vps
-    real(8),dimension(Norb,Nbath)                       :: vops
+  function delta_bath_real_main(x) result(Delta)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
+    integer                                                       :: i,ih,L
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,ibath
+    integer                                                       :: io,jo
+    real(8),dimension(Nbath)                                      :: eps,dps,vps
+    real(8),dimension(Norb,Nbath)                                 :: vops
     !
-    real(8),dimension(Nspin,Nbath)                      :: ehel
-    real(8),dimension(Nspin,Nspin,Nbath)                :: whel
-    real(8),dimension(Nspin,Nspin,Norb,Nbath)           :: wohel
+    real(8),dimension(Nspin,Nbath)                                :: ehel
+    real(8),dimension(Nspin,Nspin,Nbath)                          :: whel
+    real(8),dimension(Nspin,Nspin,Norb,Nbath)                     :: wohel
     !
-    complex(8),dimension(Nspin*Norb,Nspin*Norb,size(x)) :: invH_k
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,Nbath)   :: invH_knn
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,size(x)) :: invH_k
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)   :: invH_knn
     !
     !
     Delta=zero
     !
     L = size(x)
     !
-    select case(bath_type)
-    case default
-       !
-       !
-       !\Delta_{aa} = \sum_k [ V_{a}(k) * V_{a}(k)/(w+i\h - E_{a}(k)) ]
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             eps = dmft_bath_%e(ispin,iorb,1:Nbath)
-             vps = dmft_bath_%v(ispin,iorb,1:Nbath)
-             do i=1,L
-                Delta(ispin,ispin,iorb,iorb,i) = sum( vps(:)*vps(:)/(x(i) - eps(:)) )
-             enddo
-          enddo
-       enddo
-       !
-
-       !
-       !
-    case ("hybrid")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-       !
-
-       !\Delta_{ab} = \sum_k [ V_{a}(k) * V_{b}(k)/(w+i\h  - E(k)) ]
-       do ispin=1,Nspin
-          eps  = dmft_bath_%e(ispin,1     ,1:Nbath)
-          vops = dmft_bath_%v(ispin,1:Norb,1:Nbath)
-          do iorb=1,Norb
-             do jorb=1,Norb
-                do i=1,L
-                   Delta(ispin,ispin,iorb,jorb,i) = sum( vops(iorb,:)*vops(jorb,:)/(x(i) - eps(:)) )
+    invH_k=zero
+    do i=1,L
+      invH_knn=zero
+      do ibath=1,Nbath
+      !
+        do ilat=1,Nlat
+          do jlat=1,Nlat
+            do ispin=1,Nspin
+              do jspin=1,Nspin
+                do iorb=1,Norb
+                  do jorb=1,Norb
+                    io = index_stride_lso(ilat,ispin,iorb)
+                    jo = index_stride_lso(jlat,jspin,jorb)
+                    invH_k(io,jo,i)=dmft_bath%item(ibath)%h(ilat,jlat,ispin,jspin,iorb,jorb)
+                  enddo
                 enddo
-             enddo
+              enddo
+            enddo
           enddo
-       enddo
-
-    case ("replica")
-       !
-
-       invH_k=zero
-       do i=1,L
-          invH_knn=zero
-          do ibath=1,Nbath
-             !
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         io = iorb + (ispin-1) * Norb
-                         jo = jorb + (jspin-1) * Norb
-                         invH_k(io,jo,i)=dmft_bath_%h(ispin,jspin,iorb,jorb,ibath)
-                      enddo
-                   enddo
-                enddo
-             enddo
-             !
-             invH_k(:,:,i) = zeye(Nspin*Norb) * x(i) - invH_k(:,:,i)
-             call inv(invH_k(:,:,i))
-             invH_knn(:,:,:,:,ibath)=so2nn_reshape(invH_k(:,:,i),Nspin,Norb)
-             !
-          enddo
-          !
-          do ibath=1,Nbath
-             do ispin=1,Nspin
-                do jspin=1,Nspin
-                   do iorb=1,Norb
-                      do jorb=1,Norb
-                         Delta(ispin,jspin,iorb,jorb,i)=Delta(ispin,jspin,iorb,jorb,i)+ &
-                              (dmft_bath_%vr(ibath)) * invH_knn(ispin,jspin,iorb,jorb,ibath) * dmft_bath_%vr(ibath)
-                      enddo
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-       !
-    end select
+        enddo
+        !
+        invH_k(:,:,i) = zeye(Nlat*Nspin*Norb) * x(i) - invH_k(:,:,i)
+        call inv(invH_k(:,:,i))
+        invH_knn(:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
+        !
+      enddo
+      !
+      do ibath=1,Nbath
+        Delta(:,:,:,:,:,:,,i)=Delta(:,:,:,:,:,:,i)+ lso2nnn_reshape((dmft_bath%item(ibath)%v**2)*invH_k(:,:,i),Nlat,Nspin,Norb) !remember module of V for complex type
+      enddo
+    enddo
+    !
   end function delta_bath_real_main
 
 
-  function delta_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    Delta = delta_bath_real_main(x,dmft_bath_)
-    G0out = Delta(ispin,jspin,:,:,:)
+  function delta_bath_real_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                                      :: ispin,jspin
+    complex(8),dimension(:),intent(in)                                      :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x))           :: Delta
+    Delta = delta_bath_mats_main(x)
+    G0out = Delta(:,:,ispin,jspin,:,:,:)
   end function delta_bath_real_ispin_jspin
 
 
-  function delta_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(size(x))                       :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    Delta = delta_bath_real_main(x,dmft_bath_)
-    G0out = Delta(ispin,jspin,iorb,jorb,:)
+  function delta_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                                :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                                :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                           :: G0out
+    complex(8),dimension(:,:,Nspin,Nspin,Norb,Norb,size(x))           :: Delta
+    Delta = delta_bath_mats_main(x)
+    G0out = Delta(:,:,ispin,jspin,iorb,jorb,:)
   end function delta_bath_real_ispin_jspin_iorb_jorb
 
 
-  function delta_bath_real_main_(x,bath_) result(Delta)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: Delta
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+  function delta_bath_real_main_(x) result(Delta)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: Delta
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "delta_bath_real_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    Delta = delta_bath_real_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "delta_bath_mats_main_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    Delta = delta_bath_mats_main(x)
+    call deallocate_dmft_bath()
   end function delta_bath_real_main_
 
 
   function delta_bath_real_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
-    complex(8),dimension(:),intent(in)      :: x
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
-    real(8),dimension(:)                    :: bath_
-    logical                                 :: check
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "delta_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = delta_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "delta_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = delta_bath_mats_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
   end function delta_bath_real_ispin_jspin_
 
   function delta_bath_real_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in) :: x
-    type(effective_bath)               :: dmft_bath_
-    complex(8),dimension(size(x))      :: G0out
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
+    integer,intent(in)                           :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)           :: x
+    complex(8),dimension(Nlat,Nlat,size(x))      :: G0out
+    real(8),dimension(:)                         :: bath_
+    logical                                      :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "delta_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = delta_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "delta_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = delta_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function delta_bath_real_ispin_jspin_iorb_jorb_
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -579,121 +464,95 @@ contains
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
-  function g0and_bath_mats_main(x,dmft_bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
-    integer                                             :: iorb,jorb,ispin,jspin,io,jo,Nso,i,L
-    real(8),dimension(size(x))                          :: det
-    complex(8),dimension(size(x))                       :: fg,ff
-    complex(8),dimension(:,:),allocatable               :: fgorb,zeta
+  function g0and_bath_mats_main(x) result(G0and)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,i,L
+    real(8),dimension(size(x))                                    :: det
+    complex(8),dimension(size(x))                                 :: fg,ff
+    complex(8),dimension(:,:),allocatable                         :: fgorb,zeta
     !
     G0and = zero
     !
     L=size(x)
     !
-    select case(bath_type)
-    case default                !normal: only _{aa} are allowed (no inter-orbital local mixing)
-       !
-       !
-       Delta = delta_bath_mats(x,dmft_bath_)
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             fg(:) = x(:) + xmu - impHloc(ispin,ispin,iorb,iorb) - Delta(ispin,ispin,iorb,iorb,:)
-             G0and(ispin,ispin,iorb,iorb,:) = one/fg(:)
-          enddo
-       enddo
-       !
-       !
-    case ("hybrid","replica")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-       !
-       allocate(fgorb(Norb,Norb),zeta(Norb,Norb))
-       Delta = delta_bath_mats(x,dmft_bath_)
-       do ispin=1,Nspin         !Spin diagonal
-          do i=1,L
-             fgorb= zero
-             zeta = (x(i)+xmu)*eye(Norb)
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   fgorb(iorb,jorb) = zeta(iorb,jorb)-impHloc(ispin,ispin,iorb,jorb)-Delta(ispin,ispin,iorb,jorb,i)
-                enddo
-             enddo
-             call inv(fgorb)
-             G0and(ispin,ispin,:,:,i)=fgorb
-          enddo
-       enddo
-       deallocate(fgorb,zeta)
-       !
-    end select
+    !
+    allocate(fgorb(Nlat*Norb,Nlat*Norb),zeta(Nlat*Norb,Nlat*Norb))
+    Delta = delta_bath_mats(x)
+    do ispin=1,Nspin
+      do i=1,L
+        fgorb= zero
+        zeta = (x(i)+xmu)*eye(Nlat*Norb)
+        fgorb= zeta-nn2so_reshape(impHloc(:,:,ispin,ispin,:,:)-Delta(:,:,ispin,ispin,:,:,i),Nlat,Norb)
+        call inv(fgorb)
+        G0and(:,:,ispin,ispin,:,:,i)=so2nn_reshape(fgorb,Nlat,Norb)
+      enddo
+    enddo
+    deallocate(fgorb,zeta)
+   !
   end function g0and_bath_mats_main
 
 
-  function g0and_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = g0and_bath_mats_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,:,:,:)
+  function g0and_bath_mats_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                            :: ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))             :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = g0and_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,:,:,:)
   end function g0and_bath_mats_ispin_jspin
 
 
-  function g0and_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8)                                          :: G0out(size(x))
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = g0and_bath_mats_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,iorb,jorb,:)
+  function g0and_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = g0and_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,iorb,jorb,:)
   end function g0and_bath_mats_ispin_jspin_iorb_jorb
 
 
   function g0and_bath_mats_main_(x,bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "g0and_bath_mats_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0and = g0and_bath_mats_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0and = g0and_bath_mats_main(x)
+    call deallocate_dmft_bath()
   end function g0and_bath_mats_main_
 
 
   function g0and_bath_mats_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
-    complex(8),dimension(:),intent(in)      :: x
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
-    real(8),dimension(:)                    :: bath_
-    logical                                 :: check
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "g0and_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = g0and_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = g0and_bath_mats_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
   end function g0and_bath_mats_ispin_jspin_
 
   function g0and_bath_mats_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in) :: x
-    type(effective_bath)               :: dmft_bath_
-    complex(8)                         :: G0out(size(x))
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
+    integer,intent(in)                          :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)          :: x
+    complex(8),dimension(Nlat,Nlat,size(x))     :: G0out
+    real(8),dimension(:)                        :: bath_
+    logical                                     :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "g0and_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = g0and_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = g0and_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function g0and_bath_mats_ispin_jspin_iorb_jorb_
 
 
@@ -713,123 +572,96 @@ contains
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
-  function g0and_bath_real_main(x,dmft_bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
-    integer                                             :: iorb,jorb,ispin,jspin,io,jo,Nso,i,L
-    complex(8),dimension(size(x))                       :: det,fg,ff
-    complex(8),dimension(:,:),allocatable               :: fgorb,zeta
+  function g0and_bath_real_main(x) result(G0and)
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,i,L
+    real(8),dimension(size(x))                                    :: det
+    complex(8),dimension(size(x))                                 :: fg,ff
+    complex(8),dimension(:,:),allocatable                         :: fgorb,zeta
     !
     G0and = zero
     !
-    L = size(x)
+    L=size(x)
     !
-    select case(bath_type)
-    case default                !normal: only _{aa} are allowed (no inter-orbital local mixing)
-       !
-       Delta = delta_bath_real(x,dmft_bath_)
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             fg(:)    = x(:) + xmu - impHloc(ispin,ispin,iorb,iorb) - Delta(ispin,ispin,iorb,iorb,:)
-             G0and(ispin,ispin,iorb,iorb,:) = one/fg(:)
-          enddo
-       enddo
-       !
-       !
-       !
-    case ("hybrid","replica")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-       !
-       allocate(fgorb(Norb,Norb),zeta(Norb,Norb))
-       Delta = delta_bath_real(x,dmft_bath_)
-       do ispin=1,Nspin
-          do i=1,L
-             fgorb= zero
-             zeta = (x(i)+xmu)*eye(Norb)
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   fgorb(iorb,jorb) = zeta(iorb,jorb)-impHloc(ispin,ispin,iorb,jorb)-Delta(ispin,ispin,iorb,jorb,i)
-                enddo
-             enddo
-             call inv(fgorb)
-             G0and(ispin,ispin,:,:,i)=fgorb
-          enddo
-       enddo
-       deallocate(fgorb,zeta)
-    end select
+    !
+    allocate(fgorb(Nlat*Norb,Nlat*Norb),zeta(Nlat*Norb,Nlat*Norb))
+    Delta = delta_bath_mats(x)
+    do ispin=1,Nspin
+      do i=1,L
+        fgorb= zero
+        zeta = (x(i)+xmu)*eye(Nlat*Norb)
+        fgorb= zeta-nn2so_reshape(impHloc(:,:,ispin,ispin,:,:)-Delta(:,:,ispin,ispin,:,:,i),Nlat,Norb)
+        call inv(fgorb)
+        G0and(:,:,ispin,ispin,:,:,i)=so2nn_reshape(fgorb,Nlat,Norb)
+      enddo
+    enddo
+    deallocate(fgorb,zeta)
+   !
   end function g0and_bath_real_main
 
 
-  function g0and_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = g0and_bath_real_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,:,:,:)
+  function g0and_bath_real_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                            :: ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))             :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = g0and_bath_real_main(x)
+    G0out = G0and(:,:,ispin,jspin,:,:,:)
   end function g0and_bath_real_ispin_jspin
 
 
-  function g0and_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8)                                          :: G0out(size(x))
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = g0and_bath_real_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,iorb,jorb,:)
+  function g0and_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = g0and_bath_real_main(x)
+    G0out = G0and(:,:,ispin,jspin,iorb,jorb,:)
   end function g0and_bath_real_ispin_jspin_iorb_jorb
 
 
   function g0and_bath_real_main_(x,bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "g0and_bath_real_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0and = g0and_bath_real_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "g0and_bath_mats_main_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0and = g0and_bath_real_main(x)
+    call deallocate_dmft_bath()
   end function g0and_bath_real_main_
-
+  
 
   function g0and_bath_real_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
+    check= check_bath_dimension(bath_)
+    if(.not.check)stop "g0and_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = g0and_bath_real_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
+  end function g0and_bath_real_ispin_jspin_
+
+  function g0and_bath_real_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
+    integer,intent(in)                      :: iorb,jorb,ispin,jspin
     complex(8),dimension(:),intent(in)      :: x
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
+    complex(8),dimension(Nlat,Nlat,size(x)) :: G0out
     real(8),dimension(:)                    :: bath_
     logical                                 :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "g0and_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = g0and_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
-  end function g0and_bath_real_ispin_jspin_
-
-
-  function g0and_bath_real_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in) :: x
-    type(effective_bath)               :: dmft_bath_
-    complex(8)                         :: G0out(size(x))
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
-    check= check_bath_dimension(bath_)
-    if(.not.check)stop "g0and_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = g0and_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "g0and_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = g0and_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function g0and_bath_real_ispin_jspin_iorb_jorb_
-
-
 
 
 
@@ -851,114 +683,87 @@ contains
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
-  function invg0_bath_mats_main(x,dmft_bath_) result(G0and)
+  function invg0_bath_mats_main(x) result(G0and)
     complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
     complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
-    integer                                             :: i,iorb,jorb,ispin,jspin,io,jo,Nso,L
-    !complex(8),dimension(size(x))                       :: fg,ff
+    integer                                             :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
+    !complex(8),dimension(size(x))                      :: fg,ff
     complex(8),dimension(:,:),allocatable               :: zeta!,fgorb
     !
     G0and = zero
     !
     L=size(x)
     !
-    select case(bath_type)
-    case default                !normal: only _{aa} are allowed (no inter-orbital local mixing)
-       !
-       Delta = delta_bath_mats(x,dmft_bath_)
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             G0and(ispin,ispin,iorb,iorb,:) = x(:) + xmu - impHloc(ispin,ispin,iorb,iorb) - Delta(ispin,ispin,iorb,iorb,:)
-          enddo
-       enddo
-       !
-       !
-    case ("hybrid","replica")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-       allocate(zeta(Norb,Norb))
-       Delta = delta_bath_mats(x,dmft_bath_)
-       do ispin=1,Nspin
-          do i=1,L
-             zeta = (x(i)+xmu)*eye(Norb)
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   G0and(ispin,ispin,iorb,jorb,i) = zeta(iorb,jorb)-impHloc(ispin,ispin,iorb,jorb)-Delta(ispin,ispin,iorb,jorb,i)
-                enddo
-             enddo
-          enddo
-       enddo
-       deallocate(zeta)
-       !
-    end select
+    allocate(zeta(Nlat*Norb,Nlat*Norb))
+    Delta = delta_bath_mats(x)
+    do i=1,L
+      zeta = lso2nnn_reshape((x(i)+xmu)*eye(Nlat*Norb))
+      G0and(:,:,:,:,:,:,i) = zeta-impHloc-Delta(:,:,:,:,:,,i)
+    enddo
+    deallocate(zeta)
     !
   end function invg0_bath_mats_main
 
 
-  function invg0_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = invg0_bath_mats_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,:,:,:)
+  function invg0_bath_mats_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                            :: ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))             :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = invg0_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,:,:,:)
   end function invg0_bath_mats_ispin_jspin
 
 
-  function invg0_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8)                                          :: G0out(size(x))
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = invg0_bath_mats_main(x,dmft_bath_)
-    G0out = G0and(ispin,jspin,iorb,jorb,:)
+  function invg0_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = invg0_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,iorb,jorb,:)
   end function invg0_bath_mats_ispin_jspin_iorb_jorb
 
 
   function invg0_bath_mats_main_(x,bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "invg0_bath_mats_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0and = invg0_bath_mats_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0and = invg0_bath_mats_main(x)
+    call deallocate_dmft_bath()
   end function invg0_bath_mats_main_
 
-  function invg0_bath_mats_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
-    complex(8),dimension(:),intent(in)      :: x
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
-    real(8),dimension(:)                    :: bath_
-    logical                                 :: check
+  function invg0_bath_mats_ispin_jspin_(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "invg0_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = invg0_bath_mats_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = invg0_bath_mats_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
   end function invg0_bath_mats_ispin_jspin_
 
   function invg0_bath_mats_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in) :: x
-    type(effective_bath)               :: dmft_bath_
-    complex(8)                         :: G0out(size(x))
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
     if(.not.check)stop "invg0_bath_mats_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = invg0_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = invg0_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function invg0_bath_mats_ispin_jspin_iorb_jorb_
 
 
@@ -978,123 +783,90 @@ contains
   ! Fdelta_: anomalous
   !+-----------------------------------------------------------------------------+!
   !NORMAL:
-  function invg0_bath_real_main(x,dmft_bath_) result(G0and)
+
+
+  function invg0_bath_real_main(x) result(G0and)
     complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta
-    integer                                             :: iorb,jorb,ispin,jspin,io,jo,Nso,i,L
-    !complex(8),dimension(size(x))                       :: fg,ff
+    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta,Fdelta
+    integer                                             :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
+    !complex(8),dimension(size(x))                      :: fg,ff
     complex(8),dimension(:,:),allocatable               :: zeta!,fgorb
     !
     G0and = zero
     !
-    L = size(x)
+    L=size(x)
     !
-    select case(bath_type)
-    case default                !normal: only _{aa} are allowed (no inter-orbital local mixing)
-       !
-       Delta = delta_bath_real(x,dmft_bath_)
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             G0and(ispin,ispin,iorb,iorb,:) =  x(:) + xmu - impHloc(ispin,ispin,iorb,iorb) - Delta(ispin,ispin,iorb,iorb,:)
-          enddo
-       enddo
-    case ("hybrid","replica")             !hybrid: all _{ab} components allowed (inter-orbital local mixing present)
-       !
-
-       allocate(zeta(Norb,Norb))
-       Delta = delta_bath_real(x,dmft_bath_)
-       do ispin=1,Nspin
-          do i=1,L
-             zeta = (x(i)+xmu)*eye(Norb)
-             do iorb=1,Norb
-                do jorb=1,Norb
-                   G0and(ispin,ispin,iorb,jorb,i) = zeta(iorb,jorb) - impHloc(ispin,ispin,iorb,jorb) - Delta(ispin,ispin,iorb,jorb,i)
-                enddo
-             enddo
-          enddo
-       enddo
-       deallocate(zeta)
-       !
-    end select
+    allocate(zeta(Nlat*Norb,Nlat*Norb))
+    Delta = delta_bath_mats(x)
+    do i=1,L
+      zeta = lso2nnn_reshape((x(i)+xmu)*eye(Nlat*Norb))
+      G0and(:,:,:,:,:,:,i) = zeta-impHloc-Delta(:,:,:,:,:,,i)
+    enddo
+    deallocate(zeta)
     !
   end function invg0_bath_real_main
 
 
-  function invg0_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x))             :: G0out
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = invg0_bath_real_main(x,dmft_bath_)
-    G0out = zero
-    G0out = G0and(ispin,jspin,:,:,:)
+  function invg0_bath_real_ispin_jspin(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                            :: ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x))             :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = invg0_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,:,:,:)
   end function invg0_bath_real_ispin_jspin
 
-  function invg0_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_) result(G0out)
-    integer,intent(in)                                  :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8)                                          :: G0out(size(x))
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    G0and = invg0_bath_real_main(x,dmft_bath_)
-    G0out = zero
-    G0out = G0and(ispin,jspin,iorb,jorb,:)
+
+  function invg0_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x) result(G0out)
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    G0and = invg0_bath_mats_main(x)
+    G0out = G0and(:,:,ispin,jspin,iorb,jorb,:)
   end function invg0_bath_real_ispin_jspin_iorb_jorb
 
 
   function invg0_bath_real_main_(x,bath_) result(G0and)
-    complex(8),dimension(:),intent(in)                  :: x
-    type(effective_bath)                                :: dmft_bath_
-    complex(8),dimension(Nspin,Nspin,Norb,Norb,size(x)) :: G0and
-    real(8),dimension(:)                                :: bath_
-    logical                                             :: check
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "invg0_bath_real_main_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0and = invg0_bath_real_main(x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "invg0_bath_mats_main_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0and = invg0_bath_mats_main(x)
+    call deallocate_dmft_bath()
   end function invg0_bath_real_main_
 
-
-  function invg0_bath_real_ispin_jspin_(ispin,jspin,x,bath_) result(G0out)
-    integer,intent(in)                      :: ispin,jspin
-    complex(8),dimension(:),intent(in)      :: x
-    type(effective_bath)                    :: dmft_bath_
-    complex(8),dimension(Norb,Norb,size(x)) :: G0out
-    real(8),dimension(:)                    :: bath_
-    logical                                 :: check
+  function invg0_bath_real_ispin_jspin_(ispin,jspin,x) result(G0out)
+    integer,intent(in)                                :: ispin,jspin
+    complex(8),dimension(:),intent(in)                :: x
+    complex(8),dimension(Nlat,Nlat,Norb,Norb,size(x)) :: G0out
+    real(8),dimension(:)                              :: bath_
+    logical                                           :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "invg0_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = zero
-    G0out = invg0_bath_real_ispin_jspin(ispin,jspin,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "invg0_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = invg0_bath_mats_ispin_jspin(ispin,jspin,x)
+    call deallocate_dmft_bath()
   end function invg0_bath_real_ispin_jspin_
 
   function invg0_bath_real_ispin_jspin_iorb_jorb_(ispin,jspin,iorb,jorb,x,bath_) result(G0out)
-    integer,intent(in)                 :: iorb,jorb,ispin,jspin
-    complex(8),dimension(:),intent(in) :: x
-    type(effective_bath)               :: dmft_bath_
-    complex(8)                         :: G0out(size(x))
-    real(8),dimension(:)               :: bath_
-    logical                            :: check
+    integer,intent(in)                                            :: iorb,jorb,ispin,jspin
+    complex(8),dimension(:),intent(in)                            :: x
+    complex(8),dimension(Nlat,Nlat,size(x))                       :: G0out
+    real(8),dimension(:)                                          :: bath_
+    logical                                                       :: check
     check= check_bath_dimension(bath_)
-    if(.not.check)stop "invg0_bath_real_ error: wrong bath dimensions"
-    call allocate_dmft_bath(dmft_bath_)
-    call set_dmft_bath(bath_,dmft_bath_)
-    G0out = zero
-    G0out = invg0_bath_real_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x,dmft_bath_)
-    call deallocate_dmft_bath(dmft_bath_)
+    if(.not.check)stop "invg0_bath_mats_ error: wrong bath dimensions"
+    call allocate_dmft_bath()
+    call set_dmft_bath(bath_)
+    G0out = invg0_bath_mats_ispin_jspin_iorb_jorb(ispin,jspin,iorb,jorb,x)
+    call deallocate_dmft_bath()
   end function invg0_bath_real_ispin_jspin_iorb_jorb_
-
-
-
-
-
 
 
 
