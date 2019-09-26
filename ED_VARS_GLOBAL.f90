@@ -239,8 +239,8 @@ MODULE ED_VARS_GLOBAL
   integer                                            :: MpiComm_Global=MPI_COMM_NULL
   integer                                            :: MpiComm=MPI_COMM_NULL
 #endif
-  ! integer                                            :: MpiGroup_Global=MPI_GROUP_NULL
-  ! integer                                            :: MpiGroup=MPI_GROUP_NULL
+  integer                                            :: MpiGroup_Global=MPI_GROUP_NULL
+  integer                                            :: MpiGroup=MPI_GROUP_NULL
   logical                                            :: MpiStatus=.false.
   logical                                            :: MpiMaster=.true.
   integer                                            :: MpiRank=0
