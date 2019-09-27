@@ -1,5 +1,0 @@
-/Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/distclean.dir
-/Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/rebuild_cache.dir
-/Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/edit_cache.dir
-/Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/completion.dir
-/Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/dmft_ed.dir
