@@ -69,6 +69,9 @@ contains
        enddo
     enddo
     !
+    if(Nspin>1)then
+      if(any(dmft_bath%mask(:,:,1,Nspin,:,:)))Jhflag=.true.
+    endif
     !
 #ifdef _MPI
     if(MpiStatus)then
