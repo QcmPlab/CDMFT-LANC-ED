@@ -17,8 +17,7 @@ MODULE ED_HAMILTONIAN_COMMON
   integer                                   :: Hsector=0
   logical                                   :: Hstatus=.false.
   type(sector_map),dimension(:),allocatable :: Hs
-
-  integer,save,public :: iter=0
+  integer,save,public                       :: iter=0
 
 contains
 
@@ -56,7 +55,6 @@ contains
        enddo
     enddo
     !
-
     do i=1,Ntot
        call MPI_AllToAll(&
             send_counts(0:,i),1,MPI_INTEGER,&

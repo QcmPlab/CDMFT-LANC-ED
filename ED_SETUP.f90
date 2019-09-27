@@ -80,14 +80,6 @@ contains
        if(lanc_nstates_sector>1)stop "ED ERROR: lanc_method==lanczos available only for lanc_nstates_sector==1, T=0"
     endif
     !
-    if(lanc_method=="dvdson".AND.MpiStatus)then
-       if(mpiSIZE>1)stop "ED ERROR: lanc_method=Dvdson + MPIsize>1: not possible at the moment"       
-    endif
-    !
-    if(ed_diag_type=="full".AND.MpiStatus)then
-       if(mpiSIZE>1)stop "ED ERROR: ed_diag_type=FULL + MPIsize>1: not possible at the moment"
-    end if
-    !
   end subroutine ed_checks_global
 
 

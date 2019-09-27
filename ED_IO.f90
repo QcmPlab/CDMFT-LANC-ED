@@ -2,6 +2,8 @@ MODULE ED_IO
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
   USE ED_AUX_FUNX
+  USE ED_BATH
+  USE ED_BATH_FUNCTIONS
   USE SF_LINALG
   USE SF_ARRAYS, only: linspace,arange
   USE SF_IOTOOLS, only: str,reg,free_unit,splot,sread
@@ -16,12 +18,12 @@ MODULE ED_IO
      !     module procedure ed_get_sigma_matsubara_lattice_2
   end interface ed_get_sigma_matsubara
 
-  interface ed_get_sigma_real
+  interface ed_get_sigma_realaxis
      module procedure ed_get_sigma_real_1
      module procedure ed_get_sigma_real_2
      !     module procedure ed_get_sigma_real_lattice_1
      !     module procedure ed_get_sigma_real_lattice_2
-  end interface ed_get_sigma_real
+  end interface ed_get_sigma_realaxis
 
   !Retrieve imp GF through routines.
   interface ed_get_gimp_matsubara
@@ -32,12 +34,12 @@ MODULE ED_IO
   end interface ed_get_gimp_matsubara
 
 
-  interface ed_get_gimp_real
+  interface ed_get_gimp_realaxis
      module procedure ed_get_gimp_real_1
      module procedure ed_get_gimp_real_2
      !module procedure ed_get_gimp_real_lattice_1
      !module procedure ed_get_gimp_real_lattice_2
-  end interface ed_get_gimp_real
+  end interface ed_get_gimp_realaxis
 
 
 
@@ -51,12 +53,44 @@ MODULE ED_IO
   end interface ed_get_g0imp_matsubara
 
 
-  interface ed_get_g0imp_real
+  interface ed_get_g0imp_realaxis
      module procedure ed_get_g0imp_real_1
      module procedure ed_get_g0imp_real_2
      !     module procedure ed_get_g0imp_real_lattice_1
      !     module procedure ed_get_g0imp_real_lattice_2
-  end interface ed_get_g0imp_real
+  end interface ed_get_g0imp_realaxis
+
+
+
+  interface ed_get_delta_matsubara
+     module procedure delta_bath_main_
+  end interface ed_get_delta_matsubara
+
+  interface ed_get_delta_realaxis
+     module procedure delta_bath_main_ !mats is the same as real
+  end interface ed_get_delta_realaxis
+
+
+  interface ed_get_g0and_matsubara
+     module procedure g0and_bath_main_
+  end interface ed_get_g0and_matsubara
+
+  interface ed_get_g0and_realaxis
+     module procedure g0and_bath_main_
+  end interface ed_get_g0and_realaxis
+
+
+
+  interface ed_get_invg0and_matsubara
+     module procedure invg0_bath_main_
+  end interface ed_get_invg0and_matsubara
+
+  interface ed_get_invg0and_realaxis
+     module procedure invg0_bath_main_
+  end interface ed_get_invg0and_realaxis
+
+
+
 
 
   !Retrieve static common observables  
@@ -132,14 +166,27 @@ MODULE ED_IO
      module procedure :: ed_gf_cluster_array
   end interface ed_gf_cluster
 
+
   public :: ed_get_sigma_matsubara
-  public :: ed_get_sigma_real
+  public :: ed_get_sigma_realaxis
 
   public :: ed_get_gimp_matsubara
-  public :: ed_get_gimp_real
+  public :: ed_get_gimp_realaxis
 
   public :: ed_get_g0imp_matsubara
-  public :: ed_get_g0imp_real
+  public :: ed_get_g0imp_realaxis
+
+  public :: ed_get_delta_matsubara
+  public :: ed_get_delta_realaxis
+
+  public :: ed_get_g0and_matsubara
+  public :: ed_get_g0and_realaxis
+
+  public :: ed_get_invG0and_matsubara
+  public :: ed_get_invG0and_realaxis
+
+
+
 
   public :: ed_get_dens
   public :: ed_get_mag
@@ -187,27 +234,18 @@ contains
 
 
   !+--------------------------------------------------------------------------+!
-  ! PURPOSE: Retrieve measured values of the impurity self-energy 
+  ! PURPOSE: Retrieve measured values of the impurity functions
   !+--------------------------------------------------------------------------+!
   include "ED_IO/get_sigma_matsubara.f90"
   include "ED_IO/get_sigma_realaxis.f90"
-
-
-  !+--------------------------------------------------------------------------+!
-  ! PURPOSE: Retrieve measured values of the impurity green's functions 
-  !+--------------------------------------------------------------------------+!
   include "ED_IO/get_gimp_matsubara.f90"
   include "ED_IO/get_gimp_realaxis.f90"
-
-  !+--------------------------------------------------------------------------+!
-  ! PURPOSE: Retrieve measured values of the impurity green's functions 
-  !+--------------------------------------------------------------------------+!
   include "ED_IO/get_g0imp_matsubara.f90"
   include "ED_IO/get_g0imp_realaxis.f90"
-
+  include "ED_IO/get_Gand_all.f90"
   include "ED_IO/gf_cluster.f90"
 
-  
+
   !+--------------------------------------------------------------------------+!
   ! PURPOSE: Retrieve measured values of the local observables
   !+--------------------------------------------------------------------------+!

@@ -14,24 +14,18 @@ MODULE ED_HAMILTONIAN_DIRECT_HxV
   integer                                :: ms
   integer                                :: impi
   integer                                :: ilat,jlat,iorb,jorb,ispin,jspin,is,js,ibath
-  integer                                :: kp,k1,k2,k3,k4
+  integer                                :: k1,k2,k3,k4
   integer                                :: ialfa,ibeta
   real(8)                                :: sg1,sg2,sg3,sg4
   real(8)                                :: htmp,htmpup,htmpdw
   logical                                :: Jcondition
-  integer                                :: Nfoo
-  real(8),dimension(:,:,:,:),allocatable :: diag_hybr ![Nlat,Nspin,Norb,Nbath]
-  real(8),dimension(:,:,:,:),allocatable :: bath_diag ![Nlat,Nspin,Norb/1,Nbath]
-
 
 
 
   !>Sparse Mat-Vec direct on-the-fly product 
   public  :: directMatVec_main
-!  public  :: directMatVec_orbs
 #ifdef _MPI
   public  :: directMatVec_MPI_main
-!  public  :: directMatVec_MPI_orbs
 #endif
 
 
@@ -40,14 +34,16 @@ contains
 
 
   subroutine directMatVec_main(Nloc,vin,Hv)
-    integer                             :: Nloc
-    real(8),dimension(Nloc)             :: vin
-    real(8),dimension(Nloc)             :: Hv
-    real(8),dimension(:),allocatable    :: vt,Hvt
-    integer,dimension(Ns)               :: ibup,ibdw
-    integer,dimension(2*Ns_Ud)          :: Indices,Jndices ![2-2*Norb]
-    integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
-    integer,dimension(Nlat,Norb)        :: Nup,Ndw
+    integer                                  :: Nloc
+    real(8),dimension(Nloc)                  :: vin
+    real(8),dimension(Nloc)                  :: Hv
+    real(8),dimension(:),allocatable         :: vt,Hvt
+    integer,dimension(Ns)                    :: ibup,ibdw
+    integer,dimension(2*Ns_Ud)               :: Indices,Jndices ![2-2*Norb]
+    integer,dimension(Ns_Ud,Ns_Orb)          :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
+    integer,dimension(Nlat,Norb)             :: Nup,Ndw
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: diag_hybr
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag
     !
     if(.not.Hstatus)stop "directMatVec_cc ERROR: Hsector NOT set"
     isector=Hsector
@@ -55,7 +51,16 @@ contains
     if(Nloc/=getdim(isector))stop "directMatVec_cc ERROR: Nloc != dim(isector)"
     !
     !Get diagonal hybridization, bath energy
-    include "ED_HAMILTONIAN/diag_hybr_bath.f90"
+    diag_hybr=0d0
+    bath_diag=0d0
+    do ibath=1,Nbath
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+             bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+          enddo
+       enddo
+    enddo
     !
     Hv=0d0
     !
@@ -75,37 +80,46 @@ contains
     endif
     !-----------------------------------------------!
     !
-    deallocate(diag_hybr,bath_diag)
     return
   end subroutine directMatVec_main
 
 
-
-
 #ifdef _MPI
   subroutine directMatVec_MPI_main(Nloc,vin,Hv)
-    integer                             :: Nloc,N
-    real(8),dimension(Nloc)             :: Vin
-    real(8),dimension(Nloc)             :: Hv
-    real(8),dimension(:),allocatable    :: vt,Hvt
-    integer,dimension(Ns)               :: ibup,ibdw
-    integer,dimension(2*Ns_Ud)          :: Indices,Jndices ![2-2*Norb]
-    integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
-    integer,dimension(Nlat,Norb)        :: Nup,Ndw
+    integer                                  :: Nloc,N
+    real(8),dimension(Nloc)                  :: Vin
+    real(8),dimension(Nloc)                  :: Hv
+    real(8),dimension(:),allocatable         :: vt,Hvt
+    integer,dimension(Ns)                    :: ibup,ibdw
+    integer,dimension(2*Ns_Ud)               :: Indices,Jndices ![2-2*Norb]
+    integer,dimension(Ns_Ud,Ns_Orb)          :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
+    integer,dimension(Nlat,Norb)             :: Nup,Ndw
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: diag_hybr
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag
     !
-    integer                             :: MpiIerr
-    integer,allocatable,dimension(:)    :: Counts
-    integer,allocatable,dimension(:)    :: Offset
+    integer                                  :: MpiIerr
+    integer,allocatable,dimension(:)         :: Counts
+    integer,allocatable,dimension(:)         :: Offset
     !
     if(.not.Hstatus)stop "directMatVec_cc ERROR: Hsector NOT set"
     isector=Hsector
     !
-    !Get diagonal hybridization, bath energy
-    include "ED_HAMILTONIAN/diag_hybr_bath.f90"
     !
     if(MpiComm==MPI_UNDEFINED.OR.MpiComm==Mpi_Comm_Null)&
          stop "directMatVec_MPI_cc ERRROR: MpiComm = MPI_UNDEFINED"
     ! if(.not.MpiStatus)stop "directMatVec_MPI_cc ERROR: MpiStatus = F"
+    !
+    !Get diagonal hybridization, bath energy
+    diag_hybr=0d0
+    bath_diag=0d0
+    do ibath=1,Nbath
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+             bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+          enddo
+       enddo
+    enddo
     !
     Hv=0d0
     !
@@ -142,7 +156,6 @@ contains
     endif
     !-----------------------------------------------!
     !
-    deallocate(diag_hybr,bath_diag)
     return
   end subroutine directMatVec_MPI_main
 

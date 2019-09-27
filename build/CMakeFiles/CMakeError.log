@@ -1,0 +1,21 @@
+Determining if the Fortran sgemm exists failed with the following output:
+Change Dir: /Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/local/bin/gmake cmTC_2118c/fast 
+/usr/local/bin/gmake -f CMakeFiles/cmTC_2118c.dir/build.make CMakeFiles/cmTC_2118c.dir/build
+gmake[1]: Entering directory '/Users/amaricci/Dropbox/projects_src/CDMFT_LANC_ED/build/CMakeFiles/CMakeTmp'
+Building Fortran object CMakeFiles/cmTC_2118c.dir/testFortranCompiler.f.o
+/usr/local/bin/mpif90   -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -mmacosx-version-min=10.14   -c /Users/amaricci/projects_src/CDMFT_LANC_ED/build/CMakeFiles/CMakeTmp/testFortranCompiler.f -o CMakeFiles/cmTC_2118c.dir/testFortranCompiler.f.o
+Linking Fortran executable cmTC_2118c
+/usr/local/Cellar/cmake/3.14.5/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2118c.dir/link.txt --verbose=1
+/usr/local/bin/mpif90      -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk -mmacosx-version-min=10.14 CMakeFiles/cmTC_2118c.dir/testFortranCompiler.f.o  -o cmTC_2118c 
+Undefined symbols for architecture x86_64:
+  "_sgemm_", referenced from:
+      _MAIN__ in testFortranCompiler.f.o
+ld: symbol(s) not found for architecture x86_64
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [CMakeFiles/cmTC_2118c.dir/build.make:87: cmTC_2118c] Error 1
+gmake[1]: Leaving directory '/Users/amaricci/Dropbox/projects_src/CDMFT_LANC_ED/build/CMakeFiles/CMakeTmp'
+gmake: *** [Makefile:121: cmTC_2118c/fast] Error 2
+
+

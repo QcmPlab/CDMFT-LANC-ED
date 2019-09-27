@@ -13,34 +13,27 @@ module ED_MAIN
   USE SF_TIMER,only: start_timer,stop_timer
   implicit none
   private
-  !
-  !>INIT ED SOLVER
-  !
+
+
+
   interface ed_init_solver
      module procedure :: ed_init_solver_single
 #ifdef _MPI
      module procedure :: ed_init_solver_single_mpi
 #endif
   end interface ed_init_solver
-  !>
-  public :: ed_init_solver
 
-
-  !
-  !> ED SOLVER
-  !
   interface ed_solve
      module procedure :: ed_solve_single
 #ifdef _MPI
      module procedure :: ed_solve_single_mpi
 #endif
   end interface ed_solve
-  !>
+
+
+  public :: ed_init_solver
   public :: ed_solve
 
-
-  real(8),dimension(:),allocatable                   :: wr,wm
-  character(len=64)                                  :: suffix
 
 
 
@@ -173,17 +166,12 @@ contains
     !SOLVE THE QUANTUM IMPURITY PROBLEM:
     call diagonalize_impurity()         !find target states by digonalization of Hamiltonian
     call buildgf_impurity()             !build the one-particle impurity Green's functions  & Self-energy
-    if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])
+    ! if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])
     call observables_impurity()         !obtain impurity observables as thermal averages.          
     call local_energy_impurity()        !obtain the local energy of the effective impurity problem
     !
     call deallocate_dmft_bath()
-    select case(ed_diag_type)
-    case default
-       call es_delete_espace(state_list)
-    case ("full")
-       call delete_eigenspace()
-    end select
+    call es_delete_espace(state_list)
     !
     nullify(spHtimesV_p)
   end subroutine ed_solve_single
@@ -216,7 +204,7 @@ contains
     !SOLVE THE QUANTUM IMPURITY PROBLEM:
     call diagonalize_impurity()         !find target states by digonalization of Hamiltonian
     call buildgf_impurity()             !build the one-particle impurity Green's functions  & Self-energy
-    if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])    
+    ! if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])    
     call observables_impurity()         !obtain impurity observables as thermal averages.
     call local_energy_impurity()        !obtain the local energy of the effective impurity problem
     !

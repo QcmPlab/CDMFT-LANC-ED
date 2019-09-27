@@ -8,14 +8,11 @@ MODULE ED_HAMILTONIAN_SPARSE_HxV
 
   !>Sparse Matric constructors
   public :: ed_buildh_main
-  !public :: ed_buildh_orbs
 
   !>Sparse Mat-Vec product using stored sparse matrix
   public  :: spMatVec_main
-  !public  :: spMatVec_orbs
 #ifdef _MPI
   public  :: spMatVec_MPI_main
-  !public  :: spMatVec_MPI_orbs
 #endif
 
 
@@ -25,30 +22,29 @@ MODULE ED_HAMILTONIAN_SPARSE_HxV
   integer                                :: ms,iud
   integer                                :: impi
   integer                                :: ilat,jlat,iorb,jorb,ispin,jspin,ibath,is,js
-  integer                                :: kp,k1,k2,k3,k4
+  integer                                :: k1,k2,k3,k4
   integer                                :: ialfa,ibeta,indx
   real(8)                                :: sg1,sg2,sg3,sg4
   real(8)                                :: htmp,htmpup,htmpdw
   logical                                :: Jcondition
-  integer                                :: Nfoo,Nfoo2
-  real(8),dimension(:,:,:,:),allocatable :: diag_hybr ![Nlat,Nspin,Norb,Nbath]
-  real(8),dimension(:,:,:,:),allocatable :: bath_diag ![Nlat,Nspin,Norb/1,Nbath]
 
 
 contains
 
+
+
   !####################################################################
   !             BUILD SPARSE HAMILTONIAN of the SECTOR
   !####################################################################
-
   subroutine ed_buildh_main(isector,Hmat)
-    integer                              :: isector   
-    real(8),dimension(:,:),optional      :: Hmat
-    real(8),dimension(:,:),allocatable   :: Htmp_up,Htmp_dw,Hrdx
-    integer,dimension(Ns)                :: ibup,ibdw
-    integer,dimension(2*Ns_Ud)           :: Indices    ![2-2*Norb]
-    integer,dimension(Ns_Ud,Ns_Orb)      :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
-    integer,dimension(Nlat,Norb)         :: Nup,Ndw
+    integer                                  :: isector   
+    real(8),dimension(:,:),optional          :: Hmat
+    real(8),dimension(:,:),allocatable       :: Htmp_up,Htmp_dw,Hrdx
+    integer,dimension(Ns)                    :: ibup,ibdw
+    integer,dimension(Nlat,Norb)             :: Nup,Ndw
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: diag_hybr
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag
+
     !
     nup=zero
     ndw=zero
@@ -62,8 +58,16 @@ contains
     if(present(Hmat))&
          call assert_shape(Hmat,[getdim(isector), getdim(isector)],"ed_buildh_main","Hmat")
     !
-    !Get diagonal hybridization, bath energy
-    include "ED_HAMILTONIAN/diag_hybr_bath.f90"
+    diag_hybr=0d0
+    bath_diag=0d0
+    do ibath=1,Nbath
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+             bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+          enddo
+       enddo
+    enddo
     !
     !
 #ifdef _MPI
@@ -87,18 +91,18 @@ contains
     !
     !-----------------------------------------------!
     !LOCAL HAMILTONIAN TERMS
-    include "ED_HAMILTONIAN/stored/H_local.f90"
+    include "ED_HAMILTONIAN/sparse/H_local.f90"
     !
     !NON-LOCAL HAMILTONIAN TERMS
     if(jhflag)then
-       include "ED_HAMILTONIAN/stored/H_non_local.f90"
+       include "ED_HAMILTONIAN/sparse/H_non_local.f90"
     endif
     !
     !UP TERMS
-    include "ED_HAMILTONIAN/stored/H_up.f90"
+    include "ED_HAMILTONIAN/sparse/H_up.f90"
     !
     !DW TERMS
-    include "ED_HAMILTONIAN/stored/H_dw.f90"
+    include "ED_HAMILTONIAN/sparse/H_dw.f90"
     !-----------------------------------------------!
     !
     if(present(Hmat))then
@@ -139,16 +143,9 @@ contains
        deallocate(Htmp_up,Htmp_dw)
     endif
     !
-    deallocate(diag_hybr,bath_diag)
     return
     !
   end subroutine ed_buildh_main
-
-
-
-  !####################################################################
-  !        REMOVED: ORBS
-  !####################################################################
 
 
 
@@ -225,50 +222,6 @@ contains
     !
   end subroutine spMatVec_main
 
-  subroutine spMatVec_orbs(Nloc,v,Hv)
-    integer                    :: Nloc
-    real(8),dimension(Nloc)    :: v
-    real(8),dimension(Nloc)    :: Hv
-    integer                    :: i,iup,idw,j,jup,jdw,jj
-    integer                    :: iud
-    integer,dimension(2*Ns_Ud) :: Indices,Jndices
-    !
-    !
-    Hv=0d0
-    !
-    do i = 1,Nloc
-       do j=1,spH0d%row(i)%Size
-          Hv(i) = Hv(i) + spH0d%row(i)%vals(j)*v(spH0d%row(i)%cols(j))
-       enddo
-    enddo
-    !
-    !
-    do i=1,Dim
-       call state2indices(i,[DimUps,DimDws],Indices)
-       do iud=1,Ns_Ud
-          !
-          !UP:
-          iup = Indices(iud)
-          do jj=1,spH0ups(iud)%row(iup)%Size
-             Jndices = Indices ; Jndices(iud) = spH0ups(iud)%row(iup)%cols(jj)
-             call indices2state(Jndices,[DimUps,DimDws],j)
-             Hv(i) = Hv(i) + spH0ups(iud)%row(iup)%vals(jj)*V(j)
-          enddo
-          !
-          !DW:
-          idw = Indices(iud+Ns_Ud)
-          do jj=1,spH0dws(iud)%row(idw)%Size
-             Jndices = Indices ; Jndices(iud+Ns_Ud) = spH0dws(iud)%row(idw)%cols(jj)
-             call indices2state(Jndices,[DimUps,DimDws],j)
-             Hv(i) = Hv(i) + spH0dws(iud)%row(idw)%vals(jj)*V(j)
-          enddo
-          !
-       enddo
-    enddo
-    !
-  end subroutine spMatVec_orbs
-
-
 #ifdef _MPI
   subroutine spMatVec_mpi_main(Nloc,v,Hv)
     integer                          :: Nloc
@@ -288,7 +241,6 @@ contains
     ! if(MpiComm==Mpi_Comm_Null)return
     ! if(MpiComm==MPI_UNDEFINED)stop "spMatVec_mpi_cc ERROR: MpiComm = MPI_UNDEFINED"
     if(.not.MpiStatus)stop "spMatVec_mpi_cc ERROR: MpiStatus = F"
-    iter = iter+1
     !
     !Evaluate the local contribution: Hv_loc = Hloc*v
     Hv=0d0
@@ -357,12 +309,6 @@ contains
     endif
     !
   end subroutine spMatVec_mpi_main
-
-
-  !####################################################################
-  !        REMOVED: ORBS
-  !####################################################################
-
 #endif
 
 
@@ -375,31 +321,3 @@ end MODULE ED_HAMILTONIAN_SPARSE_HXV
 
 
 
-
-! !Up
-! Hrdx = kronecker_product(eye(mDimDw),Hrdx_up)
-! if(iud==1)then
-!    rDim = product(DimUps(iud+1:Ns_Ud))*product(DimDws(iud+1:Ns_Ud))
-!    Hmat = Hmat + kronecker_product(Hrdx, eye(rDim))
-! elseif(iud==Ns_Ud)then
-!    lDim = product(DimUps(1:iud-1))*product(DimDws(1:iud-1))
-!    Hmat = Hmat + kronecker_product(eye(lDim),Hrdx)             
-! else
-!    lDim = product(DimUps(1:iud-1))*product(DimDws(1:iud-1))
-!    rDim = product(DimUps(iud+1:Ns_Ud))*product(DimDws(iud+1:Ns_Ud))
-!    Hmat = Hmat + kronecker_product(kronecker_product(eye(lDim),Hrdx),eye(rDim))
-! end if
-! !
-! !Dw
-! Hrdx = kronecker_product(Hrdx_dw,eye(mDimUp))
-! if(iud==1)then
-!    rDim = product(DimUps(iud+1:Ns_Ud))*product(DimDws(iud+1:Ns_Ud))
-!    Hmat = Hmat + kronecker_product(Hrdx, eye(rDim))
-! elseif(iud==Ns_Ud)then
-!    lDim = product(DimUps(1:iud-1))*product(DimDws(1:iud-1))
-!    Hmat = Hmat + kronecker_product(eye(lDim),Hrdx)             
-! else
-!    lDim = product(DimUps(1:iud-1))*product(DimDws(1:iud-1))
-!    rDim = product(DimUps(iud+1:Ns_Ud))*product(DimDws(iud+1:Ns_Ud))
-!    Hmat = Hmat + kronecker_product(kronecker_product(eye(lDim),Hrdx),eye(rDim))
-! end if

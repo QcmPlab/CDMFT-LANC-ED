@@ -1,0 +1,21 @@
+# The fortran modules provided by this target.
+provides
+ ed_aux_funx.mod
+ ed_bath.mod
+ ed_bath_functions.mod
+ ed_diag.mod
+ ed_eigenspace.mod
+ ed_gf_normal.mod
+ ed_gf_shared.mod
+ ed_greens_functions.mod
+ ed_hamiltonian.mod
+ ed_hamiltonian_common.mod
+ ed_hamiltonian_direct_hxv.mod
+ ed_hamiltonian_sparse_hxv.mod
+ ed_input_vars.mod
+ ed_io.mod
+ ed_main.mod
+ ed_observables.mod
+ ed_setup.mod
+ ed_sparse_matrix.mod
+ ed_vars_global.mod
