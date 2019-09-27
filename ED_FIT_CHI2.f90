@@ -332,16 +332,31 @@ contains
       real(8),dimension(:)                                          :: a
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)  :: Delta
       integer                                                       :: ilat,jlat,ispin,jspin,iorb,jorb,ibath
-      integer                                                       :: i,io,jo,ndx
+      integer                                                       :: i,io,jo,ndx,stride
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: V_k
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,Ldelta)  :: invH_k
+      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: invH_k,Haux
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)   :: invH_knn
+      real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)      :: dummy_Hbath
+      real(8),dimension(Nbath)                                      :: dummy_Vbath
       !
-      !ACHTUNG! here the bath was a temporary one, is it safe to use dmft_bath?
+      !ACHTUNG! here the bath was a temporary one, since we removed the possibility to act on other baths we need to replicate the
+      !function behaviour. Rather ugly...
+      stride = 0
+      !Get Hs
+      do ibath=1,Nbath
+         dummy_Hbath(:,:,:,:,:,:,ibath) = 0d0
+         dummy_Hbath(:,:,:,:,:,:,ibath) = unpack(a(stride+1:stride+dmft_bath%Nmask), dmft_bath%mask, dummy_Hbath(:,:,:,:,:,:,ibath))
+         Haux=nnn2lso_reshape(dummy_Hbath(:,:,:,:,:,:,ibath),Nlat,Nspin,Norb)
+         forall(io=1:Nlat*Nspin*Norb,jo=1:Nlat*Nspin*Norb,jo>io) Haux(jo,io)=Haux(io,jo) !conjugate if complex
+         dummy_Hbath(:,:,:,:,:,:,ibath)=lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
+         stride = stride + dmft_bath%Nmask
+      enddo
       !
-      call allocate_dmft_bath()
-      call init_dmft_bath_mask()
-      call set_dmft_bath(a)
+      !Get Vs
+      do ibath=1,Nbath
+         stride = stride + 1
+         dummy_Vbath(ibath) = a(stride)
+      enddo
       !
       Delta=zero
       invH_k=zero
@@ -357,7 +372,7 @@ contains
                            do jorb=1,Norb
                               io = index_stride_lso(ilat,ispin,iorb)
                               jo = index_stride_lso(jlat,jspin,jorb)
-                              invH_k(io,jo,i)=dmft_bath%item(ibath)%h(ilat,jlat,ispin,jspin,iorb,jorb)
+                              invH_k(io,jo)=dummy_Hbath(ilat,jlat,ispin,jspin,iorb,jorb,ibath)
                            enddo
                         enddo
                      enddo
@@ -365,9 +380,9 @@ contains
                enddo
             enddo
             !
-            invH_k(:,:,i) = zeye(Nlat*Nspin*Norb) * xi * Xdelta(i) - invH_k(:,:,i)
-            call inv(invH_k(:,:,i))
-            invH_knn(:,:,:,:,:,:,ibath)=lso2nnn_reshape(invH_k(:,:,i),Nlat,Nspin,Norb)
+            invH_k = zeye(Nlat*Nspin*Norb) * xi * Xdelta(i) - invH_k
+            call inv(invH_k)
+            invH_knn(:,:,:,:,:,:,ibath)=lso2nnn_reshape(invH_k,Nlat,Nspin,Norb)
             !
          enddo
          !
@@ -379,7 +394,7 @@ contains
                         do iorb=1,Norb
                            do jorb=1,Norb
                               Delta(ilat,jlat,ispin,jspin,iorb,jorb,i)=Delta(ilat,jlat,ispin,jspin,iorb,jorb,i)+ &
-                                 (dmft_bath%item(ibath)%v)*invH_knn(ilat,jlat,ispin,jspin,iorb,jorb,ibath)*dmft_bath%item(ibath)%v
+                                 dummy_Vbath(ibath)*invH_knn(ilat,jlat,ispin,jspin,iorb,jorb,ibath)*dummy_Vbath(ibath)
                            enddo
                         enddo
                      enddo
