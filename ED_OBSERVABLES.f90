@@ -14,7 +14,7 @@ MODULE ED_OBSERVABLES
   private
   !
   public :: observables_impurity
-  ! public :: local_energy_impurity
+  public :: local_energy_impurity
 
 
   logical,save                           :: iolegend=.true.

@@ -970,7 +970,9 @@ contains
     Z                = eye(Nlanc)
     diag(1:Nlanc)    = alanc(1:Nlanc)
     subdiag(2:Nlanc) = blanc(2:Nlanc)
-    call tql2(Nlanc,diag,subdiag,Z,ierr)
+    !call tql2(Nlanc,diag,subdiag,Z,ierr)   
+    call eigh(diag(1:Nlanc),subdiag(2:Nlanc),Ev=Z(:Nlanc,:Nlanc))
+
     !
     call GFmatrix_allocate(impGmatrix(ilat,jlat,ispin,ispin,iorb,jorb),istate=istate,ichan=ichan,Nexc=Nlanc)
     !

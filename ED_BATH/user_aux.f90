@@ -102,7 +102,7 @@ subroutine spin_symmetrize_bath_site(bath_,save)
   endif
   !
   call allocate_dmft_bath()
-  call init_dmft_bathmask()
+  !call init_dmft_bathmask()
   call set_dmft_bath(bath_)
 
   do ibath=1,Nbath
@@ -134,7 +134,7 @@ subroutine orb_equality_bath_site(bath_,indx,save)
   endif
   !
   call allocate_dmft_bath()
-  call init_dmft_bathmask()
+!  call init_dmft_bathmask()
   call set_dmft_bath(bath_)
   !
   do ibath=1,Nbath
