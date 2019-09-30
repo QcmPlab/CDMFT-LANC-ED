@@ -69,10 +69,6 @@ contains
        enddo
     enddo
     !
-    if(Nspin>1)then
-      if(any(dmft_bath%mask(:,:,1,Nspin,:,:)))Jhflag=.true.
-    endif
-    !
 #ifdef _MPI
     if(MpiStatus)then
        call sp_set_mpi_matrix(MpiComm,spH0d,mpiIstart,mpiIend,mpiIshift)

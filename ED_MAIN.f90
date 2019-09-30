@@ -43,19 +43,13 @@ contains
 
 
 
-  !+-----------------------------------------------------------------------------+!
   ! PURPOSE: allocate and initialize one or multiple baths -+!
-  !+-----------------------------------------------------------------------------+!
-  !                              SINGLE SITE                                      !
-  !+-----------------------------------------------------------------------------+!
   subroutine ed_init_solver_single(bath,Hloc)
     real(8),dimension(:),intent(inout) :: bath
     complex(8),intent(in)              :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical                            :: check 
     logical,save                       :: isetup=.true.
     integer                            :: i
-    logical                            :: MPI_MASTER=.true.
-    integer                            :: MPI_ERR
     !
     write(LOGfile,"(A)")"INIT SOLVER FOR "//trim(ed_file_suffix)
     !
@@ -71,6 +65,8 @@ contains
     bath = 0d0
     !
     call allocate_dmft_bath()
+    if( (Nspin>1) .AND. &
+         any(dmft_bath%mask(:,:,1,Nspin,:,:)) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
     call get_dmft_bath(bath)    !dmft_bath --> user_bath
     !
@@ -106,6 +102,9 @@ contains
     bath = 0d0
     !
     call allocate_dmft_bath()
+    if(MPIMASTER   .AND. &
+         (Nspin>1) .AND. &
+         any(dmft_bath%mask(:,:,1,Nspin,:,:)) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
     call get_dmft_bath(bath)
     !
