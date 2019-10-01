@@ -53,15 +53,15 @@ contains
   !+----------------------------------------------------------------------+
   !PURPOSE  : Chi^2 fit of the G0/Delta 
   !+----------------------------------------------------------------------+
-  subroutine chi2_fitgf_generic_normal(fg,bath,ispin,iorb)
+  subroutine chi2_fitgf_generic_normal(fg,bath)
     complex(8),dimension(:,:,:,:,:,:,:) :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Niw] 
     real(8),dimension(:)                :: bath
-    integer,optional                    :: ispin,iorb
-    integer                             :: ispin_
+    !integer,optional                    :: ispin,iorb
+    !integer                             :: ispin_
     !
-    ispin_=1;if(present(ispin))ispin_=ispin
+    !ispin_=1;if(present(ispin))ispin_=ispin
     !
-    call assert_shape(fg,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(fg,5)],"chi2_fitgf_generic_normal","fg")
+    call assert_shape(fg,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(fg,7)],"chi2_fitgf_generic_normal","fg")
     !
     select case(cg_method)
     case default
@@ -72,7 +72,8 @@ contains
        if(ed_verbose>2)write(LOGfile,"(A,I1,A,A)")"\Chi2 fit with CG-minimize and CG-weight: ",cg_weight," on: ",cg_scheme
     end select
     !
-    call chi2_fitgf_replica(fg,bath,ispin)
+    !call chi2_fitgf_replica(fg,bath,ispin)
+    call chi2_fitgf_replica(fg,bath)
     !
     !set trim_state_list to true after the first fit has been done: this 
     !marks the ends of the cycle of the 1st DMFT loop.
@@ -84,7 +85,7 @@ contains
   !+-------------------------------------------------------------+
   !PURPOSE  : Chi^2 interface for
   !+-------------------------------------------------------------+
-  subroutine chi2_fitgf_replica(fg,bath_,ispin)
+  subroutine chi2_fitgf_replica(fg,bath_)
     complex(8),dimension(:,:,:,:,:,:,:) :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     real(8),dimension(:),intent(inout)  :: bath_
     real(8),dimension(:),allocatable    :: array_bath

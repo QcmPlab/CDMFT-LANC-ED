@@ -218,7 +218,7 @@ contains
     endif
 #endif
     !
-    deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2)
+    deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
     deallocate(simp,zimp)
   end subroutine lanc_observables
 

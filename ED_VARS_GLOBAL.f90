@@ -207,8 +207,10 @@ MODULE ED_VARS_GLOBAL
   !Local energies and generalized double occupancies
   !PRIVATE (now public but accessible thru routine)
   !=========================================================
-  real(8),dimension(:),allocatable                     :: ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot
-  real(8),dimension(:),allocatable                     :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
+  !real(8),dimension(:),allocatable                     :: ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot
+  real(8)                                               :: ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot
+  !real(8),dimension(:),allocatable                     :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
+  real(8)                                               :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
   ! real(8),dimension(:,:),allocatable,save            :: ddii,eii
 

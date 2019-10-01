@@ -64,12 +64,11 @@ program ed_hm_1dchain
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
 
-
    !Build Hk and Hloc
    call generate_hk_hloc()
    
    !setup solver
-   Nb=get_bath_dimension()
+   Nb=get_bath_dimension(lso2nnn(hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
    call ed_init_solver(comm,bath,lso2nnn(Hloc))
@@ -99,8 +98,7 @@ program ed_hm_1dchain
 
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
-         call ed_chi2_fitgf(delta,bath,ispin=1)
-         call ed_chi2_fitgf(delta,bath,ispin=2)
+         call ed_chi2_fitgf(delta,bath)
          !
          !MIXING:
          if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*BathOld

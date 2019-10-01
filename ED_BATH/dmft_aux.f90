@@ -99,13 +99,13 @@ end subroutine init_dmft_bath
 subroutine write_dmft_bath(unit)
   integer,optional     :: unit
   integer              :: unit_
-  integer              :: i
+  integer              :: ibath
   integer              :: io,jo,iorb,ispin
-  real(8)              :: hrep_aux(Nspin*Norb,Nspin*Norb)
+  real(8)              :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
   unit_=LOGfile;if(present(unit))unit_=unit
   if(.not.dmft_bath%status)stop "write_dmft_bath error: bath not allocated"
   !
-  do i=1,Nbath
+  do ibath=1,Nbath
      hrep_aux=0d0
      hrep_aux=nnn2lso_reshape(dmft_bath%item(ibath)%h,Nlat,Nspin,Norb)
      if(unit_==LOGfile)then        
