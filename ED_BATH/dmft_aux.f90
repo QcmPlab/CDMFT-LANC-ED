@@ -68,13 +68,13 @@ subroutine init_dmft_bath()
   !Read from file if exist:
   inquire(file=trim(Hfile)//trim(ed_file_suffix)//".restart",exist=IOfile)
   if(IOfile)then
-     write(LOGfile,"(A)")'Reading bath from file'//trim(Hfile)//trim(ed_file_suffix)//".restart"
+     write(LOGfile,"(A)")"Reading bath from file "//trim(Hfile)//trim(ed_file_suffix)//".restart"
      unit = free_unit()
      flen = file_length(trim(Hfile)//trim(ed_file_suffix)//".restart")
      !
      open(unit,file=trim(Hfile)//trim(ed_file_suffix)//".restart")
      do ibath=1,Nbath
-        read(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
+        read(unit,"(F21.12,1X)")dmft_bath%item(ibath)%v
         do io=1,Nlat*Nspin*Norb
            read(unit,*)(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
         enddo
@@ -109,9 +109,9 @@ subroutine write_dmft_bath(unit)
      hrep_aux=0d0
      hrep_aux=nnn2lso_reshape(dmft_bath%item(ibath)%h,Nlat,Nspin,Norb)
      if(unit_==LOGfile)then        
-        write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|",( hrep_aux(1,jo),jo=1,Nspin*Norb)        
+        write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|",( hrep_aux(1,jo),jo=1,Nlat*Nspin*Norb)        
         do io=2,Nlat*Nspin*Norb
-           write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|",(hrep_aux(io,jo),jo=1,Nspin*Norb)
+           write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|",(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
         enddo
      else
         write(unit_,"(F21.12)")dmft_bath%item(ibath)%v

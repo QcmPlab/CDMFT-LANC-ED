@@ -88,11 +88,11 @@ program ed_hm_1dchain
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=3)
+      !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=3)
 
       !Get the Weiss field/Delta function to be fitted
       call dmft_self_consistency(comm,Gmats,Smats,Delta,lso2nnn(Hloc),cg_scheme)
-
+      print*,Delta(1,1,1,1,1,1,1)
       call Bcast_MPI(comm,Delta)
 
 
@@ -105,7 +105,7 @@ program ed_hm_1dchain
          BathOld=Bath
          !
          !Check convergence (if required change chemical potential)
-         converged = check_convergence(delta(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop,reset=.false.)
+         converged = check_convergence(delta(1,1,1,1,1,1,:),dmft_error,nsuccess,nloop)
       endif
       !
       call Bcast_MPI(comm,bath)
