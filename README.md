@@ -23,7 +23,7 @@ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is c
 
 - [x] Write code for the spin-decoupled case
 - [x] Code compiles and runs without errors
-- [ ] Check exact diagonalization comparing results with known 2x2 plaquette data (without bath)
+- [x] Check exact diagonalization comparing results with known 2x2 plaquette data (without bath)
 - [ ] Check 1d Hubbard chain against literature
 
 ### MILESTONE 2
