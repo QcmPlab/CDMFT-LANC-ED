@@ -92,7 +92,6 @@ program ed_hm_1dchain
 
       !Get the Weiss field/Delta function to be fitted
       call dmft_self_consistency(comm,Gmats,Smats,Delta,lso2nnn(Hloc),cg_scheme)
-      print*,Delta(1,1,1,1,1,1,1)
       call Bcast_MPI(comm,Delta)
 
 

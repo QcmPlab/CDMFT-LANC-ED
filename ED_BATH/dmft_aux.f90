@@ -155,7 +155,7 @@ end subroutine save_dmft_bath
 !+-------------------------------------------------------------------+
 !PURPOSE  : copy the bath components back to a 1-dim array 
 !+-------------------------------------------------------------------+
-subroutine get_dmft_bath(bath_)
+subroutine set_dmft_bath(bath_)
   real(8),dimension(:)   :: bath_
   integer                :: stride,ibath,Nmask,io,jo
   logical                :: check
@@ -165,6 +165,11 @@ subroutine get_dmft_bath(bath_)
   !
   check=check_bath_dimension(bath_)
   if(.not.check)stop "get_dmft_bath error: wrong bath dimensions"
+  !
+  do ibath=1,Nbath
+     dmft_bath%item(ibath)%h=0d0
+     dmft_bath%item(ibath)%v=0d0
+  enddo
   !
   Nmask  = dmft_bath%Nmask
   stride = 0
@@ -184,7 +189,7 @@ subroutine get_dmft_bath(bath_)
      stride = stride + 1
      dmft_bath%item(ibath)%v = bath_(stride)
   enddo
-end subroutine get_dmft_bath
+end subroutine set_dmft_bath
 
 
 
@@ -194,7 +199,7 @@ end subroutine get_dmft_bath
 !PURPOSE  : set the bath components from a given user provided 
 ! bath-array 
 !+-------------------------------------------------------------------+
-subroutine set_dmft_bath(bath_)
+subroutine get_dmft_bath(bath_)
   real(8),dimension(:)   :: bath_
   integer                :: stride,ibath,Nmask
   logical                :: check
@@ -204,10 +209,7 @@ subroutine set_dmft_bath(bath_)
   check = check_bath_dimension(bath_)
   if(.not.check)stop "set_dmft_bath error: wrong bath dimensions"
   !
-  do ibath=1,Nbath
-     dmft_bath%item(ibath)%h=0d0
-     dmft_bath%item(ibath)%v=0d0
-  enddo
+  bath_=0.d0
   !
   Nmask  = dmft_bath%Nmask
   stride = 0
@@ -223,7 +225,7 @@ subroutine set_dmft_bath(bath_)
      bath_(stride)=dmft_bath%item(ibath)%v
   enddo
   !
-end subroutine set_dmft_bath
+end subroutine get_dmft_bath
 
 
 

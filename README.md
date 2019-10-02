@@ -15,7 +15,27 @@ The code structure is as follow:
 * The actual implementation of the DMFT equations is case by case performed in a driver program, usually placed in the directory `drivers`. 
 * In the driver code the user must includes the `DMFT_ED` module and call the necessary procedures to solve the DMFT equations.
 
-An example, solving the Hubbard model on the Bethe lattice, is contained in the file `drivers/ced_hm_bethe.f90`.
+An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/ced_hm_1dchaom.f90`.
+
+## DEVELOPMENT
+
+###MILESTONE 1
+
+- [x] Write code for the spin-decoupled case
+- [x] Code compiles and runs without errors
+- [ ] Check exact diagonalization comparing results with known 2x2 plaquette data (without bath)
+- [ ] Check 1d Hubbard chain against literature
+
+###MILESTONE 2
+
+- [ ] Include complex routines for diagonalization (and bath?)
+- [ ] Test 2d BHZ model 
+
+###MILESTONE 3
+
+- [ ] Test 3d BHZ model for non spin-coupling choices of cluster
+- [ ] Add real-space CDMFT case for finite systems
+- [ ] Rewrite the code for the general spin-coupled case
 
 
 --

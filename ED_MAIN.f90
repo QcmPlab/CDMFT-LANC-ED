@@ -75,6 +75,9 @@ contains
     isetup=.false.
     !
   end subroutine ed_init_solver_single
+
+  
+  
 #ifdef _MPI
   subroutine ed_init_solver_single_mpi(MpiComm,bath,Hloc)
     integer                            :: MpiComm
@@ -106,8 +109,7 @@ contains
          (Nspin>1) .AND. &
          any(dmft_bath%mask(:,:,1,Nspin,:,:)) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
-    call get_dmft_bath(bath)
-    !
+    call get_dmft_bath(bath)    !dmft_bath --> user_bath
     if(isetup)call setup_global
     call deallocate_dmft_bath()
     isetup=.false.
@@ -116,25 +118,6 @@ contains
     !
   end subroutine ed_init_solver_single_mpi
 #endif
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   !+-----------------------------------------------------------------------------+!
@@ -195,7 +178,7 @@ contains
     if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
-    call set_dmft_bath(bath)
+    call set_dmft_bath(bath)    !user_bath --> dmft_bath
     call write_dmft_bath(LOGfile)
     if(MpiMaster)call save_dmft_bath(used=.true.)
     !
