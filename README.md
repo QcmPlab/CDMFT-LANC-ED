@@ -19,19 +19,19 @@ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is c
 
 ## DEVELOPMENT
 
-###MILESTONE 1
+### MILESTONE 1
 
 - [x] Write code for the spin-decoupled case
 - [x] Code compiles and runs without errors
 - [ ] Check exact diagonalization comparing results with known 2x2 plaquette data (without bath)
 - [ ] Check 1d Hubbard chain against literature
 
-###MILESTONE 2
+### MILESTONE 2
 
 - [ ] Include complex routines for diagonalization (and bath?)
 - [ ] Test 2d BHZ model 
 
-###MILESTONE 3
+### MILESTONE 3
 
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Add real-space CDMFT case for finite systems
