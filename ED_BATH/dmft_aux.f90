@@ -54,13 +54,17 @@ subroutine init_dmft_bath()
   integer              :: io,jo,iorb,ispin,jorb,jspin
   logical              :: IOfile
   real(8)              :: de
+  real(8),allocatable  :: noise_b(:)
   character(len=21)    :: space
   !  
   if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
   !
+  allocate(noise_b(Nbath));noise_b=0.d0 
+  call random_number(noise_b)
+  !
   !BATH INITIALIZATION
   do ibath=1,Nbath
-     dmft_bath%item(ibath)%h=impHloc - xmu*lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
+     dmft_bath%item(ibath)%h=impHloc - (xmu+noise_b(ibath))*lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
      dmft_bath%item(ibath)%v=max(0.1d0,1.d0/sqrt(dble(Nbath)))
   enddo
   !
@@ -105,14 +109,16 @@ subroutine write_dmft_bath(unit)
   unit_=LOGfile;if(present(unit))unit_=unit
   if(.not.dmft_bath%status)stop "write_dmft_bath error: bath not allocated"
   !
+  if(unit_==LOGfile)write(unit_,"(A9,a5,90(A9,1X))")"V"," ","H"        
   do ibath=1,Nbath
      hrep_aux=0d0
      hrep_aux=nnn2lso_reshape(dmft_bath%item(ibath)%h,Nlat,Nspin,Norb)
-     if(unit_==LOGfile)then        
+     if(unit_==LOGfile)then
         write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|",( hrep_aux(1,jo),jo=1,Nlat*Nspin*Norb)        
         do io=2,Nlat*Nspin*Norb
            write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|",(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
         enddo
+           write(unit_,"(A9)")" "
      else
         write(unit_,"(F21.12)")dmft_bath%item(ibath)%v
         do io=1,Nlat*Nspin*Norb

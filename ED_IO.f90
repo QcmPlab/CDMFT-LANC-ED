@@ -277,8 +277,8 @@ contains
              do jorb=1,Norb
                 do ispin=1,Nspin
                    suffix="_Isite"//str(ilat,4)//"_Jsite"//str(jlat,4)//"_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
-                   call splot("impSigma"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".vca"   ,wm,impSmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
-                   call splot("impSigma"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".vca",wr,impSreal(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                   call splot("impSigma"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impSmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                   call splot("impSigma"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impSreal(ilat,jlat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo
@@ -311,8 +311,8 @@ contains
              do jorb=1,Norb
                 do ispin=1,Nspin
                    suffix="_Isite"//str(ilat,4)//"_Jsite"//str(jlat,4)//"_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
-                   call splot("impG"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".vca"   ,wm,impGmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
-                   call splot("impG"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".vca",wr,impGreal(ilat,jlat,ispin,ispin,iorb,jorb,:))                
+                   call splot("impG"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impGmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                   call splot("impG"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impGreal(ilat,jlat,ispin,ispin,iorb,jorb,:))                
                 enddo
              enddo
           enddo
@@ -344,8 +344,8 @@ contains
              do jorb=1,Norb
                 do ispin=1,Nspin
                    suffix="_Isite"//str(ilat,4)//"_Jsite"//str(jlat,4)//"_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
-                   call splot("impG0"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".vca"   ,wm,impG0mats(ilat,jlat,ispin,ispin,iorb,jorb,:))
-                   call splot("impG0"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".vca",wr,impG0real(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                   call splot("impG0"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impG0mats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+                   call splot("impG0"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impG0real(ilat,jlat,ispin,ispin,iorb,jorb,:))
                 enddo
              enddo
           enddo

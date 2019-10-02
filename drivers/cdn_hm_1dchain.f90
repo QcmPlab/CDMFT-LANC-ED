@@ -131,13 +131,14 @@ program ed_hm_1dchain
 contains
 
    !-------------------------------------------------------------------------------------------
-   !PURPOSE:  Hk model for the 1d Hubbard chain
+   !PURPOSE:  H models for the 1d Hubbard chain
    !-------------------------------------------------------------------------------------------
-   function hk_model(kpoint,N) result(hk)
+   function hloc_model(N) result(hloc)
       integer                                               :: n,ilat,ispin,iorb
-      real(8),dimension(:)                                  :: kpoint
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
-      complex(8),dimension(N,N)                             :: hk
+      complex(8),dimension(N,N)                             :: hloc
+      !
+      hopping_matrix=zero
       !
       do ispin=1,Nspin
          do iorb=1,Norb
@@ -150,6 +151,17 @@ contains
          enddo
       enddo
       !
+      Hloc=nnn2lso(hopping_matrix)
+   end function hloc_model
+   
+   function hk_model(kpoint,N) result(hk)
+      integer                                               :: n,ilat,ispin,iorb
+      real(8),dimension(:)                                  :: kpoint
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
+      complex(8),dimension(N,N)                             :: hk
+      !
+      hopping_matrix=zero
+      !
       do ispin=1,Nspin
          do iorb=1,Norb  
             hopping_matrix(1,Nlat,ispin,ispin,iorb,iorb)=hopping_matrix(1,Nlat,ispin,ispin,iorb,iorb)-ts*exp(xi*kpoint(1)*Nlat)
@@ -157,7 +169,7 @@ contains
          enddo
       enddo
       !
-      Hk=nnn2lso(hopping_matrix)
+      Hk=nnn2lso(hopping_matrix)+hloc_model(N)
    end function hk_model
 
 
@@ -183,8 +195,8 @@ contains
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/Nkx
-      Hloc   = zero
-      Hloc=sum(Hk(:,:,:),dim=3)/Nkx
+      Hloc=hloc_model(Nlso)
+      where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
       !
    end subroutine generate_hk_hloc
 

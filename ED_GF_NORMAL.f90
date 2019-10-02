@@ -35,7 +35,7 @@ contains
   !                        NORMAL
   !+------------------------------------------------------------------+
   subroutine build_gf_normal()
-    integer :: iorb,jorb,ispin,i,counter
+    integer :: iorb,jorb,ispin,i
     integer :: Nstates
     real(8) :: chan4
     integer :: isite,jsite,ibath,icomposite,jbath,jcomposite
@@ -46,12 +46,10 @@ contains
     !else
     !   chan4=1.d0
     !endif
-    counter=1
     !
     if(allocated(impGmatrix))deallocate(impGmatrix)
     allocate(impGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
     !
-    if(MPIMASTER)call start_timer
     ! 
     Nstates = state_list%size
     max_exc=-huge(1d0)          !find the max excitation
@@ -63,8 +61,6 @@ contains
              call GFmatrix_allocate(impGmatrix(isite,isite,ispin,ispin,iorb,iorb),Nstate=Nstates) !2= add,del exc. c^+_i|psi>             
              call lanc_build_gf_normal_main(isite,iorb,ispin)
              !
-             counter=counter+1
-             if(ed_verbose .eq. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
              !site-off-diagonal:
              do jsite=1,Nlat
                 do jorb=1,Norb
@@ -75,11 +71,8 @@ contains
                    call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
                    !         if(vca_gf_symmetric)then
                    call lanc_build_gf_normal_mix_chan2(isite,jsite,iorb,jorb,ispin)
-                   counter=counter+1
-                   if(ed_verbose .eq. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
                    !         else
                    !            call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
-                   !            counter=counter+1
                    !            if(ed_verbose .eq. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
                    !         endif
                 enddo
@@ -106,7 +99,6 @@ contains
           enddo
        enddo
     enddo
-    if(MPIMASTER)call stop_timer(LOGfile)
   end subroutine build_gf_normal
 
 

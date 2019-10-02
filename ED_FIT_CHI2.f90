@@ -31,8 +31,6 @@ MODULE ED_FIT_CHI2
   integer,dimension(:),allocatable      :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
   integer                               :: Orb_indx,Spin_indx,Spin_mask
   !
-  type(effective_bath)                  :: chi2_bath
-
 
 contains
 
@@ -56,8 +54,8 @@ contains
   subroutine chi2_fitgf_generic_normal(fg,bath)
     complex(8),dimension(:,:,:,:,:,:,:) :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Niw] 
     real(8),dimension(:)                :: bath
-    !integer,optional                    :: ispin,iorb
-    !integer                             :: ispin_
+    !integer,optional                   :: ispin,iorb
+    !integer                            :: ispin_
     !
     !ispin_=1;if(present(ispin))ispin_=ispin
     !
@@ -349,7 +347,7 @@ contains
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)         :: invH_knnn
     real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)      :: dummy_Hbath
     real(8),dimension(Nbath)                                      :: dummy_Vbath
-    complex(8) :: iw
+    complex(8)                                                    :: iw
     !
     !ACHTUNG! here the bath was a temporary one, since we removed the possibility to act on other baths we need to replicate the
     !function behaviour. Rather ugly...
