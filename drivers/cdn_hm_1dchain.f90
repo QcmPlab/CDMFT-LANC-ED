@@ -15,7 +15,7 @@ program ed_hm_1dchain
    real(8),allocatable                                                    :: Bath(:),BathOld(:)
    !The local hybridization function:
    complex(8),allocatable                                                 :: Hloc(:,:)
-   complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Delta
+   complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
    character(len=16)                                                      :: finput
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
@@ -59,7 +59,7 @@ program ed_hm_1dchain
 
 
    !Allocate Weiss Field:
-   allocate(delta(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+   allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Weiss_old(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
@@ -72,7 +72,7 @@ program ed_hm_1dchain
    allocate(bath(Nb))
    allocate(bathold(Nb))
    call ed_init_solver(comm,bath,lso2nnn(Hloc))
-
+   Weiss_old=zero
 
    !DMFT loop
    iloop=0;converged=.false.
@@ -91,20 +91,20 @@ program ed_hm_1dchain
       !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=3)
 
       !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(comm,Gmats,Smats,Delta,lso2nnn(Hloc),cg_scheme)
-      call Bcast_MPI(comm,Delta)
-
-
+      call dmft_self_consistency(comm,Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+      call Bcast_MPI(comm,Weiss)
+      !
+      !MIXING:
+      if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
+      Weiss_old=Weiss
+      !
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
-         call ed_chi2_fitgf(delta,bath)
+         call ed_chi2_fitgf(Weiss,bath)
          !
-         !MIXING:
-         if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*BathOld
-         BathOld=Bath
          !
          !Check convergence (if required change chemical potential)
-         converged = check_convergence(delta(1,1,1,1,1,1,:),dmft_error,nsuccess,nloop)
+         converged = check_convergence(Weiss(1,1,1,1,1,1,:),dmft_error,nsuccess,nloop)
       endif
       !
       call Bcast_MPI(comm,bath)

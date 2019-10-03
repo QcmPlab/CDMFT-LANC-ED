@@ -24,6 +24,7 @@ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is c
 - [x] Write code for the spin-decoupled case
 - [x] Code compiles and runs without errors
 - [x] Check exact diagonalization comparing results with known 2x2 plaquette data (without bath)
+- [x] Check single-site cluster case against single-site DMFT code
 - [ ] Check 1d Hubbard chain against literature
 
 ### MILESTONE 2
