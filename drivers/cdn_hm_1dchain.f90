@@ -47,7 +47,7 @@ program ed_hm_1dchain
    call add_ctrl_var(beta,"BETA")
    call add_ctrl_var(Norb,"Norb")
    call add_ctrl_var(Nspin,"Nspin")
-   call add_ctrl_var(xmu,"xmu")
+   !call add_ctrl_var(xmu,"xmu")
    call add_ctrl_var(wini,"wini")
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
@@ -111,7 +111,7 @@ program ed_hm_1dchain
       !
       call Bcast_MPI(comm,bath)
       call Bcast_MPI(comm,converged)
-      call Bcast_MPI(comm,xmu)
+      !call Bcast_MPI(comm,xmu)
       !
       if(master)call end_loop
    enddo
@@ -145,7 +145,7 @@ contains
       do ispin=1,Nspin
          do iorb=1,Norb
             do ilat=1,Nlat
-               hopping_matrix(ilat,ilat,ispin,ispin,iorb,iorb)= -xmu
+               hopping_matrix(ilat,ilat,ispin,ispin,iorb,iorb)= 0.d0!-xmu
                !
                if(ilat>1)hopping_matrix(ilat,ilat-1,ispin,ispin,iorb,iorb)= -ts
                if(ilat<Nlat)hopping_matrix(ilat,ilat+1,ispin,ispin,iorb,iorb)= -ts
