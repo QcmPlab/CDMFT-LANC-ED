@@ -47,7 +47,7 @@ program ed_hm_1dchain
    call add_ctrl_var(beta,"BETA")
    call add_ctrl_var(Norb,"Norb")
    call add_ctrl_var(Nspin,"Nspin")
-   !call add_ctrl_var(xmu,"xmu")
+   call add_ctrl_var(xmu,"xmu")
    call add_ctrl_var(wini,"wini")
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
