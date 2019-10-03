@@ -31,6 +31,8 @@ program ed_hm_1dchain
    rank   = get_Rank_MPI(comm)
    master = get_Master_MPI(comm)
    
+   !
+
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputED.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")

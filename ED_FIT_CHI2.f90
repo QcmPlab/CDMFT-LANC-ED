@@ -324,7 +324,9 @@ contains
        chi2_so(l) = sum( (abs(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))**cg_pow)/Wdelta(:) )
     enddo
     !
-    chi2=sum(chi2_so)
+    !FIXME:THIS NEEDS A THOROUGH DISCUSSION
+    !
+    chi2=maxval(chi2_so)
     chi2=chi2/Ldelta
     !
   end function chi2_weiss_replica
