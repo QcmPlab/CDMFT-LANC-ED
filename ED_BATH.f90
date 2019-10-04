@@ -3,6 +3,7 @@ MODULE ED_BATH
   USE SF_IOTOOLS, only:free_unit,reg,file_length,txtfy
   USE SF_LINALG, only: eye,inv
   USE SF_MISC, only: assert_shape
+  USE SF_ARRAYS, only: linspace
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
   USE ED_AUX_FUNX

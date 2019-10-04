@@ -326,6 +326,7 @@ contains
     !
     !FIXME:THIS NEEDS A THOROUGH DISCUSSION
     !
+    !chi2=sum(chi2_so)
     chi2=maxval(chi2_so)
     chi2=chi2/Ldelta
     !

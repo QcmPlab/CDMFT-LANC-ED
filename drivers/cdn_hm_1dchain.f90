@@ -106,7 +106,7 @@ program ed_hm_1dchain
          !
          !
          !Check convergence (if required change chemical potential)
-         converged = check_convergence(Weiss(1,1,1,1,1,1,:),dmft_error,nsuccess,nloop)
+         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
       endif
       !
       call Bcast_MPI(comm,bath)

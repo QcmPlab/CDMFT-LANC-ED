@@ -54,13 +54,13 @@ subroutine init_dmft_bath()
   integer              :: io,jo,iorb,ispin,jorb,jspin
   logical              :: IOfile
   real(8)              :: de
-  real(8),allocatable  :: noise_b(:)
+  real(8)              :: noise_b(Nbath)
   character(len=21)    :: space
   !  
   if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
   !
-  allocate(noise_b(Nbath));noise_b=0.d0 
-  call random_number(noise_b)
+  noise_b=linspace(-2.d0,2.d0,Nbath) 
+  !call random_number(noise_b)
   !
   !BATH INITIALIZATION
   do ibath=1,Nbath
