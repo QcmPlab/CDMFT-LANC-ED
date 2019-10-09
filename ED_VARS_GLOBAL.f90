@@ -1,6 +1,7 @@
 MODULE ED_VARS_GLOBAL
   USE SF_CONSTANTS
   USE ED_SPARSE_MATRIX
+  USE ED_INPUT_VARS
 #ifdef _MPI
   USE MPI
   USE SF_MPI
@@ -85,7 +86,6 @@ MODULE ED_VARS_GLOBAL
   integer,save                                       :: Nsectors !Number of sectors
   integer,save                                       :: Ns_orb
   integer,save                                       :: Ns_ud
-  integer                                            :: Nlat     !# size of cluster
   !
   integer                                            :: Nlso
 
@@ -232,7 +232,6 @@ MODULE ED_VARS_GLOBAL
   integer                                            :: site_indx_padding=4
   logical                                            :: Jhflag              !spin-exchange and pair-hopping flag.
   logical                                            :: offdiag_gf_flag=.false.
-  character(len=200)                                 :: ed_input_file=""
 
 
   !This is the internal Mpi Communicator and variables.

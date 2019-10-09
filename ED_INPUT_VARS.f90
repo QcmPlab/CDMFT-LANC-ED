@@ -1,5 +1,4 @@
 MODULE ED_INPUT_VARS
-  USE ED_VARS_GLOBAL
   USE SF_VERSION
   USE SF_PARSE_INPUT
   USE SF_IOTOOLS, only:str
@@ -11,6 +10,7 @@ MODULE ED_INPUT_VARS
 
   !input variables
   !=========================================================
+  integer              :: Nlat                !# of cluster sites
   integer              :: Norb                !# of lattice orbitals per site
   integer              :: Nspin               !# spin degeneracy (max 2)
   integer              :: Nbath               !# of bath sites (per orbital or not depending on bath_type)
@@ -84,6 +84,7 @@ MODULE ED_INPUT_VARS
   !=========================================================
   character(len=100)   :: Hfile,HLOCfile
   integer,save         :: LOGfile
+  character(len=200)   :: ed_input_file=""
 
 
 
@@ -113,6 +114,7 @@ contains
     ed_input_file=str(INPUTunit)
     !
     !DEFAULT VALUES OF THE PARAMETERS:
+    call parse_input_variable(Nlat,"NLAT",INPUTunit,default=1,comment="Number of cluster sites")
     call parse_input_variable(Norb,"NORB",INPUTunit,default=1,comment="Number of impurity orbitals (max 5).")
     call parse_input_variable(Nbath,"NBATH",INPUTunit,default=6,comment="Number of bath sites:(normal=>Nbath per orb)(hybrid=>Nbath total)(replica=>Nbath=Nreplica)")
     call parse_input_variable(Nspin,"NSPIN",INPUTunit,default=1,comment="Number of spin degeneracy (max 2)")

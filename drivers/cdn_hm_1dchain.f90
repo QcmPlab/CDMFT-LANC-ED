@@ -7,8 +7,7 @@ program ed_hm_1dchain
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx
-   integer                                                                :: iloop,Nb,Nkx,iw
+   integer                                                                :: Nx,Nlso,iloop,Nb,Nkx,iw
    logical                                                                :: converged
    real(8)                                                                :: ts,tsp,wmixing
    !Bath:
