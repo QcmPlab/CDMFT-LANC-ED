@@ -1,7 +1,7 @@
 MODULE ED_BATH
   USE SF_CONSTANTS, only: zero
   USE SF_IOTOOLS, only:free_unit,reg,file_length,txtfy
-  USE SF_LINALG, only: eye,inv
+  USE SF_LINALG, only: eye,inv,trace
   USE SF_MISC, only: assert_shape
   USE SF_ARRAYS, only: linspace
   USE ED_INPUT_VARS
@@ -20,6 +20,9 @@ MODULE ED_BATH
      module procedure ::  spin_symmetrize_bath_site
   end interface spin_symmetrize_bath
 
+  interface hermiticize_bath
+     module procedure ::  hermiticize_bath_main
+  end interface hermiticize_bath
 
   interface orb_equality_bath
      module procedure ::  orb_equality_bath_site
@@ -41,6 +44,7 @@ MODULE ED_BATH
   public :: get_bath_dimension
   public :: check_bath_dimension
   !explicit symmetries:
+  public :: hermiticize_bath
   public :: break_symmetry_bath
   public :: spin_symmetrize_bath
   public :: orb_equality_bath

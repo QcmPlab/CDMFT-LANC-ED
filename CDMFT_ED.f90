@@ -23,6 +23,7 @@ MODULE CDMFT_ED
 
   USE ED_BATH, only:                            &
        get_bath_dimension                     , &
+       hermiticize_bath                       , &
        spin_symmetrize_bath                   , &
        orb_equality_bath                      , &
        break_symmetry_bath

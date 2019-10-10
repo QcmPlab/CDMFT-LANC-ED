@@ -103,6 +103,7 @@ program ed_hm_1dchain
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
          !
+         call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)

@@ -119,6 +119,40 @@ end subroutine spin_symmetrize_bath_site
 
 !---------------------------------------------------------!
 
+subroutine hermiticize_bath_main(bath_,save)
+  real(8),dimension(:)                               :: bath_
+  real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: h_aux
+  real(8)                                            :: trax
+  logical,optional                                   :: save
+  logical                                            :: save_
+  integer                                            :: io,jo
+  save_=.true.;if(present(save))save_=save
+  write(LOGfile,"(A)")"Hermiticizing bath:"
+  !
+  call allocate_dmft_bath()
+  !call init_dmft_bathmask()
+  call set_dmft_bath(bath_)
+  !
+  do ibath=1,Nbath
+    h_aux=nnn2lso_reshape(dmft_bath%item(ibath)%h,Nlat,Nspin,Norb)
+    do io=1,Nlat*Nspin*Norb
+      do jo=io+1,Nlat*Nspin*Norb
+        h_aux(io,jo)=(h_aux(io,jo)+h_aux(jo,io))*0.5d0
+      enddo
+    enddo
+    trax=trace(h_aux)/(Nlat*Nspin*Norb)
+    do io=1,Nlat*Nspin*Norb
+      h_aux(io,io)=trax
+    enddo
+    dmft_bath%item(ibath)%h=lso2nnn_reshape(h_aux,Nlat,Nspin,Norb)
+  enddo
+  !
+  if(save_)call save_dmft_bath()
+  call get_dmft_bath(bath_)
+  call deallocate_dmft_bath()
+end subroutine hermiticize_bath_main
+!---------------------------------------------------------!
+
 
 subroutine orb_equality_bath_site(bath_,indx,save)
   real(8),dimension(:)   :: bath_
