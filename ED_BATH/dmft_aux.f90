@@ -59,19 +59,16 @@ subroutine init_dmft_bath()
   !  
   if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
   !
-  offset_b=linspace(-HWBAND,HWBAND,Nbath) 
+  if(Nbath>1)then
+   offset_b=linspace(-HWBAND,HWBAND,Nbath)
+  else
+   offset_b(1)=0.d0
+  endif
   !call random_number(noise_b)
   !
   !BATH INITIALIZATION
   do ibath=1,Nbath
-     hrep_aux=eye(Nlat*Nspin*Norb)
-     noise_b =linspace(-offset_b(ibath)/10.d0,offset_b(ibath)/10.d0,Nlat*Nspin*Norb)
-     do io=1,Nlat*Nspin*Norb
-        !hrep_aux(io,io)=noise_b(io)
-       hrep_aux(io,io)=0.d0
-     enddo
-     dmft_bath%item(ibath)%h=impHloc - (xmu+offset_b(ibath))*lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)&
-                             + lso2nnn_reshape(hrep_aux,Nlat,Nspin,Norb)
+     dmft_bath%item(ibath)%h=impHloc - (xmu+offset_b(ibath))*lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
      dmft_bath%item(ibath)%v=max(0.1d0,1.d0/sqrt(dble(Nbath)))
   enddo
   !

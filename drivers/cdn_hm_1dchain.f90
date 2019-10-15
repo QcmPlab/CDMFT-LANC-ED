@@ -23,7 +23,7 @@ program ed_hm_1dchain
    integer                                                                :: comm
    integer                                                                :: rank
    integer                                                                :: mpi_size
-   logical                                                                :: master
+   logical                                                                :: master,hermiticize
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -38,6 +38,7 @@ program ed_hm_1dchain
    call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
+   call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -52,7 +53,7 @@ program ed_hm_1dchain
    call add_ctrl_var(eps,"eps")
    
    !set global variables
-   if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
+   !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
    Nlat=Nx
    Nlso=Nlat*Nspin*Norb
    if(.not.allocated(wm))allocate(wm(Lmats))
@@ -103,7 +104,7 @@ program ed_hm_1dchain
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
          !
-         call hermiticize_bath(bath)
+         if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
@@ -111,7 +112,7 @@ program ed_hm_1dchain
       !
       call Bcast_MPI(comm,bath)
       call Bcast_MPI(comm,converged)
-      !call Bcast_MPI(comm,xmu)
+      call Bcast_MPI(comm,xmu)
       !
       if(master)call end_loop
    enddo

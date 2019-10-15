@@ -67,22 +67,17 @@ contains
     integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,i,L
     real(8),dimension(size(x))                                    :: det
     complex(8),dimension(size(x))                                 :: fg,ff
-    complex(8),dimension(Nlat*Norb,Nlat*Norb)                     :: fgorb,zeta
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: fgorb,zeta
     !
     G0and = zero
     !
     L=size(x)
     !
-    !> workout a spin-block at the time
-    Delta = delta_bath(x)
-    do ispin=1,Nspin
-       do i=1,L
-          fgorb= zero
-          zeta = (x(i)+xmu)*eye(Nlat*Norb)
-          fgorb= zeta-nn2so_reshape(impHloc(:,:,ispin,ispin,:,:)-Delta(:,:,ispin,ispin,:,:,i),Nlat,Norb)
-          call inv(fgorb)
-          G0and(:,:,ispin,ispin,:,:,i)=so2nn_reshape(fgorb,Nlat,Norb)
-       enddo
+    g0and=invg0_bath(x)
+    do i=1,L
+      fgorb=nnn2lso_reshape(g0and(:,:,:,:,:,:,i),Nlat,Nspin,Norb)
+      call inv(fgorb)
+      g0and(:,:,:,:,:,:,i)=lso2nnn_reshape(fgorb,Nlat,Nspin,Norb)
     enddo
     !
   end function g0and_bath
@@ -101,7 +96,7 @@ contains
     !
     Delta = delta_bath(x)
     do i=1,L
-       zeta = (x(i)+xmu)*eye(Nlat**Nspin*Norb)
+       zeta = (x(i)+xmu)*eye(Nlat*Nspin*Norb)
        G0and(:,:,:,:,:,:,i) = lso2nnn_reshape(zeta,Nlat,Nspin,Norb)-impHloc-Delta(:,:,:,:,:,:,i)
     enddo
   end function invg0_bath
