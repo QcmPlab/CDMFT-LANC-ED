@@ -69,12 +69,14 @@ contains
                    MaskBool=(dmft_bath%mask(isite,jsite,ispin,ispin,iorb,jorb))
                    if(.not.MaskBool)cycle
                    call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
-                   !         if(vca_gf_symmetric)then
-                   call lanc_build_gf_normal_mix_chan2(isite,jsite,iorb,jorb,ispin)
-                   !         else
-                   !            call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
-                   !            if(ed_verbose .eq. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
-                   !         endif
+                   call GFmatrix_allocate(impGmatrix(jsite,isite,ispin,ispin,jorb,iorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
+                   !if(vca_gf_symmetric)then
+                      call lanc_build_gf_normal_mix_chan2(isite,jsite,iorb,jorb,ispin)
+                      call lanc_build_gf_normal_mix_chan2(jsite,isite,jorb,iorb,ispin)
+                   !else
+                   !   call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
+                   !   call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
+                   !endif
                 enddo
              enddo
           enddo
@@ -1043,14 +1045,4 @@ contains
 
 
 END MODULE ED_GF_NORMAL
-
-
-
-
-
-
-
-
-
-
 

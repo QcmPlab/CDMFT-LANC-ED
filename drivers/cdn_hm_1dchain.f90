@@ -90,10 +90,11 @@ program ed_hm_1dchain
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
-      !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=3)
+      if(master)call dmft_print_gf_matsubara(Gmats(1,1,:,:,:,:,:),"Gloc",iprint=3)
 
       !Get the Weiss field/Delta function to be fitted
       call dmft_self_consistency(comm,Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+      if(master)call dmft_print_gf_matsubara(Weiss(1,1,:,:,:,:,:),"Weiss",iprint=3)
       call Bcast_MPI(comm,Weiss)
       !
       !MIXING:

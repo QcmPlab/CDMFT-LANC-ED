@@ -36,7 +36,6 @@ contains
     integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin,ibath
     integer                                                       :: io,jo
     real(8),dimension(Nbath)                                      :: eps,dps,vps
-    real(8),dimension(Norb,Nbath)                                 :: vops
     !
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: invH_k
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)         :: invH_knn
@@ -88,7 +87,7 @@ contains
     complex(8),dimension(:),intent(in)                            :: x
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(x)) :: G0and,Delta
     integer                                                       :: i,ilat,jlat,iorb,jorb,ispin,jspin,io,jo,Nso,L
-    complex(8),dimension(Nlat*Norb,Nlat*Norb)                     :: zeta
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: zeta
     !
     G0and = zero
     !
