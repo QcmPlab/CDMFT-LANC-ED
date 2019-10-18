@@ -1,4 +1,4 @@
-program ed_hm_1dchain
+program cdn_hm_1dchain
    USE CDMFT_ED
    !
    USE SCIFOR
@@ -209,7 +209,8 @@ contains
 
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+      complex(8),ded_hm_square_2nn
+imension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
       integer                                               :: ilat,jlat
       integer                                               :: iorb,jorb
       integer                                               :: ispin,jspin
@@ -258,6 +259,6 @@ contains
       enddo
    end function nnn2lso
 
-end program ed_hm_1dchain
+end program cdn_hm_1dchain
 
 
