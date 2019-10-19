@@ -57,8 +57,8 @@ program cdn_hm_2dsquare
 
    !set global variables
    !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
-   Ny=Nx
-   Nky=Nkx
+   !Ny=Nx
+   !Nky=Nkx
    Nlat=Nx*Ny
    Nlso=Nlat*Nspin*Norb
    if(.not.allocated(wm))allocate(wm(Lmats))
@@ -150,7 +150,7 @@ contains
       do ispin=1,Nspin
          do iorb=1,Norb
             do ilat=1,Nx
-               do jlat=1,Nx
+               do jlat=1,Ny
                   ind1=indices2N([ilat,jlat])
                   hopping_matrix(ind1,ind1,ispin,ispin,iorb,iorb)= 0.d0!-mu_var
                   if(ilat<Nx)then
@@ -161,10 +161,9 @@ contains
                      ind2=indices2N([ilat-1,jlat])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(jlat<Nx)then
+                  if(jlat<Ny)then
                      ind2=indices2N([ilat,jlat+1])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
-
                   endif
                   if(jlat>1)then
                      ind2=indices2N([ilat,jlat-1])
@@ -305,23 +304,23 @@ contains
       !
       indices(1)=mod(N,Nx)
       if(indices(1)==0)indices(1)=3
-      indices(2)=(N+1-indices(1))/Nx+1
+      indices(2)=N/Nx
    end function N2indices
 
    subroutine naming_convention()
       integer                       :: i,j
       integer,dimension(Nx,Ny)      :: matrix
       !
-      do i=1,Nx
-         do j=1,Ny
-            matrix(i,j)=indices2N([j,i])
+      do j=1,Ny
+         do i=1,Nx
+            matrix(i,j)=indices2N([i,j])
          enddo
       enddo
       !
       write(LOGfile,"(A)")"The unique index of each site (on the cartesian plane) is as follows:"
       write(LOGfile,"(A)")" "
       do j=1,Ny
-         write(LOGfile,"(20(I2,2x))")(matrix(Ny+1-j,i),i =1,Nx)
+         write(LOGfile,"(20(I2,2x))")(matrix(i,Ny+1-j),i =1,Nx)
       enddo
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
