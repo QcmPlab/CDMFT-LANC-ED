@@ -40,7 +40,7 @@ program cdn_hm_2dsquare
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
-   call parse_input_variable(Nkx,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
+   call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
    call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
    !
    call ed_read_input(trim(finput),comm)
