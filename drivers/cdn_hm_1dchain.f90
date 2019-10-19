@@ -209,8 +209,7 @@ contains
 
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
-      complex(8),ded_hm_square_2nn
-imension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
       integer                                               :: ilat,jlat
       integer                                               :: iorb,jorb
       integer                                               :: ispin,jspin
