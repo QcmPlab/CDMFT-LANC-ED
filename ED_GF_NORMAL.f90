@@ -66,7 +66,8 @@ contains
                 do jorb=1,Norb
                    if(isite==jsite .and. iorb==jorb)cycle
                    MaskBool=.true.   
-                   MaskBool=(dmft_bath%mask(isite,jsite,ispin,ispin,iorb,jorb))
+                   if(impHloc(isite,jsite,ispin,ispin,iorb,jorb).eq.0.d0)MaskBool=.false.
+                   !if((DREAL(impHloc(isite,jsite,ispin,ispin,iorb,jorb)).eq.0.d0).and.(DIMAG(impHloc(isite,jsite,ispin,ispin,iorb,jorb))))MaskBool=.false.
                    if(.not.MaskBool)cycle
                    call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
                    call GFmatrix_allocate(impGmatrix(jsite,isite,ispin,ispin,jorb,iorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
