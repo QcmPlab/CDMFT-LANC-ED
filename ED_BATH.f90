@@ -7,32 +7,36 @@ MODULE ED_BATH
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
   USE ED_AUX_FUNX
+  USE ED_HLOC_DECOMPOSITION
   implicit none
 
   private
 
 
-  interface break_symmetry_bath
-     module procedure :: break_symmetry_bath_site
-  end interface break_symmetry_bath
+  !interface break_symmetry_bath
+     !module procedure :: break_symmetry_bath_site
+  !end interface break_symmetry_bath
 
-  interface spin_symmetrize_bath
-     module procedure ::  spin_symmetrize_bath_site
-  end interface spin_symmetrize_bath
+  !interface spin_symmetrize_bath
+     !module procedure ::  spin_symmetrize_bath_site
+  !end interface spin_symmetrize_bath
 
-  interface hermiticize_bath
-     module procedure ::  hermiticize_bath_main
-  end interface hermiticize_bath
+  !interface hermiticize_bath
+     !module procedure ::  hermiticize_bath_main
+  !end interface hermiticize_bath
 
-  interface orb_equality_bath
-     module procedure ::  orb_equality_bath_site
-  end interface orb_equality_bath
+  !interface orb_equality_bath
+     !module procedure ::  orb_equality_bath_site
+  !end interface orb_equality_bath
 
-  interface ph_symmetrize_bath
-     module procedure ::  ph_symmetrize_bath_site
-  end interface ph_symmetrize_bath
+  !interface ph_symmetrize_bath
+     !module procedure ::  ph_symmetrize_bath_site
+  !end interface ph_symmetrize_bath
 
-
+  interface get_bath_dimension
+     module procedure ::  get_bath_dimension_direct
+     module procedure ::  get_bath_dimension_symmetries
+  end interface get_bath_dimension
 
 
 
@@ -42,13 +46,13 @@ MODULE ED_BATH
   !
   !##################################################################
   public :: get_bath_dimension
-  public :: check_bath_dimension
+  !public :: check_bath_dimension
   !explicit symmetries:
-  public :: hermiticize_bath
-  public :: break_symmetry_bath
-  public :: spin_symmetrize_bath
-  public :: orb_equality_bath
-  public :: ph_symmetrize_bath
+  !public :: hermiticize_bath
+  !public :: break_symmetry_bath
+  !public :: spin_symmetrize_bath
+  !public :: orb_equality_bath
+  !public :: ph_symmetrize_bath
 
 
 
@@ -84,46 +88,46 @@ MODULE ED_BATH
 contains
 
 
-  function mask_hloc(hloc,wdiag,uplo) result(Hmask)
-    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
-    logical,optional                                   :: wdiag,uplo
-    logical                                            :: wdiag_,uplo_
-    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
-    integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
-    !
-    wdiag_=.false.;if(wdiag)wdiag_=wdiag
-    uplo_ =.false.;if(uplo)  uplo_=uplo
-    !
-    Hmask=.false.
-    where(abs(Hloc)>1d-6)Hmask=.true.
-    !
-    if(wdiag_)then
-       do ispin=1,Nspin
-          do ilat=1,Nlat
-             do iorb=1,Norb
-                Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
-             enddo
-          enddo
-       enddo
-    endif
-    !
-    if(uplo_)then
-       do ispin=1,Nspin
-          do ilat=1,Nlat
-             do jlat=1,Nlat
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      io = index_stride_lso(ilat,ispin,iorb)
-                      jo = index_stride_lso(jlat,ispin,jorb)
-                      if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-    endif
-    !
-  end function mask_hloc
+  !function mask_hloc(hloc,wdiag,uplo) result(Hmask)
+    !real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+    !logical,optional                                   :: wdiag,uplo
+    !logical                                            :: wdiag_,uplo_
+    !logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+    !integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
+    !!
+    !wdiag_=.false.;if(wdiag)wdiag_=wdiag
+    !uplo_ =.false.;if(uplo)  uplo_=uplo
+    !!
+    !Hmask=.false.
+    !where(abs(Hloc)>1d-6)Hmask=.true.
+    !!
+    !if(wdiag_)then
+       !do ispin=1,Nspin
+          !do ilat=1,Nlat
+             !do iorb=1,Norb
+                !Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
+             !enddo
+          !enddo
+       !enddo
+    !endif
+    !!
+    !if(uplo_)then
+       !do ispin=1,Nspin
+          !do ilat=1,Nlat
+             !do jlat=1,Nlat
+                !do iorb=1,Norb
+                   !do jorb=1,Norb
+                      !io = index_stride_lso(ilat,ispin,iorb)
+                      !jo = index_stride_lso(jlat,ispin,jorb)
+                      !if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
+                   !enddo
+                !enddo
+             !enddo
+          !enddo
+       !enddo
+    !endif
+    !!
+  !end function mask_hloc
 
 
 

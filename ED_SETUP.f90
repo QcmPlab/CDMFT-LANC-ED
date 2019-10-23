@@ -27,8 +27,6 @@ MODULE ED_SETUP
   public :: build_sector
   public :: delete_sector
   !
-  public :: imp_state_index
-  !
   public :: get_Sector
   public :: get_Indices
   public :: get_Nup
@@ -698,14 +696,6 @@ contains
   end subroutine delete_sector
 
 
-
-  !> Find position in the state vector for a given lattice-spin-orbital position for the cluster (no bath considered)
-  function imp_state_index(ilat,iorb) result(indx)  
-    integer :: ilat
-    integer :: iorb
-    integer :: indx
-    indx = iorb + (ilat-1)*Norb
-  end function imp_state_index
 
 
 

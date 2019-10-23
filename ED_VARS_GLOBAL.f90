@@ -7,20 +7,41 @@ MODULE ED_VARS_GLOBAL
   USE SF_MPI
 #endif
   implicit none
+  !-------------------- H EXPANSION STRUCTURE ----------------------!
+  type H_operator
+     complex(8),dimension(:,:,:,:,:,:),allocatable   :: O          !Replica hamilt
+  end type H_operator
 
+  type(H_operator),dimension(:),allocatable             :: H_basis
+  real(8),dimension(:),allocatable                      :: lambda_impHloc
+  
 
   !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
   type effective_bath_component
-     real(8)                                       :: v     !spin-keep hyb.
-     real(8),dimension(:,:,:,:,:,:),allocatable    :: h     !Replica hamilt [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+     integer                          :: N_dec
+     real(8)                          :: v          !spin-keep hyb.
+     real(8),dimension(:),allocatable :: lambda
   end type effective_bath_component
 
   type effective_bath
-     integer                                                 :: Nmask
      type(effective_bath_component),dimension(:),allocatable :: item
-     logical(8),dimension(:,:,:,:,:,:),allocatable           :: mask  !impHloc mask   [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
      logical                                                 :: status=.false.
   end type effective_bath
+
+
+
+ !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
+  !type effective_bath_component
+     !real(8)                                       :: v     !spin-keep hyb.
+     !real(8),dimension(:,:,:,:,:,:),allocatable    :: h     !Replica hamilt [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+  !end type effective_bath_component
+
+  !type effective_bath
+     !integer                                                 :: Nmask
+     !type(effective_bath_component),dimension(:),allocatable :: item
+     !logical(8),dimension(:,:,:,:,:,:),allocatable           :: mask  !impHloc mask   [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+     !logical                                                 :: status=.false.
+  !end type effective_bath
 
 
 
@@ -93,6 +114,7 @@ MODULE ED_VARS_GLOBAL
   !INTERNAL USE (accessed thru functions)
   !=========================================================
   real(8),dimension(:,:,:,:,:,:),allocatable         :: impHloc           !local hamiltonian [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+  type(H_repr)                                       :: impHloc_sym
 
 
   !Some maps between sectors and full Hilbert space (pointers)
