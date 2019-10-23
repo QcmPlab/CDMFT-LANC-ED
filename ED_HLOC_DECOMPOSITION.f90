@@ -62,25 +62,29 @@ MODULE ED_HLOC_DECOMPOSITION
    !initialize impHloc and the set [H_basis,lambda_impHloc]
 
    subroutine init_hloc_direct(Hloc)
-      integer                                               :: ilat,jlat,ispin,iorb,jorb,counter,io,jo,Nsym
+      integer                                               :: ilat,jlat,ispin,jspin,iorb,jorb,counter,io,jo,Nsym
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hloc
       logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
       !
       !
       impHloc=lso2nnn_reshape(Hloc,Nlat,Nspin,Norb)
+      !
       Hmask=.false.
+      !SPIN DIAGONAL
       do ispin=1,Nspin
-         do ilat=1,Nlat
-            do jlat=1,Nlat
-               do iorb=1,Norb
-                  do jorb=1,Norb
-                     io=imp_state_index(ilat,iorb)
-                     jo=imp_state_index(jlat,jorb)
-                     if((impHloc(ilat,jlat,ispin,ispin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                        counter=counter+1
-                        !COMPLEX
-                        !if(io.ne.jo)counter=counter+1
-                     endif
+         do jspin=1,Nspin
+            do ilat=1,Nlat
+               do jlat=1,Nlat
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        io=index_stride_lso(ilat,ispin,iorb)
+                        jo=index_stride_lso(jlat,jspin,jorb)
+                        if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                           counter=counter+1
+                           !COMPLEX
+                           !if(io.ne.jo)counter=counter+1
+                        endif
+                     enddo
                   enddo
                enddo
             enddo
@@ -92,28 +96,30 @@ MODULE ED_HLOC_DECOMPOSITION
       counter=0
       !
       do ispin=1,Nspin
-         do ilat=1,Nlat
-            do jlat=1,Nlat
-               do iorb=1,Norb
-                  do jorb=1,Norb
-                     io=imp_state_index(ilat,iorb)
-                     jo=imp_state_index(jlat,jorb)
-                     if((impHloc(ilat,jlat,ispin,ispin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                        counter=counter+1
-                        H_basis(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=one
-                        H_basis(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=one
-                        !REAL
-                        lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
-                        !COMPLEX
-                        !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
-                        !
-                        !if(io.ne.jo)then
-                        !counter=counter+1
-                           !H_basis(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=xi
-                           !H_basis(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=-xi
-                           !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
-                        !endif
-                     endif
+         do jspin=1,Nspin
+            do ilat=1,Nlat
+               do jlat=1,Nlat
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        io=index_stride_lso(ilat,ispin,iorb)
+                        jo=index_stride_lso(jlat,jspin,jorb)
+                        if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                           counter=counter+1
+                           H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                           H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                           !REAL
+                           lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
+                           !COMPLEX
+                           !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           !
+                           !if(io.ne.jo)then
+                           !counter=counter+1
+                              !H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=xi
+                              !H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=-xi
+                              !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           !endif
+                        endif
+                     enddo
                   enddo
                enddo
             enddo

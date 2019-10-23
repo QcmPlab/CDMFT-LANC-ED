@@ -6,7 +6,8 @@ subroutine deallocate_dmft_bath()
    if(.not.dmft_bath%status)return
    do ibath=1,Nbath
       dmft_bath%item(ibath)%v = 0d0
-      call deallocate_h_repr(dmft_bath%item(ibath)%h)
+      dmft_bath%item(ibath)%N_dec=0
+      deallocate(dmft_bath%item(ibath)%lambda)
    enddo
    deallocate(dmft_bath%item)
    dmft_bath%status=.false.
@@ -21,24 +22,26 @@ subroutine allocate_dmft_bath()
    integer :: ibath,isym,Nsym
    real(8) :: maxdiff
    !
-   if(.not.allocated(impHloc))stop "impHloc not allocated in allocate_dmft_bath" !FIXME
+   if(.not.allocated(lambda_impHloc))stop "lambda_impHloc not allocated in allocate_dmft_bath" !FIXME
 
    call deallocate_dmft_bath()
    !
    allocate(dmft_bath%item(Nbath))
    !
    !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   Nsym=impHloc_sym%N_dec
+   Nsym=size(lambda_impHloc)
    !
-   do isym=1,impHloc_sym%N_dec
-      maxdiff=maxval(impHloc_sym%decomposition(isym)%O-lso2nnn_reshape(eye(Nlat*Nspin*Norb)))
+   do isym=1,size(lambda_impHloc)
+      maxdiff=maxval(DREAL(H_Basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
       if(maxdiff .lt. 1d-6) Nsym=Nsym+1
+      exit
    enddo
    !
-   !ALLOCATE H MATRICES
+   !ALLOCATE coefficients vectors
    !
    do ibath=1,Nbath
-      call allocate_h_repr(dmft_bath%item(ibath)%h,Nsym)
+      dmft_Bath%item(ibath)%N_dec=Nsym
+      allocate(dmft_bath%item(ibath)%lambda(Nsym))
    enddo
    !
    dmft_bath%status=.true.
@@ -46,7 +49,29 @@ end subroutine allocate_dmft_bath
 
 
 
+!+-------------------------------------------------------------------+
+!PURPOSE  : Reconstruct bath matrix from lambda vector
+!+-------------------------------------------------------------------+
 
+function bath_from_sym(lambdavec) result (Hbath)
+   integer                                               :: Nsym,Nsym_,isym
+   real(8),dimension(:)                                  :: lambdavec
+   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hbath
+   !
+   Nsym=size(lambdavec)
+   Nsym_=size(lambda_impHloc)
+   !
+   Hbath=zero
+   !
+   do isym=1,Nsym
+      Hbath=Hbath+lambdavec(isym)*H_Basis(isym)%O
+   enddo
+   !
+   !IF NO IDENTITY WAS DECLARED, ADD IT WITH THE OFFSET
+   !
+   if(Nsym.ne.Nsym_)Hbath=Hbath+lso2nnn_reshape(lambdavec(Nsym_+1)*eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
+   !
+end function bath_from_sym
 
 
 !+------------------------------------------------------------------+
@@ -76,24 +101,21 @@ subroutine init_dmft_bath()
       dmft_bath%item(ibath)%v=max(0.1d0,1.d0/sqrt(dble(Nbath)))
    enddo
    !
-   !BATH MATRICES INITIALIZATION
+   !BATH LAMBDAS INITIALIZATION
    do ibath=1,Nbath
-      Nsym = dmft_bath%item(ibath)%h%N_dec
-      Nsym_= impHloc_sym%N_dec
+      Nsym = dmft_bath%item(ibath)%N_dec
+      Nsym_= size(lambda_impHloc)
       if(Nsym .ne. Nsym_)then
-         dmft_bath%item(ibath)%h%decomposition(1)%O      =  lso2nnn_reshape(eye(Nlat*Nspin*Norb))
-         dmft_bath%item(ibath)%h%decomposition(1)%lambda =  xmu+offset_b(ibath)
-         do isym=2,Nsym
-            dmft_bath%item(ibath)%h%decomposition(isym)%O      =  impHloc_sym%decomposition(isym)%O
-            dmft_bath%item(ibath)%h%decomposition(isym)%lambda =  impHloc_sym%decomposition(isym)%lambda
+         do isym=1,Nsym_
+            dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
          enddo
+         dmft_bath%item(ibath)%lambda(Nsym_+1) =  xmu+offset_b(ibath)  !ADD THE OFFSET (IDENTITY)
       else
          do isym=1,Nsym
-            dmft_bath%item(ibath)%h%decomposition(isym)%O      =  impHloc_sym%decomposition(isym)%O
-            dmft_bath%item(ibath)%h%decomposition(isym)%lambda =  impHloc_sym%decomposition(isym)%lambda
-            maxdiff=maxval(impHloc_sym%decomposition(isym)%O-lso2nnn_reshape(eye(Nlat*Nspin*Norb)))
-            if(maxdiff<1.d-6) dmft_bath%item(ibath)%h%decomposition(isym)%lambda =&
-               dmft_bath%item(ibath)%h%decomposition(isym)%lambda + (xmu+offset_b(ibath))
+            dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
+            maxdiff=maxval(DREAL(H_basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+            if(maxdiff<1.d-6) dmft_bath%item(ibath)%lambda(isym) =&
+               dmft_bath%item(ibath)%lambda(isym) + (xmu+offset_b(ibath))
          enddo
       endif
    enddo
@@ -107,23 +129,14 @@ subroutine init_dmft_bath()
       !
       open(unit,file=trim(Hfile)//trim(ed_file_suffix)//".restart")
       !
-      !read V
       !
       do ibath=1,Nbath
+         !read number of lambdas
+         read(unit,"(I3)")Nsym
+         !read V
          read(unit,"(F21.12,1X)")dmft_bath%item(ibath)%v
-      enddo
-      !
-      !read number of lambdas
-      read(unit,"(I3)")Nsym
-      !read lambdas and O
-      do isym=1,Nsym
-         do ibath=1,Nbath
-            read(unit,"(F21.12,1X)")dmft_bath%item(ibath)%h%decomposition(isym)%lambda
-         enddo
-         do io=1,Nlat*Nspin*Norb
-            read(unit,*)(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
-         enddo
-         dmft_bath%item(ibath)%h%decomposition(isym)%O=lso2nnn_reshape(hrep_aux,Nlat,Nspin,Norb)
+         !read lambdas
+         read(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,Nsym)
       enddo
       close(unit)
    endif
@@ -155,7 +168,7 @@ subroutine write_dmft_bath(unit)
    if(unit_==LOGfile)then
       do ibath=1,Nbath
          hrep_aux=0d0
-         hrep_aux_nnn=H_from_symm(dmft_bath%item(ibath)%h)
+         hrep_aux_nnn=bath_from_sym(dmft_bath%item(ibath)%lambda)
          Hrep_aux=DREAL(nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb))
          write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|",( hrep_aux(1,jo),jo=1,Nlat*Nspin*Norb)        
          do io=2,Nlat*Nspin*Norb
@@ -165,21 +178,12 @@ subroutine write_dmft_bath(unit)
       enddo
    else
       do ibath=1,Nbath
-         write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
-      enddo
-      !
-      !write number of lambdas
-      write(unit,"(I3)")dmft_bath%item(ibath)%h%N_dec
-      !write lambdas and O
-      do isym=1,dmft_bath%item(ibath)%h%N_dec
-         do ibath=1,Nbath
-            write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%h%decomposition(isym)%lambda
-         enddo
-         !O are the same for each replica
-         hrep_aux=dmft_bath%item(1)%h%decomposition(isym)%O
-         do io=1,Nlat*Nspin*Norb
-            write(unit,*)(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
-         enddo
+        !write number of lambdas
+        write(unit,"(I3)")dmft_bath%item(ibath)%N_dec
+        !write Vs
+        write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
+        !write lambdas
+         write(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,dmft_bath%item(ibath)%N_dec)
       enddo
    endif
    !
@@ -218,9 +222,9 @@ end subroutine save_dmft_bath
 !PURPOSE  : copy the bath components back to a 1-dim array 
 !+-------------------------------------------------------------------+
 subroutine set_dmft_bath(bath_)
-   real(8),dimension(:)   :: bath_
-   integer                :: stride,ibath,Nmask,io,jo,isym
-   logical                :: check
+   real(8),dimension(:)                               :: bath_
+   integer                                            :: stride,ibath,Nmask,io,jo,isym
+   logical                                            :: check
    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Haux
    !
    if(.not.dmft_bath%status)stop "get_dmft_bath error: bath not allocated"
@@ -229,24 +233,22 @@ subroutine set_dmft_bath(bath_)
    !if(.not.check)stop "get_dmft_bath error: wrong bath dimensions"
    !
    do ibath=1,Nbath
-      do isym=1,dmft_bath%item(ibath)%h%N_dec
-         dmft_bath%item(ibath)%v=0d0
-         dmft_bath%item(ibath)%h%decomposition(isym)%lambda=0d0
-      enddo
+      dmft_bath%item(ibath)%N_dec=0
+      dmft_bath%item(ibath)%v=0d0
+      dmft_bath%item(ibath)%lambda=0d0
    enddo
    !
    stride = 0
-   !Get Vs
    do ibath=1,Nbath
+      !Get N_dec
+      stride = stride + 1
+      dmft_bath%item(ibath)%N_dec=bath_(stride)
+      !Get Vs
       stride = stride + 1
       dmft_bath%item(ibath)%v = bath_(stride)
-   enddo
-   !Get lambdas
-   do ibath=1,Nbath
-      do isym=1,dmft_bath%item(ibath)%h%N_dec
-         stride=stride+1
-         dmft_bath%item(ibath)%h%decomposition(isym)%lambda=bath_(stride)
-      enddo
+      !get Lambdas
+      dmft_bath%item(ibath)%lambda=bath_(stride+1:stride+dmft_bath%item(ibath)%N_dec)
+      stride=stride+dmft_bath%item(ibath)%N_dec
    enddo
    !
 end subroutine set_dmft_bath
@@ -272,17 +274,16 @@ subroutine get_dmft_bath(bath_)
    bath_=0.d0
    !
    stride = 0
-   !Set Vs
    do ibath=1,Nbath
+      !Get N_dec
+      stride = stride + 1
+      bath_(stride)=dmft_bath%item(ibath)%N_dec
+      !Get Vs
       stride = stride + 1
       bath_(stride)=dmft_bath%item(ibath)%v
-   enddo
-   !Set Lambdas
-   do ibath=1,Nbath
-      do isym=1,dmft_bath%item(ibath)%h%N_dec
-         stride = stride + 1
-         bath_(stride)=dmft_bath%item(ibath)%h%decomposition(isym)%lambda
-      enddo
+      !get Lambdas
+      bath_(stride+1:stride+dmft_bath%item(ibath)%N_dec)=dmft_bath%item(ibath)%lambda      
+      stride=stride+dmft_bath%item(ibath)%N_dec
    enddo
 end subroutine get_dmft_bath
 

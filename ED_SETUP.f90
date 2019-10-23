@@ -49,6 +49,8 @@ MODULE ED_SETUP
   public :: get_twin_sector
   public :: flip_state
   !
+  public :: imp_state_index
+  !
   public :: binary_search
 
 #ifdef _MPI
@@ -502,6 +504,13 @@ contains
     idw = (i-1)/DimUp+1
   end function idw_index
 
+  !> Find position in the state vector for a given lattice-spin-orbital position for the cluster (no bath considered)
+  function imp_state_index(ilat,iorb) result(indx)  
+    integer :: ilat
+    integer :: iorb
+    integer :: indx
+    indx = iorb + (ilat-1)*Norb
+  end function imp_state_index
 
 
 

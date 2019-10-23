@@ -73,6 +73,7 @@ MODULE ED_BATH
   public :: save_dmft_bath                   !INTERNAL (for effective_bath)
   public :: set_dmft_bath                    !INTERNAL (for effective_bath)
   public :: get_dmft_bath                    !INTERNAL (for effective_bath)
+  public :: bath_from_sym                    !INTERNAL (for effective_bath)
   !
 
 
@@ -88,46 +89,46 @@ MODULE ED_BATH
 contains
 
 
-  !function mask_hloc(hloc,wdiag,uplo) result(Hmask)
-    !real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
-    !logical,optional                                   :: wdiag,uplo
-    !logical                                            :: wdiag_,uplo_
-    !logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
-    !integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
-    !!
-    !wdiag_=.false.;if(wdiag)wdiag_=wdiag
-    !uplo_ =.false.;if(uplo)  uplo_=uplo
-    !!
-    !Hmask=.false.
-    !where(abs(Hloc)>1d-6)Hmask=.true.
-    !!
-    !if(wdiag_)then
-       !do ispin=1,Nspin
-          !do ilat=1,Nlat
-             !do iorb=1,Norb
-                !Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
-             !enddo
-          !enddo
-       !enddo
-    !endif
-    !!
-    !if(uplo_)then
-       !do ispin=1,Nspin
-          !do ilat=1,Nlat
-             !do jlat=1,Nlat
-                !do iorb=1,Norb
-                   !do jorb=1,Norb
-                      !io = index_stride_lso(ilat,ispin,iorb)
-                      !jo = index_stride_lso(jlat,ispin,jorb)
-                      !if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
-                   !enddo
-                !enddo
-             !enddo
-          !enddo
-       !enddo
-    !endif
-    !!
-  !end function mask_hloc
+  function mask_hloc(hloc,wdiag,uplo) result(Hmask)
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+    logical,optional                                   :: wdiag,uplo
+    logical                                            :: wdiag_,uplo_
+    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+    integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
+    !
+    wdiag_=.false.;if(wdiag)wdiag_=wdiag
+    uplo_ =.false.;if(uplo)  uplo_=uplo
+    !
+    Hmask=.false.
+    where(abs(Hloc)>1d-6)Hmask=.true.
+    !
+    if(wdiag_)then
+       do ispin=1,Nspin
+          do ilat=1,Nlat
+             do iorb=1,Norb
+                Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
+             enddo
+          enddo
+       enddo
+    endif
+    !
+    if(uplo_)then
+       do ispin=1,Nspin
+          do ilat=1,Nlat
+             do jlat=1,Nlat
+                do iorb=1,Norb
+                   do jorb=1,Norb
+                      io = index_stride_lso(ilat,ispin,iorb)
+                      jo = index_stride_lso(jlat,ispin,jorb)
+                      if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
+                   enddo
+                enddo
+             enddo
+          enddo
+       enddo
+    endif
+    !
+  end function mask_hloc
 
 
 

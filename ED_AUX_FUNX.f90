@@ -75,7 +75,6 @@ MODULE ED_AUX_FUNX
   !
   public :: ed_search_variable
   !
-  public :: imp_state_index
 
 
 
@@ -691,13 +690,6 @@ contains
   end subroutine ed_search_variable
 
 
-  !> Find position in the state vector for a given lattice-spin-orbital position for the cluster (no bath considered)
-  function imp_state_index(ilat,iorb) result(indx)  
-    integer :: ilat
-    integer :: iorb
-    integer :: indx
-    indx = iorb + (ilat-1)*Norb
-  end function imp_state_index
 
 
 

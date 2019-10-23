@@ -4,22 +4,21 @@
 !+-------------------------------------------------------------------+
 function get_bath_dimension_direct(Hloc_nn) result(bath_size)
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb),intent(in)          :: Hloc_nn
+  real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hloc
   integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,iorb,jorb,io,jo
-  type(H_repr)                                                              :: Hloc
   logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hmask
   !
-  !off-diagonal non-vanishing elements
   Hloc=dreal(Hloc_nn)
   !
-  ! !Real part of nondiagonal elements
-  Hmask = mask_hloc(Hloc,wdiag=.false.,uplo=.true.)
+  !Real part of nonzero elements
+  Hmask = mask_hloc(Hloc,wdiag=.true.,uplo=.true.)
   ndx   = count(Hmask)          !all elements
   !
-  !Imaginary part of nondiagonal elements
-  Ndx=2*Ndx
+  !COMPLEX:Imaginary part of nondiagonal elements
+  !Hmask = mask_hloc(Hloc,wdiag=.false.,uplo=.true.)
+  !ndx   = ndx+count(Hmask)          !all elements
   !
   !Diagonal elements are always there
-  Ndx=Ndx+Nlat*Nspin*Norb
   !number of non vanishing elements for each replica
   ndx = ndx * Nbath
   !diagonal hybridizations: Vs
@@ -40,8 +39,8 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   !
   ndx=Nsym+1
   do isym=1,Nsym
-     maxdiff=maxval(impHloc_sym%decomposition(isym)%O-lso2nnn_reshape(eye(Nlat*Nspin*Norb)))
-     if(maxdiff)Nsym=Nsym-1
+     maxdiff=maxval(DREAL(H_basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+     if(maxdiff.lt.1d-6)Nsym=Nsym-1
   enddo
   !
   !number of non vanishing elements for each replica
