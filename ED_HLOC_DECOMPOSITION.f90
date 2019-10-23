@@ -10,8 +10,8 @@ MODULE ED_HLOC_DECOMPOSITION
    end interface set_Hloc
 
    public:: set_Hloc
-   public:: allocate_h_repr
-   public:: deallocate_h_repr
+   public:: allocate_h_basis
+   public:: deallocate_h_basis
 
    contains
 
@@ -19,54 +19,76 @@ MODULE ED_HLOC_DECOMPOSITION
    ! PURPOSE: INITIALIZE INTERNAL HLOC STRUCTURES
    !-------------------------------------------------------------------!
 
-   subroutine allocate_h_repr(H,N)
+   !allocate GLOBAL basis for H (used for impHloc and bath) and vectors coefficient
+
+   subroutine allocate_h_basis(N)
       integer              :: N,isym
-      type(H_repr)         :: H
       !
-      H%N_dec=N
-      allocate(H%decomposition(N))
+      allocate(H_basis(N))
+      allocate(lambda_impHloc(N))
       do isym=1,N
-         H%decomposition(isym)%lambda=0.d0
-         allocate(H%decomposition(isym)%O(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+         allocate(H_basis(isym)%O(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+         H_basis(isym)%O=0.d0
+         lambda_impHloc(isym)=0.d0
       enddo
-   end subroutine allocate_h_repr
+   end subroutine allocate_h_basis
 
-   subroutine deallocate_h_repr(H)
+
+   !deallocate GLOBAL basis for H (used for impHloc and bath) and vectors coefficient
+
+   subroutine deallocate_h_basis()
       integer              :: isym
-      type(H_repr)         :: H
       !
-      do isym=1,H%N_dec
-         H%decomposition(isym)%lambda=0.d0
-         deallocate(H%decomposition(isym)%O)
+      do isym=1,size(H_basis)
+         deallocate(H_basis(isym)%O)
       enddo
-      deallocate(H%decomposition)
-   end subroutine deallocate_h_repr
+      deallocate(H_basis)
+   end subroutine deallocate_h_basis
 
-   function H_from_sym(H_sym) result (H)
-      type(H_repr)                                                 :: H_sym
+   !reconstruct [Nlat][][Nspin][][Norb][] hamiltonian from basis expansion given [lambda]
+
+   function H_from_sym(lambdavec) result (H)
+      real(8),dimension(:)                                         :: lambdavec
       integer                                                      :: isym
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)        :: H
       !
+      if(size(lambdavec).ne.size(H_basis)) STOP "H_from_sym: Wrong coefficient vector size"
       H=zero
-      do isym=1,H_sym%N_dec
-         H=H+H_sym%decomposition(isym)%lambda*H_sym%decomposition(isym)%O
+      do isym=1,size(lambdavec)
+         H=H+lambdavec(isym)*H_basis(isym)%O
       enddo
    end function H_from_sym
 
+   !initialize impHloc and the set [H_basis,lambda_impHloc]
+
    subroutine init_hloc_direct(Hloc)
-      integer                                               :: ilat,jlat,ispin,iorb,jorb,counter,io,jo
+      integer                                               :: ilat,jlat,ispin,iorb,jorb,counter,io,jo,Nsym
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hloc
       logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
       !
       !
       impHloc=lso2nnn_reshape(Hloc,Nlat,Nspin,Norb)
       Hmask=.false.
-      where(abs(impHloc)>1d-6)Hmask=.true.
+      do ispin=1,Nspin
+         do ilat=1,Nlat
+            do jlat=1,Nlat
+               do iorb=1,Norb
+                  do jorb=1,Norb
+                     io=imp_state_index(ilat,iorb)
+                     jo=imp_state_index(jlat,jorb)
+                     if((impHloc(ilat,jlat,ispin,ispin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                        counter=counter+1
+                        !COMPLEX
+                        !if(io.ne.jo)counter=counter+1
+                     endif
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
       !
-      !REAL
-      call allocate_h_repr(impHloc_sym,2*count(Hmask))
-      !COMPLEX
-      !call allocate_h_repr(impHloc_sym,2*count(Hmask))
+      call allocate_h_basis(counter)
+      !
       counter=0
       !
       do ispin=1,Nspin
@@ -76,22 +98,21 @@ MODULE ED_HLOC_DECOMPOSITION
                   do jorb=1,Norb
                      io=imp_state_index(ilat,iorb)
                      jo=imp_state_index(jlat,jorb)
-                     if((Hmask(ilat,jlat,ispin,ispin,iorb,jorb)).and.(io.le.jo))then
+                     if((impHloc(ilat,jlat,ispin,ispin,iorb,jorb).ne.zero).and.(io.le.jo))then
                         counter=counter+1
-                        !
-                        impHloc_sym%decomposition(counter)%O=zero
-                        !
-                        impHloc_sym%decomposition(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=one
-                        impHloc_sym%decomposition(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=one
+                        H_basis(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=one
+                        H_basis(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=one
                         !REAL
-                        impHloc_sym%decomposition(counter)%lambda=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
+                        lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
                         !COMPLEX
-                        !impHloc_sym%decomposition(counter)%lambda=DREAL(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                        !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
                         !
+                        !if(io.ne.jo)then
                         !counter=counter+1
-                        !impHloc_sym%decomposition(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=xi
-                        !impHloc_sym%decomposition(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=-xi
-                        !impHloc_sym%decomposition(counter)%lambda=DIMAG(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                           !H_basis(counter)%O(ilat,jlat,ispin,ispin,iorb,jorb)=xi
+                           !H_basis(counter)%O(jlat,ilat,ispin,ispin,jorb,iorb)=-xi
+                           !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                        !endif
                      endif
                   enddo
                enddo
@@ -101,18 +122,23 @@ MODULE ED_HLOC_DECOMPOSITION
    end subroutine init_hloc_direct
 
 
-   subroutine init_hloc_symmetries(Hvec,lambdavec,N)
-      integer                                                       :: isym,N
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,N)       :: Hvec
-      real(8),dimension(N)                                          :: lambdavec
+   subroutine init_hloc_symmetries(Hvec,lambdavec)
+      integer                                   :: isym,N
+      complex(8),dimension(:,:,:,:,:,:,:)       :: Hvec
+      real(8),dimension(:)                      :: lambdavec
       !
-      call allocate_h_repr(impHloc_sym,N)
+      if(size(lambdavec).ne.size(H_basis)) STOP "Init_hloc: Wrong coefficient vector size"
+      if(size(Hvec(1,1,1,1,1,1,:)).ne.size(H_basis)) STOP "Init_hloc: Wrong H_basis size"
+      !
+      N=size(lambdavec)
+      !
+      call allocate_h_basis(N)
       do isym=1,N
-         impHloc_sym%decomposition(isym)%lambda= lambdavec(isym)
-         impHloc_sym%decomposition(isym)%O     = Hvec(:,:,:,:,:,:,isym)
+         lambda_impHloc(isym)= lambdavec(isym)
+         H_basis(isym)%O     = Hvec(:,:,:,:,:,:,isym)
       enddo
       !
-      impHloc=H_from_sym(impHloc_sym)
+      impHloc=H_from_sym(lambda_impHloc)
       !
    end subroutine init_hloc_symmetries
 

@@ -114,7 +114,6 @@ MODULE ED_VARS_GLOBAL
   !INTERNAL USE (accessed thru functions)
   !=========================================================
   real(8),dimension(:,:,:,:,:,:),allocatable         :: impHloc           !local hamiltonian [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-  type(H_repr)                                       :: impHloc_sym
 
 
   !Some maps between sectors and full Hilbert space (pointers)
