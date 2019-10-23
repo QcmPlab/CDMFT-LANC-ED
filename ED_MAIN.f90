@@ -3,6 +3,7 @@ module ED_MAIN
   USE ED_VARS_GLOBAL
   USE ED_EIGENSPACE, only: state_list,es_delete_espace,delete_eigenspace
   USE ED_AUX_FUNX
+  USE ED_HLOC_DECOMPOSITION
   USE ED_SETUP
   USE ED_BATH
   USE ED_HAMILTONIAN
@@ -59,14 +60,14 @@ contains
     !Init bath:
     call set_Hloc(Hloc)
     !
-    check = check_bath_dimension(bath,dreal(Hloc))
-    if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
+    !check = check_bath_dimension(bath,dreal(Hloc))
+    !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
     !
     bath = 0d0
     !
     call allocate_dmft_bath()
     if( (Nspin>1) .AND. &
-         any(dmft_bath%mask(:,:,1,Nspin,:,:)) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
+         any(Hloc(:,:,1,Nspin,:,:).ne.0d0) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
     call get_dmft_bath(bath)    !dmft_bath --> user_bath
     !
@@ -99,15 +100,15 @@ contains
     !Init bath:
     call set_hloc(Hloc)
     !
-    check = check_bath_dimension(bath,dreal(Hloc))
-    if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
+    !check = check_bath_dimension(bath,dreal(Hloc))
+    !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
     !
     bath = 0d0
     !
     call allocate_dmft_bath()
     if(MPIMASTER   .AND. &
          (Nspin>1) .AND. &
-         any(dmft_bath%mask(:,:,1,Nspin,:,:)) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
+         any(Hloc(:,:,1,Nspin,:,:).ne.0d0) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
     call get_dmft_bath(bath)    !dmft_bath --> user_bath
     if(isetup)call setup_global
@@ -136,8 +137,8 @@ contains
     !
     if(present(Hloc))call set_Hloc(Hloc)
     !
-    check = check_bath_dimension(bath)
-    if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
+    !check = check_bath_dimension(bath)
+    !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath)    !user_bath --> dmft_bath
@@ -174,8 +175,8 @@ contains
     !
     if(present(Hloc))call set_Hloc(Hloc)
     !
-    check = check_bath_dimension(bath)
-    if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
+    !check = check_bath_dimension(bath)
+    !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath)    !user_bath --> dmft_bath

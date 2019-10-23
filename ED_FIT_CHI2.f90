@@ -84,18 +84,19 @@ contains
   !PURPOSE  : Chi^2 interface for
   !+-------------------------------------------------------------+
   subroutine chi2_fitgf_replica(fg,bath_)
-    complex(8),dimension(:,:,:,:,:,:,:) :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    real(8),dimension(:),intent(inout)  :: bath_
-    real(8),dimension(:),allocatable    :: array_bath
-    integer                             :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
-    integer                             :: iter,stride,count,Asize
-    real(8)                             :: chi
-    logical                             :: check
-    character(len=256)                  :: suffix
-    integer                             :: unit
+    complex(8),dimension(:,:,:,:,:,:,:)                   :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+    logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+    real(8),dimension(:),intent(inout)                    :: bath_
+    real(8),dimension(:),allocatable                      :: array_bath
+    integer                                               :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
+    integer                                               :: iter,stride,counter,Asize
+    real(8)                                               :: chi
+    logical                                               :: check
+    character(len=256)                                    :: suffix
+    integer                                               :: unit
     !
-    check= check_bath_dimension(bath_,impHloc)
-    if(.not.check)stop "chi2_fitgf_replica error: wrong bath dimensions"
+    !check= check_bath_dimension(bath_,impHloc)
+    !if(.not.check)stop "chi2_fitgf_replica error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath_)
@@ -105,25 +106,26 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    totNlso=dmft_bath%Nmask
+    Hmask=mask_hloc(impHloc,wdiag=.true.)
+    totNlso=count(Hmask)
     allocate(getIlat(totNlso) ,getJlat(totNlso))
     allocate(getIspin(totNlso),getJspin(totNlso))
     allocate(getIorb(totNlso) ,getJorb(totNlso))
-    count=0
+    counter=0
     do ilat=1,Nlat
        do jlat=1,Nlat
           do ispin=1,Nspin
              do jspin=1,Nspin
                 do iorb=1,Norb
                    do jorb=1,Norb
-                      if (dmft_bath%mask(ilat,jlat,ispin,jspin,iorb,jorb))then
-                         count=count+1
-                         getIlat(count)  = ilat
-                         getIspin(count) = ispin
-                         getIorb(count)  = iorb
-                         getJlat(count)  = jlat
-                         getJspin(count) = jspin
-                         getJorb(count)  = jorb
+                      if (Hmask(ilat,jlat,ispin,jspin,iorb,jorb))then
+                         counter=counter+1
+                         getIlat(counter)  = ilat
+                         getIspin(counter) = ispin
+                         getIorb(counter)  = iorb
+                         getJlat(counter)  = jlat
+                         getJspin(counter) = jspin
+                         getJorb(counter)  = jorb
                       endif
                    enddo
                 enddo
@@ -343,40 +345,40 @@ contains
   function delta_replica(a) result(Delta)
     real(8),dimension(:)                                          :: a
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)  :: Delta
-    integer                                                       :: ilat,jlat,ispin,jspin,iorb,jorb,ibath
+    integer                                                       :: ilat,jlat,ispin,jspin,iorb,jorb,ibath,isym,N_dec
     integer                                                       :: i,io,jo,ndx,stride
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: V_k
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: Haux
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)         :: invH_knnn
     real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)      :: dummy_Hbath
     real(8),dimension(Nbath)                                      :: dummy_Vbath
+    real(8),dimension(:,:),allocatable                            :: dummy_lambda
     complex(8)                                                    :: iw
     !
     !ACHTUNG! here the bath was a temporary one, since we removed the possibility to act on other baths we need to replicate the
     !function behaviour. Rather ugly...
     stride = 0
+    N_dec=a(1)
+    allocate(dummy_lambda(Nbath,N_Dec))
     !Get Hs
     do ibath=1,Nbath
-       dummy_Hbath(:,:,:,:,:,:,ibath) = 0d0
-       dummy_Hbath(:,:,:,:,:,:,ibath) = unpack(a(stride+1:stride+dmft_bath%Nmask), dmft_bath%mask, dummy_Hbath(:,:,:,:,:,:,ibath))
-       Haux=nnn2lso_reshape(dummy_Hbath(:,:,:,:,:,:,ibath),Nlat,Nspin,Norb)
-       forall(io=1:Nlat*Nspin*Norb,jo=1:Nlat*Nspin*Norb,jo>io) Haux(jo,io)=Haux(io,jo) !conjugate if complex
-       dummy_Hbath(:,:,:,:,:,:,ibath)=lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
-       stride = stride + dmft_bath%Nmask
-    enddo
-    !
-    !Get Vs
-    do ibath=1,Nbath
-       stride = stride + 1
-       dummy_Vbath(ibath) = a(stride)
+      !Get N_dec
+      stride = stride + 1
+      N_dec=a(stride)
+      !Get Vs
+      stride = stride + 1
+      dummy_vbath(ibath) = a(stride)
+      !get Lambdas
+      dummy_lambda(ibath,:)=a(stride+1:stride+N_dec)
+      stride=stride+N_dec
     enddo
     !
     Delta=zero
     do i=1,Ldelta
        iw = xi*Xdelta(i)
        do ibath=1,Nbath
-          Haux      = nnn2lso_reshape(dummy_Hbath(:,:,:,:,:,:,ibath),Nlat,Nspin,Norb)
-          Haux      = zeye(Nlat*Nspin*Norb)*iw - Haux
+          invH_knnn  = bath_from_sym(dummy_lambda(ibath,:))
+          Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
           call inv(Haux)
           invH_knnn = lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
           Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ dummy_Vbath(ibath)*invH_knnn(:,:,:,:,:,:)*dummy_Vbath(ibath)          

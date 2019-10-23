@@ -5,7 +5,8 @@ MODULE ED_HLOC_DECOMPOSITION
    private
 
    interface set_Hloc
-     module procedure init_Hloc_direct
+     module procedure init_Hloc_direct_lso
+     module procedure init_Hloc_direct_nnn
      module procedure init_Hloc_symmetries
    end interface set_Hloc
 
@@ -61,7 +62,7 @@ MODULE ED_HLOC_DECOMPOSITION
 
    !initialize impHloc and the set [H_basis,lambda_impHloc]
 
-   subroutine init_hloc_direct(Hloc)
+   subroutine init_hloc_direct_lso(Hloc)
       integer                                               :: ilat,jlat,ispin,jspin,iorb,jorb,counter,io,jo,Nsym
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hloc
       logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
@@ -125,8 +126,75 @@ MODULE ED_HLOC_DECOMPOSITION
             enddo
          enddo
       enddo
-   end subroutine init_hloc_direct
+   end subroutine init_hloc_direct_lso
 
+
+   subroutine init_hloc_direct_nnn(Hloc)
+      integer                                               :: ilat,jlat,ispin,jspin,iorb,jorb,counter,io,jo,Nsym
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+      logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+      !
+      !
+      impHloc=Hloc
+      !
+      Hmask=.false.
+      !SPIN DIAGONAL
+      do ispin=1,Nspin
+         do jspin=1,Nspin
+            do ilat=1,Nlat
+               do jlat=1,Nlat
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        io=index_stride_lso(ilat,ispin,iorb)
+                        jo=index_stride_lso(jlat,jspin,jorb)
+                        if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                           counter=counter+1
+                           !COMPLEX
+                           !if(io.ne.jo)counter=counter+1
+                        endif
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+      !
+      call allocate_h_basis(counter)
+      !
+      counter=0
+      !
+      do ispin=1,Nspin
+         do jspin=1,Nspin
+            do ilat=1,Nlat
+               do jlat=1,Nlat
+                  do iorb=1,Norb
+                     do jorb=1,Norb
+                        io=index_stride_lso(ilat,ispin,iorb)
+                        jo=index_stride_lso(jlat,jspin,jorb)
+                        if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                           counter=counter+1
+                           H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                           H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                           !REAL
+                           lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
+                           !COMPLEX
+                           !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           !
+                           !if(io.ne.jo)then
+                           !counter=counter+1
+                              !H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=xi
+                              !H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=-xi
+                              !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           !endif
+                        endif
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+   end subroutine init_hloc_direct_nnn
+   
 
    subroutine init_hloc_symmetries(Hvec,lambdavec)
       integer                                   :: isym,N

@@ -74,6 +74,7 @@ MODULE ED_BATH
   public :: set_dmft_bath                    !INTERNAL (for effective_bath)
   public :: get_dmft_bath                    !INTERNAL (for effective_bath)
   public :: bath_from_sym                    !INTERNAL (for effective_bath)
+  public :: mask_hloc
   !
 
 

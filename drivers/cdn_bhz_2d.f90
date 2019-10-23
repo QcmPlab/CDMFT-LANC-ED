@@ -110,7 +110,7 @@ program cdn_bhz_2d
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
          !
-         if(hermiticize)call hermiticize_bath(bath)
+         !if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
