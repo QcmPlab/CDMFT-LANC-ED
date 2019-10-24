@@ -54,12 +54,14 @@ contains
     diag_hybr=0d0
     bath_diag=0d0
     do ibath=1,Nbath
-       do ispin=1,Nspin
+      do ilat=1,Nlat
+        do ispin=1,Nspin
           do iorb=1,Norb
-             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
-             bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+            diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+            bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
           enddo
-       enddo
+        enddo
+      enddo
     enddo
     !
     Hv=0d0
@@ -113,12 +115,14 @@ contains
     diag_hybr=0d0
     bath_diag=0d0
     do ibath=1,Nbath
-       do ispin=1,Nspin
+      do ilat=1,Nlat
+        do ispin=1,Nspin
           do iorb=1,Norb
-             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
-             bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+            diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+            bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
           enddo
-       enddo
+        enddo
+      enddo
     enddo
     !
     Hv=0d0
