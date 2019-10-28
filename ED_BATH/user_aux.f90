@@ -41,7 +41,7 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   ndx=Nsym+1
   !if already there remove it
   do isym=1,Nsym
-     maxdiff=maxval(ABS(DREAL(H_basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+     maxdiff=maxval(ABS(DREAL(Hloc_nn(:,:,:,:,:,:,isym)))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
      if(maxdiff.lt.1d-6)Nsym=Nsym-1
   enddo
   !
