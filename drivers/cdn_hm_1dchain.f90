@@ -71,18 +71,21 @@ program cdn_hm_1dchain
 
    !Build Hk and Hloc
    call generate_hk_hloc()
-   allocate(lambdasym_vector(3))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
+   allocate(lambdasym_vector(1))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
    
    !Build Hk and Hloc
    call generate_hk_hloc()
+   Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
+   lambdasym_vector=[-1.d0]
    
    !setup solver
    Nb=get_bath_dimension(lso2nnn(hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
-   call set_Hloc(lso2nnn(hloc))
-   call ed_init_solver(comm,bath,lso2nnn(Hloc))
+   !call set_Hloc(Hsym_basis,lambdasym_vector)
+   call set_Hloc(lso2nnn(Hloc))
+   call ed_init_solver(comm,bath)
    Weiss_old=zero
 
    !DMFT loop

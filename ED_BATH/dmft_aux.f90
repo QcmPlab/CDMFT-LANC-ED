@@ -32,7 +32,7 @@ subroutine allocate_dmft_bath()
    Nsym=size(lambda_impHloc)+1
    !
    do isym=1,size(lambda_impHloc)
-      maxdiff=maxval(DREAL(H_Basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+      maxdiff=maxval(ABS(DREAL(H_Basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
       if(maxdiff .lt. 1d-6) Nsym=Nsym-1
       exit
    enddo
