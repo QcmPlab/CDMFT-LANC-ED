@@ -106,8 +106,9 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    Hmask=mask_hloc(impHloc,wdiag=.true.)
+    Hmask=mask_hloc(impHloc,wdiag=.true.,uplo=.true.)
     totNlso=count(Hmask)
+    !
     allocate(getIlat(totNlso) ,getJlat(totNlso))
     allocate(getIspin(totNlso),getJspin(totNlso))
     allocate(getIorb(totNlso) ,getJorb(totNlso))
@@ -372,6 +373,7 @@ contains
       dummy_lambda(ibath,:)=a(stride+1:stride+N_dec)
       stride=stride+N_dec
     enddo
+    !
     !
     Delta=zero
     do i=1,Ldelta

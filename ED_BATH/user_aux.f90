@@ -11,14 +11,16 @@ function get_bath_dimension_direct(Hloc_nn) result(bath_size)
   Hloc=dreal(Hloc_nn)
   !
   !Real part of nonzero elements
-  Hmask = mask_hloc(Hloc,wdiag=.true.,uplo=.true.)
+  Hmask = mask_hloc(Hloc,wdiag=.true.,uplo=.false.)
   ndx   = count(Hmask)          !all elements
+  !
   !
   !COMPLEX:Imaginary part of nondiagonal elements
   !Hmask = mask_hloc(Hloc,wdiag=.false.,uplo=.true.)
   !ndx   = ndx+count(Hmask)          !all elements
   !
-  !Diagonal elements are always there
+  !Diagonal elements are always to be added in this representation
+  ndx=ndx+Nlat*Nspin*Norb
   !number of non vanishing elements for each replica
   ndx = ndx * Nbath
   !diagonal hybridizations: Vs

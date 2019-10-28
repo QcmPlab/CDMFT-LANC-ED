@@ -136,9 +136,6 @@ contains
     endif
     call sleep(1)
     !
-    !<DEBUG> in VCA this is allocated in the VCA_MAIN... why?
-    allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-    impHloc=zero
     !
     allocate(spH0ups(Ns_Ud))
     allocate(spH0dws(Ns_Ud))

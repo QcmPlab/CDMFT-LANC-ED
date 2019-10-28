@@ -58,7 +58,7 @@ contains
     if(isetup)call init_ed_structure()
     !
     !Init bath:
-    call set_Hloc(Hloc)
+    !call set_Hloc(Hloc)
     !
     !check = check_bath_dimension(bath,dreal(Hloc))
     !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
@@ -98,7 +98,7 @@ contains
     if(isetup)call init_ed_structure()
     !
     !Init bath:
-    call set_hloc(Hloc)
+    !call set_hloc(Hloc)
     !
     !check = check_bath_dimension(bath,dreal(Hloc))
     !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
@@ -135,7 +135,7 @@ contains
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    if(present(Hloc))call set_Hloc(Hloc)
+    !if(present(Hloc))call set_Hloc(Hloc)
     !
     !check = check_bath_dimension(bath)
     !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
@@ -173,7 +173,7 @@ contains
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    if(present(Hloc))call set_Hloc(Hloc)
+    !if(present(Hloc))call set_Hloc(Hloc)
     !
     !check = check_bath_dimension(bath)
     !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"

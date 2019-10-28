@@ -1,6 +1,7 @@
 MODULE ED_GF_NORMAL
   USE ED_GF_SHARED
   USE ED_AUX_FUNX
+  USE ED_BATH, only:mask_hloc
   implicit none
   private
 
@@ -39,7 +40,7 @@ contains
     integer :: Nstates
     real(8) :: chan4
     integer :: isite,jsite,ibath,icomposite,jbath,jcomposite
-    logical :: MaskBool
+    logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
     !
     !if(vca_gf_symmetric)then
     chan4=0.d0
@@ -49,6 +50,7 @@ contains
     !
     if(allocated(impGmatrix))deallocate(impGmatrix)
     allocate(impGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+    Hmask=mask_hloc(impHloc,wdiag=.true.,uplo=.false.)
     !
     ! 
     Nstates = state_list%size
@@ -65,17 +67,11 @@ contains
              do jsite=1,Nlat
                 do jorb=1,Norb
                    if(isite==jsite .and. iorb==jorb)cycle
-                   MaskBool=.true.   
-                   if(impHloc(isite,jsite,ispin,ispin,iorb,jorb).eq.0.d0)MaskBool=.false.
-                   !if((DREAL(impHloc(isite,jsite,ispin,ispin,iorb,jorb)).eq.0.d0).and.(DIMAG(impHloc(isite,jsite,ispin,ispin,iorb,jorb))))MaskBool=.false.
-                   if(.not.MaskBool)cycle
+                   if(.not.Hmask(isite,jsite,ispin,ispin,iorb,jorb))cycle
                    call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
-                   call GFmatrix_allocate(impGmatrix(jsite,isite,ispin,ispin,jorb,iorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
                    !if(vca_gf_symmetric)then
                       call lanc_build_gf_normal_mix_chan2(isite,jsite,iorb,jorb,ispin)
-                      call lanc_build_gf_normal_mix_chan2(jsite,isite,jorb,iorb,ispin)
                    !else
-                   !   call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
                    !   call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
                    !endif
                 enddo

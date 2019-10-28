@@ -97,11 +97,12 @@ contains
     logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
     integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
     !
-    wdiag_=.false.;if(wdiag)wdiag_=wdiag
-    uplo_ =.false.;if(uplo)  uplo_=uplo
+    wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
+    uplo_ =.false.;if(present(uplo))  uplo_=uplo
     !
     Hmask=.false.
     where(abs(Hloc)>1d-6)Hmask=.true.
+    !
     !
     if(wdiag_)then
        do ispin=1,Nspin

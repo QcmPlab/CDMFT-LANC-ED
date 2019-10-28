@@ -67,6 +67,8 @@ MODULE ED_HLOC_DECOMPOSITION
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hloc
       logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
       !
+      allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+      impHloc=zero
       !
       impHloc=lso2nnn_reshape(Hloc,Nlat,Nspin,Norb)
       !
@@ -134,8 +136,12 @@ MODULE ED_HLOC_DECOMPOSITION
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
       logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
       !
+      allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+      impHloc=zero
       !
       impHloc=Hloc
+      !
+      counter=0
       !
       Hmask=.false.
       !SPIN DIAGONAL
@@ -204,9 +210,13 @@ MODULE ED_HLOC_DECOMPOSITION
       if(size(lambdavec).ne.size(H_basis)) STOP "Init_hloc: Wrong coefficient vector size"
       if(size(Hvec(1,1,1,1,1,1,:)).ne.size(H_basis)) STOP "Init_hloc: Wrong H_basis size"
       !
+      allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+      impHloc=zero
+      !
       N=size(lambdavec)
       !
       call allocate_h_basis(N)
+      !
       do isym=1,N
          lambda_impHloc(isym)= lambdavec(isym)
          H_basis(isym)%O     = Hvec(:,:,:,:,:,:,isym)

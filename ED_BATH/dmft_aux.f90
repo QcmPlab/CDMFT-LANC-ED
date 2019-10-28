@@ -29,11 +29,11 @@ subroutine allocate_dmft_bath()
    allocate(dmft_bath%item(Nbath))
    !
    !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   Nsym=size(lambda_impHloc)
+   Nsym=size(lambda_impHloc)+1
    !
    do isym=1,size(lambda_impHloc)
       maxdiff=maxval(DREAL(H_Basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
-      if(maxdiff .lt. 1d-6) Nsym=Nsym+1
+      if(maxdiff .lt. 1d-6) Nsym=Nsym-1
       exit
    enddo
    !
@@ -63,7 +63,7 @@ function bath_from_sym(lambdavec) result (Hbath)
    !
    Hbath=zero
    !
-   do isym=1,Nsym
+   do isym=1,Nsym_
       Hbath=Hbath+lambdavec(isym)*H_Basis(isym)%O
    enddo
    !
@@ -109,13 +109,13 @@ subroutine init_dmft_bath()
          do isym=1,Nsym_
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
          enddo
-         dmft_bath%item(ibath)%lambda(Nsym_+1) =  xmu+offset_b(ibath)  !ADD THE OFFSET (IDENTITY)
+         dmft_bath%item(ibath)%lambda(Nsym_+1) =  -(xmu+offset_b(ibath))  !ADD THE OFFSET (IDENTITY)
       else
          do isym=1,Nsym
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
             maxdiff=maxval(DREAL(H_basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
             if(maxdiff<1.d-6) dmft_bath%item(ibath)%lambda(isym) =&
-               dmft_bath%item(ibath)%lambda(isym) + (xmu+offset_b(ibath))
+               dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
          enddo
       endif
    enddo
