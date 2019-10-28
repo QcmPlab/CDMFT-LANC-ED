@@ -34,16 +34,21 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   integer                                                            :: bath_size,ndx,isym,Nsym
   real                                                               :: maxdiff
   !
-  !off-diagonal non-vanishing elements
+  !number of symmetries
   Nsym=size(Hloc_nn(1,1,1,1,1,1,:))
   !
+  !add identity
   ndx=Nsym+1
+  !if already there remove it
   do isym=1,Nsym
-     maxdiff=maxval(DREAL(H_basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+     maxdiff=maxval(ABS(DREAL(H_basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
      if(maxdiff.lt.1d-6)Nsym=Nsym-1
   enddo
   !
-  !number of non vanishing elements for each replica
+  !for each replica we also print N_dec
+  ndx=ndx+1
+  !
+  !number of replicas
   ndx = ndx * Nbath
   !diagonal hybridizations: Vs
   ndx = ndx + Nbath

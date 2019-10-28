@@ -80,11 +80,12 @@ program cdn_hm_1dchain
    lambdasym_vector=[-1.d0]
    
    !setup solver
-   Nb=get_bath_dimension(lso2nnn(hloc))
+   Nb=get_bath_dimension(Hsym_basis)
+   !Nb=get_bath_dimension(lso2nnn(Hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
-   !call set_Hloc(Hsym_basis,lambdasym_vector)
-   call set_Hloc(lso2nnn(Hloc))
+   call set_Hloc(Hsym_basis,lambdasym_vector)
+   !call set_Hloc(lso2nnn(Hloc))
    call ed_init_solver(comm,bath)
    Weiss_old=zero
 

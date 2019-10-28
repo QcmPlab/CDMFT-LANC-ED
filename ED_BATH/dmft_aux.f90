@@ -113,7 +113,7 @@ subroutine init_dmft_bath()
       else
          do isym=1,Nsym
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
-            maxdiff=maxval(DREAL(H_basis(isym)%O)-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
+            maxdiff=maxval(ABS(DREAL(H_basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
             if(maxdiff<1.d-6) dmft_bath%item(ibath)%lambda(isym) =&
                dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
          enddo
