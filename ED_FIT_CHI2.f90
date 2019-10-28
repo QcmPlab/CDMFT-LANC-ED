@@ -359,7 +359,8 @@ contains
     !ACHTUNG! here the bath was a temporary one, since we removed the possibility to act on other baths we need to replicate the
     !function behaviour. Rather ugly...
     stride = 0
-    N_dec=a(1)
+    N_dec=NINT(a(1))
+    if(allocated(dummy_lambda))deallocate(dummy_lambda)
     allocate(dummy_lambda(Nbath,N_Dec))
     !Get Hs
     do ibath=1,Nbath
@@ -387,6 +388,7 @@ contains
        enddo
     enddo
     !
+    deallocate(dummy_lambda)
     !
   end function delta_replica
 
