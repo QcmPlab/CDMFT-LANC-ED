@@ -32,7 +32,6 @@ end function get_bath_dimension_direct
 function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   complex(8),dimension(:,:,:,:,:,:,:),intent(in)                     :: Hloc_nn
   integer                                                            :: bath_size,ndx,isym,Nsym
-  real                                                               :: maxdiff
   !
   !number of symmetries
   Nsym=size(Hloc_nn(1,1,1,1,1,1,:))
@@ -41,8 +40,7 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   ndx=Nsym+1
   !if already there remove it
   do isym=1,Nsym
-     maxdiff=maxval(ABS(DREAL(Hloc_nn(:,:,:,:,:,:,isym)))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
-     if(maxdiff.lt.1d-6)Nsym=Nsym-1
+     if(is_identity(Hloc_nn(:,:,:,:,:,:,isym)))Nsym=Nsym-1
   enddo
   !
   !for each replica we also print N_dec

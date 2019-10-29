@@ -20,7 +20,6 @@ end subroutine deallocate_dmft_bath
 !+-------------------------------------------------------------------+
 subroutine allocate_dmft_bath()
    integer :: ibath,isym,Nsym
-   real(8) :: maxdiff
    !
    if(.not.allocated(lambda_impHloc))stop "lambda_impHloc not allocated in allocate_dmft_bath" !FIXME
 
@@ -32,8 +31,7 @@ subroutine allocate_dmft_bath()
    Nsym=size(lambda_impHloc)+1
    !
    do isym=1,size(lambda_impHloc)
-      maxdiff=maxval(ABS(DREAL(H_Basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
-      if(maxdiff .lt. 1d-6) Nsym=Nsym-1
+      if(is_identity(H_Basis(isym)%O)) Nsym=Nsym-1
       exit
    enddo
    !
@@ -80,7 +78,7 @@ end function bath_from_sym
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
    real(8)              :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
-   real(8)              :: re,im,maxdiff
+   real(8)              :: re,im
    integer              :: i,ibath,isym,unit,flen,Nh,Nsym,Nsym_
    integer              :: io,jo,iorb,ispin,jorb,jspin
    logical              :: IOfile
@@ -113,8 +111,7 @@ subroutine init_dmft_bath()
       else
          do isym=1,Nsym
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
-            maxdiff=maxval(ABS(DREAL(H_basis(isym)%O))-lso2nnn_reshape(eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb))
-            if(maxdiff<1.d-6) dmft_bath%item(ibath)%lambda(isym) =&
+            if(is_identity(H_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym) =&
                dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
          enddo
       endif

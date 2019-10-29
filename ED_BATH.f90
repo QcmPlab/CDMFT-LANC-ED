@@ -38,6 +38,10 @@ MODULE ED_BATH
      module procedure ::  get_bath_dimension_symmetries
   end interface get_bath_dimension
 
+  interface is_identity
+     module procedure ::  is_identity_lso
+     module procedure ::  is_identity_nnn
+  end interface is_identity
 
 
   !##################################################################
@@ -89,8 +93,60 @@ MODULE ED_BATH
 
 contains
 
+!+-------------------------------------------------------------------+
+!PURPOSE  : Check if a matrix is the identity
+!+-------------------------------------------------------------------+
 
-  function mask_hloc(hloc,wdiag,uplo) result(Hmask)
+   function is_identity_nnn(mnnn) result(flag)
+     complex(8),dimension(nlat,nlat,nspin,nspin,norb,norb)                    :: mnnn
+     real(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                       :: mtmp
+     integer                                                                  :: i,j
+     logical                                                                  :: flag
+     !
+     flag=.true.
+     !
+     mtmp=dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb))
+     !
+     do i=1,nlat*nspin*norb-1
+       if((mtmp(i,i).ne.mtmp(i+1,i+1)).or.(mtmp(i,i).lt.1.d-6))flag=.false.
+     enddo
+     !
+     do i=1,nlat*nspin*norb
+        do j=1,nlat*nspin*norb
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+         enddo
+     enddo
+     !
+   end function is_identity_nnn
+
+
+   function is_identity_lso(mlso) result(flag)
+     complex(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                    :: mlso
+     real(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                       :: mtmp
+     integer                                                                  :: i,j
+     logical                                                                  :: flag
+     !
+     flag=.true.
+     !
+     mtmp=dreal(mlso)
+     !
+     do i=1,nlat*nspin*norb-1
+       if((mtmp(i,i).ne.mtmp(i+1,i+1)).or.(mtmp(i,i).lt.1.d-6))flag=.false.
+     enddo
+     !
+     do i=1,nlat*nspin*norb
+        do j=1,nlat*nspin*norb
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+         enddo
+     enddo
+     !
+   end function is_identity_lso
+
+!+-------------------------------------------------------------------+
+!PURPOSE  : Create bath mask
+!+-------------------------------------------------------------------+
+
+function mask_hloc(hloc,wdiag,uplo) result(Hmask)
     real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
     logical,optional                                   :: wdiag,uplo
     logical                                            :: wdiag_,uplo_
