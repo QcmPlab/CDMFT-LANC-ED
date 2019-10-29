@@ -95,8 +95,8 @@ contains
     character(len=256)                                    :: suffix
     integer                                               :: unit
     !
-    !check= check_bath_dimension(bath_,impHloc)
-    !if(.not.check)stop "chi2_fitgf_replica error: wrong bath dimensions"
+    check= check_bath_dimension(bath_)
+    if(.not.check)stop "chi2_fitgf_replica error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath_)

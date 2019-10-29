@@ -60,8 +60,8 @@ contains
     !Init bath:
     !call set_Hloc(Hloc)
     !
-    !check = check_bath_dimension(bath,dreal(Hloc))
-    !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
+    check = check_bath_dimension(bath)
+    if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
     !
     bath = 0d0
     !
@@ -100,8 +100,8 @@ contains
     !Init bath:
     !call set_hloc(Hloc)
     !
-    !check = check_bath_dimension(bath,dreal(Hloc))
-    !if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
+    check = check_bath_dimension(bath)
+    if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
     !
     bath = 0d0
     !
@@ -137,8 +137,8 @@ contains
     !
     !if(present(Hloc))call set_Hloc(Hloc)
     !
-    !check = check_bath_dimension(bath)
-    !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
+    check = check_bath_dimension(bath)
+    if(.not.check)stop "ED_SOLVE error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath)    !user_bath --> dmft_bath
@@ -175,8 +175,8 @@ contains
     !
     !if(present(Hloc))call set_Hloc(Hloc)
     !
-    !check = check_bath_dimension(bath)
-    !if(.not.check)stop "ED_SOLVE_SINGLE Error: wrong bath dimensions"
+    check = check_bath_dimension(bath)
+    if(.not.check)stop "ED_SOLVE error: wrong bath dimensions"
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath)    !user_bath --> dmft_bath

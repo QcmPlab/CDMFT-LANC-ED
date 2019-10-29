@@ -50,7 +50,7 @@ MODULE ED_BATH
   !
   !##################################################################
   public :: get_bath_dimension
-  !public :: check_bath_dimension
+  public :: check_bath_dimension
   !explicit symmetries:
   !public :: hermiticize_bath
   !public :: break_symmetry_bath

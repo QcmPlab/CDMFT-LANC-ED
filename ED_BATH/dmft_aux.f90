@@ -226,8 +226,8 @@ subroutine set_dmft_bath(bath_)
    !
    if(.not.dmft_bath%status)stop "get_dmft_bath error: bath not allocated"
    !
-   !check=check_bath_dimension(bath_)
-   !if(.not.check)stop "get_dmft_bath error: wrong bath dimensions"
+   check=check_bath_dimension(bath_)
+   if(.not.check)stop "get_dmft_bath error: wrong bath dimensions"
    !
    do ibath=1,Nbath
       dmft_bath%item(ibath)%N_dec=0
@@ -265,8 +265,8 @@ subroutine get_dmft_bath(bath_)
    !
    if(.not.dmft_bath%status)stop "set_dmft_bath error: bath not allocated"
    !
-   !check = check_bath_dimension(bath_)
-   !if(.not.check)stop "set_dmft_bath error: wrong bath dimensions"
+   check = check_bath_dimension(bath_)
+   if(.not.check)stop "set_dmft_bath error: wrong bath dimensions"
    !
    bath_=0.d0
    !

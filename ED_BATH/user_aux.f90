@@ -58,18 +58,23 @@ end function get_bath_dimension_symmetries
 !+-------------------------------------------------------------------+
 !PURPOSE  : Check if the dimension of the bath array are consistent
 !+-------------------------------------------------------------------+
-!function check_bath_dimension(bath_,Hloc_nn) result(bool)
-  !real(8),dimension(:)        :: bath_
-  !integer                     :: Ntrue
-  !logical                     :: bool
-  !real(8),optional,intent(in) :: Hloc_nn(:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:]
-  !if (present(Hloc_nn))then
-     !Ntrue = get_bath_dimension(one*Hloc_nn)
-  !else
-     !Ntrue = get_bath_dimension()
-  !endif
-  !bool  = ( size(bath_) == Ntrue )
-!end function check_bath_dimension
+function check_bath_dimension(bath_) result(bool)
+  real(8),dimension(:)           :: bath_
+  integer                        :: Ntrue,i
+  logical                        :: bool
+  complex(8),allocatable         :: Hbasis_reshuffled(:,:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:][Nsym]
+  !
+  if(.not.allocated(H_basis))STOP "check_bath_dimension: Hbasis not allocated"
+  !
+  if(.not.allocated(Hbasis_reshuffled))allocate(Hbasis_reshuffled(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(H_basis)))
+  !
+  do i=1,size(H_basis)
+    Hbasis_reshuffled(:,:,:,:,:,:,i)=H_basis(i)%O
+  enddo
+  !
+  Ntrue = get_bath_dimension(Hbasis_reshuffled)
+  bool  = ( size(bath_) == Ntrue )
+end function check_bath_dimension
 
 
 !##################################################################
