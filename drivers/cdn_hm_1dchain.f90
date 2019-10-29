@@ -19,6 +19,9 @@ program cdn_hm_1dchain
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   !SYMMETRIES TEST
+   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
    integer                                                                :: rank
@@ -68,12 +71,22 @@ program cdn_hm_1dchain
 
    !Build Hk and Hloc
    call generate_hk_hloc()
+   allocate(lambdasym_vector(1))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
+   
+   !Build Hk and Hloc
+   call generate_hk_hloc()
+   Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
+   lambdasym_vector=[-1.d0]
    
    !setup solver
-   Nb=get_bath_dimension(lso2nnn(hloc))
+   call set_Hloc(Hsym_basis,lambdasym_vector)
+   Nb=get_bath_dimension(Hsym_basis)
+   !Nb=get_bath_dimension(lso2nnn(Hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
-   call ed_init_solver(comm,bath,lso2nnn(Hloc))
+   !call set_Hloc(lso2nnn(Hloc))
+   call ed_init_solver(comm,bath)
    Weiss_old=zero
 
    !DMFT loop
@@ -104,7 +117,7 @@ program cdn_hm_1dchain
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
          !
-         if(hermiticize)call hermiticize_bath(bath)
+         !if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)

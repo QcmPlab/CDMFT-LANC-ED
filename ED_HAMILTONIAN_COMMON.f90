@@ -18,7 +18,7 @@ MODULE ED_HAMILTONIAN_COMMON
   logical                                   :: Hstatus=.false.
   type(sector_map),dimension(:),allocatable :: Hs
   integer,save,public                       :: iter=0
-
+  !
 contains
 
 

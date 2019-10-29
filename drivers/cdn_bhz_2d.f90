@@ -10,7 +10,7 @@ program cdn_bhz_2d
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,M,lambda,wmixing
+   real(8)                                                                :: ts,Mh,lambda,wmixing
    !Bath:
    real(8),allocatable                                                    :: Bath(:),BathOld(:)
    !The local hybridization function:
@@ -20,6 +20,9 @@ program cdn_bhz_2d
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   !SYMMETRIES TEST
+   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
    integer                                                                :: rank
@@ -37,7 +40,7 @@ program cdn_bhz_2d
    call parse_cmd_variable(finput,"FINPUT",default='inputED.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
    call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
-   call parse_input_variable(M,"M",finput,default=1.d0,comment="crystal field splitting")
+   call parse_input_variable(Mh,"Mh",finput,default=1.d0,comment="crystal field splitting")
    call parse_input_variable(lambda,"lambda",finput,default=0.3d0,comment="spin-orbit coupling")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
@@ -75,10 +78,24 @@ program cdn_bhz_2d
 
    !Build Hk and Hloc
    call generate_hk_hloc()
+   allocate(lambdasym_vector(3))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
+   !
+   !SETUP SYMMETRIES (EXPERIMENTAL)
+   lambdasym_vector(1)=Mh
+   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
+   !
+   lambdasym_vector(2)=ts
+   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
+   !
+   lambdasym_vector(3)=lambda
+   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
+   !
    !setup solver
    Nb=get_bath_dimension(lso2nnn(hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
+   call set_Hloc(lso2nnn(hloc))
    call ed_init_solver(comm,bath,lso2nnn(Hloc))
    Weiss_old=zero
 
@@ -110,7 +127,7 @@ program cdn_bhz_2d
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
          !
-         if(hermiticize)call hermiticize_bath(bath)
+         !if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
@@ -144,8 +161,9 @@ contains
    !+------------------------------------------------------------------+
 
 
-   function Hloc_model(N) result (H0)
+   function Hloc_model(N,Mh_,ts_,lambda_) result (H0)
       integer                                               :: N,ilat,jlat,ispin,iorb,jorb,ind1,ind2
+      real(8)                                               :: Mh_,ts_,lambda_
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
       complex(8),dimension(N,N)                             :: H0
       character(len=64)                                     :: file_
@@ -158,22 +176,22 @@ contains
          do ilat=1,Nx
             do jlat=1,Ny
                ind1=indices2N([ilat,jlat])
-               hopping_matrix(ind1,ind1,ispin,ispin,:,:)= t_m(m)
+               hopping_matrix(ind1,ind1,ispin,ispin,:,:)= t_m(mh_)
                if(ilat<Nx)then
                   ind2=indices2N([ilat+1,jlat])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_x(ts,lambda,ispin)
+                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_x(ts_,lambda_,ispin)
                endif
                if(ilat>1)then
                   ind2=indices2N([ilat-1,jlat])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= dconjg(transpose(t_x(ts,lambda,ispin)))
+                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= dconjg(transpose(t_x(ts_,lambda_,ispin)))
                endif
                if(jlat<Ny)then
                   ind2=indices2N([ilat,jlat+1])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_y(ts,lambda)
+                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_y(ts_,lambda_)
                endif
                if(jlat>1)then
                   ind2=indices2N([ilat,jlat-1])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= transpose(t_y(ts,lambda))
+                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= transpose(t_y(ts_,lambda_))
                endif
             enddo
          enddo
@@ -216,7 +234,7 @@ contains
          enddo
       enddo
       !
-      Hk=nnn2lso(hopping_matrix)+hloc_model(N)
+      Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
       ! 
    end function hk_model
 
@@ -277,7 +295,7 @@ contains
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/(Nkx*Nky)
-      Hloc=hloc_model(Nlso)
+      Hloc=hloc_model(Nlso,Mh,ts,lambda)
       where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
          !
    end subroutine generate_hk_hloc

@@ -40,7 +40,7 @@
                        ialfa = getBathStride(ilat,iorb,ibath)
                        ibeta = getBathStride(jlat,jorb,ibath)
                        Jcondition = &
-                            (dmft_bath%item(ibath)%h(ilat,jlat,1,1,iorb,jorb)/=0d0) &
+                            (hbath_Reconstructed(ilat,jlat,1,1,iorb,jorb,ibath)/=0d0) &
                             .AND. (ibup(ibeta)==1) .AND. (ibup(ialfa)==0)
                        !
                        if (Jcondition)then
@@ -48,7 +48,7 @@
                           call cdg(ialfa,k1,k2,sg2)
                           jup  = binary_search(Hs(1)%map,k2)
                           j    = jup + (idw-1)*DimUp
-                          htmp = dmft_bath%item(ibath)%h(ilat,jlat,1,1,iorb,jorb)*sg1*sg2
+                          htmp = hbath_Reconstructed(ilat,jlat,1,1,iorb,jorb,ibath)*sg1*sg2
                           !
                           hv(i) = hv(i) + htmp*vin(j)
                           !

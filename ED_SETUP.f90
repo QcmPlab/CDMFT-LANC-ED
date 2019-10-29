@@ -27,8 +27,6 @@ MODULE ED_SETUP
   public :: build_sector
   public :: delete_sector
   !
-  public :: imp_state_index
-  !
   public :: get_Sector
   public :: get_Indices
   public :: get_Nup
@@ -50,6 +48,8 @@ MODULE ED_SETUP
   public :: twin_sector_order
   public :: get_twin_sector
   public :: flip_state
+  !
+  public :: imp_state_index
   !
   public :: binary_search
 
@@ -136,9 +136,6 @@ contains
     endif
     call sleep(1)
     !
-    !<DEBUG> in VCA this is allocated in the VCA_MAIN... why?
-    allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-    impHloc=zero
     !
     allocate(spH0ups(Ns_Ud))
     allocate(spH0dws(Ns_Ud))
@@ -504,6 +501,13 @@ contains
     idw = (i-1)/DimUp+1
   end function idw_index
 
+  !> Find position in the state vector for a given lattice-spin-orbital position for the cluster (no bath considered)
+  function imp_state_index(ilat,iorb) result(indx)  
+    integer :: ilat
+    integer :: iorb
+    integer :: indx
+    indx = iorb + (ilat-1)*Norb
+  end function imp_state_index
 
 
 
@@ -698,14 +702,6 @@ contains
   end subroutine delete_sector
 
 
-
-  !> Find position in the state vector for a given lattice-spin-orbital position for the cluster (no bath considered)
-  function imp_state_index(ilat,iorb) result(indx)  
-    integer :: ilat
-    integer :: iorb
-    integer :: indx
-    indx = iorb + (ilat-1)*Norb
-  end function imp_state_index
 
 
 

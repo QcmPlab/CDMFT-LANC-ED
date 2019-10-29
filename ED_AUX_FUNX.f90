@@ -36,10 +36,10 @@ MODULE ED_AUX_FUNX
      module procedure :: print_Hloc_lso
   end interface print_Hloc
 
-  interface set_Hloc
-     module procedure set_Hloc_lso
-     module procedure set_Hloc_nnn
-  end interface set_Hloc
+  !interface set_Hloc
+     !module procedure set_Hloc_lso
+     !module procedure set_Hloc_nnn
+  !end interface set_Hloc
 
 #if __GNUC__ > 6
   interface read(unformatted)
@@ -62,7 +62,7 @@ MODULE ED_AUX_FUNX
 
   public :: index_stride_lso
   !
-  public :: set_Hloc
+  !public :: set_Hloc
   public :: print_Hloc
   !
   public :: save_gfprime
@@ -74,6 +74,8 @@ MODULE ED_AUX_FUNX
   public :: nn2so_reshape
   !
   public :: ed_search_variable
+  !
+
 
 
 contains
@@ -143,25 +145,25 @@ contains
   !+------------------------------------------------------------------+
   !PURPOSE  : Set Hloc to impHloc
   !+------------------------------------------------------------------+
-  subroutine set_Hloc_nnn(hloc)
-    complex(8),dimension(:,:,:,:,:,:) :: Hloc
-    call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"set_Hloc_nnn","Hloc")
-    !
-    impHloc = dreal(Hloc)
-    !
-    write(LOGfile,"(A)")"Updated impHloc:"
-    if(ed_verbose>2)call print_Hloc(impHloc)
-  end subroutine set_Hloc_nnn
-  !
-  subroutine set_Hloc_lso(Hloc)
-    complex(8),dimension(:,:) :: hloc
-    call assert_shape(Hloc,[Nlat*Nspin*Norb,Nlat*Nspin*Norb],"set_Hloc_lso","Hloc")
-    !
-    impHloc = lso2nnn_reshape(dreal(Hloc),Nlat,Nspin,Norb)
-    !
-    write(LOGfile,"(A)")"Updated impHloc:"
-    if(ed_verbose>2)call print_Hloc(impHloc)
-  end subroutine set_Hloc_lso
+  !subroutine set_Hloc_nnn(hloc)
+    !complex(8),dimension(:,:,:,:,:,:) :: Hloc
+    !call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"set_Hloc_nnn","Hloc")
+    !!
+    !impHloc = dreal(Hloc)
+    !!
+    !write(LOGfile,"(A)")"Updated impHloc:"
+    !if(ed_verbose>2)call print_Hloc(impHloc)
+  !end subroutine set_Hloc_nnn
+  !!
+  !subroutine set_Hloc_lso(Hloc)
+    !complex(8),dimension(:,:) :: hloc
+    !call assert_shape(Hloc,[Nlat*Nspin*Norb,Nlat*Nspin*Norb],"set_Hloc_lso","Hloc")
+    !!
+    !impHloc = lso2nnn_reshape(dreal(Hloc),Nlat,Nspin,Norb)
+    !!
+    !write(LOGfile,"(A)")"Updated impHloc:"
+    !if(ed_verbose>2)call print_Hloc(impHloc)
+  !end subroutine set_Hloc_lso
 
 
 
@@ -686,6 +688,7 @@ contains
     close(unit)
     !
   end subroutine ed_search_variable
+
 
 
 

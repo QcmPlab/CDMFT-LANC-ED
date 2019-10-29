@@ -48,7 +48,8 @@ contains
     invH_k=zero
     do i=1,L
        do ibath=1,Nbath
-          invH_k = nnn2lso_reshape(dmft_bath%item(ibath)%h,Nlat,Nspin,Norb)
+          invH_knn=bath_from_sym(dmft_Bath%item(ibath)%lambda)
+          invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
           invH_k = zeye(Nlat*Nspin*Norb)*x(i) - invH_k
           call inv(invH_k)
           Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i) + &

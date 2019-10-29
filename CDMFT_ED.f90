@@ -2,9 +2,9 @@ MODULE CDMFT_ED
   USE ED_INPUT_VARS
 
   USE ED_AUX_FUNX, only:                        &
-       set_Hloc                               , &
        ed_search_variable
-
+  USE ED_HLOC_DECOMPOSITION,only:               &
+       set_Hloc                               
 
   USE ED_IO,      only:                         &
        ed_print_impSigma                      , &
@@ -22,11 +22,11 @@ MODULE CDMFT_ED
        ed_get_g0and_realaxis
 
   USE ED_BATH, only:                            &
-       get_bath_dimension                     , &
-       hermiticize_bath                       , &
-       spin_symmetrize_bath                   , &
-       orb_equality_bath                      , &
-       break_symmetry_bath
+       get_bath_dimension                     !, &
+       !hermiticize_bath                       , &
+       !spin_symmetrize_bath                   , &
+       !orb_equality_bath                      , &
+       !break_symmetry_bath
 
   !USE ED_BATH_FUNCTIONS, only:                  &
 

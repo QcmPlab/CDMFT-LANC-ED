@@ -43,7 +43,9 @@ contains
     integer,dimension(Ns_Ud,Ns_Orb)          :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Nlat,Norb)             :: Nup,Ndw
     real(8),dimension(Nlat,Nspin,Norb,Nbath) :: diag_hybr
-    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag  
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)    :: Hbath_reconstructed
+
     !
     if(.not.Hstatus)stop "directMatVec_cc ERROR: Hsector NOT set"
     isector=Hsector
@@ -54,11 +56,12 @@ contains
     diag_hybr=0d0
     bath_diag=0d0
     do ibath=1,Nbath
+      Hbath_reconstructed(:,:,:,:,:,:,ibath)=bath_from_sym(dmft_bath%item(ibath)%lambda)
       do ilat=1,Nlat
         do ispin=1,Nspin
           do iorb=1,Norb
             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
-            bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+            bath_diag(ilat,ispin,iorb,ibath)=Hbath_Reconstructed(ilat,ilat,ispin,ispin,iorb,iorb,ibath)
           enddo
         enddo
       enddo
@@ -97,7 +100,9 @@ contains
     integer,dimension(Ns_Ud,Ns_Orb)          :: Nups,Ndws       ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Nlat,Norb)             :: Nup,Ndw
     real(8),dimension(Nlat,Nspin,Norb,Nbath) :: diag_hybr
-    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag
+    real(8),dimension(Nlat,Nspin,Norb,Nbath) :: bath_diag  
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)    :: Hbath_reconstructed
+
     !
     integer                                  :: MpiIerr
     integer,allocatable,dimension(:)         :: Counts
@@ -115,11 +120,12 @@ contains
     diag_hybr=0d0
     bath_diag=0d0
     do ibath=1,Nbath
+      Hbath_reconstructed(:,:,:,:,:,:,ibath)=bath_from_sym(dmft_bath%item(ibath)%lambda)
       do ilat=1,Nlat
         do ispin=1,Nspin
           do iorb=1,Norb
             diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
-            bath_diag(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%h(ilat,ilat,ispin,ispin,iorb,iorb)
+            bath_diag(ilat,ispin,iorb,ibath)=Hbath_Reconstructed(ilat,ilat,ispin,ispin,iorb,iorb,ibath)
           enddo
         enddo
       enddo
