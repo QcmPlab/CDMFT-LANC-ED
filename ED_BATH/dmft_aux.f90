@@ -239,7 +239,7 @@ subroutine set_dmft_bath(bath_)
    do ibath=1,Nbath
       !Get N_dec
       stride = stride + 1
-      dmft_bath%item(ibath)%N_dec=bath_(stride)
+      dmft_bath%item(ibath)%N_dec=NINT(bath_(stride))
       !Get Vs
       stride = stride + 1
       dmft_bath%item(ibath)%v = bath_(stride)

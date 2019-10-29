@@ -30,7 +30,12 @@ MODULE ED_FIT_CHI2
   integer                               :: totNorb,totNspin,totNlso
   integer,dimension(:),allocatable      :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
   integer                               :: Orb_indx,Spin_indx,Spin_mask
+  integer,dimension(:),allocatable      :: Nlambdas
   !
+  type nsymm_vector
+     real(8),dimension(:),allocatable   :: element          
+  end type nsymm_vector
+!
 
 contains
 
@@ -60,6 +65,7 @@ contains
     !ispin_=1;if(present(ispin))ispin_=ispin
     !
     call assert_shape(fg,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(fg,7)],"chi2_fitgf_generic_normal","fg")
+    allocate(Nlambdas(Nbath))
     !
     select case(cg_method)
     case default
@@ -70,12 +76,12 @@ contains
        if(ed_verbose>2)write(LOGfile,"(A,I1,A,A)")"\Chi2 fit with CG-minimize and CG-weight: ",cg_weight," on: ",cg_scheme
     end select
     !
-    !call chi2_fitgf_replica(fg,bath,ispin)
     call chi2_fitgf_replica(fg,bath)
     !
     !set trim_state_list to true after the first fit has been done: this 
     !marks the ends of the cycle of the 1st DMFT loop.
     trim_state_list=.true.
+    deallocate(Nlambdas)
   end subroutine chi2_fitgf_generic_normal
 
 
@@ -100,9 +106,8 @@ contains
     !
     call allocate_dmft_bath()
     call set_dmft_bath(bath_)
-    !
-    allocate(array_bath(size(bath_)))
-    array_bath=bath_
+    allocate(array_bath(size(bath_)-Nbath))
+    call bath2vector(bath_,array_bath)
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
@@ -214,7 +219,8 @@ contains
     write(unit,"(ES18.9,1x,I5)") chi,iter
     close(unit)
     !
-    call set_dmft_bath(array_bath)           ! *** array_bath --> dmft_bath ***    (per write fit result)
+    call vector2bath(array_bath,bath_)
+    call set_dmft_bath(bath_)           ! *** bath_ --> dmft_bath ***    (per write fit result)
     call write_dmft_bath(LOGfile)
     call save_dmft_bath()
     !
@@ -226,6 +232,7 @@ contains
     deallocate(getIlat,getJlat)
     deallocate(getIspin,getJspin)
     deallocate(getIorb,getJorb)
+    deallocate(array_bath)
     !
   contains
     !
@@ -346,33 +353,28 @@ contains
   function delta_replica(a) result(Delta)
     real(8),dimension(:)                                          :: a
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)  :: Delta
-    integer                                                       :: ilat,jlat,ispin,jspin,iorb,jorb,ibath,isym,N_dec
+    integer                                                       :: ilat,jlat,ispin,jspin,iorb,jorb,ibath,isym
     integer                                                       :: i,io,jo,ndx,stride
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: V_k
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: Haux
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)         :: invH_knnn
     real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)      :: dummy_Hbath
     real(8),dimension(Nbath)                                      :: dummy_Vbath
-    real(8),dimension(:,:),allocatable                            :: dummy_lambda
+    type(nsymm_vector),dimension(Nbath)                           :: dummy_lambda
     complex(8)                                                    :: iw
     !
     !ACHTUNG! here the bath was a temporary one, since we removed the possibility to act on other baths we need to replicate the
     !function behaviour. Rather ugly...
-    stride = 0
-    N_dec=NINT(a(1))
-    if(allocated(dummy_lambda))deallocate(dummy_lambda)
-    allocate(dummy_lambda(Nbath,N_Dec))
     !Get Hs
+    stride = 0
     do ibath=1,Nbath
-      !Get N_dec
-      stride = stride + 1
-      N_dec=a(stride)
+      allocate(dummy_lambda(ibath)%element(Nlambdas(ibath)))
       !Get Vs
       stride = stride + 1
       dummy_vbath(ibath) = a(stride)
       !get Lambdas
-      dummy_lambda(ibath,:)=a(stride+1:stride+N_dec)
-      stride=stride+N_dec
+      dummy_lambda(ibath)%element=a(stride+1:stride+Nlambdas(ibath))
+      stride=stride+Nlambdas(ibath)
     enddo
     !
     !
@@ -380,15 +382,17 @@ contains
     do i=1,Ldelta
        iw = xi*Xdelta(i)
        do ibath=1,Nbath
-          invH_knnn  = bath_from_sym(dummy_lambda(ibath,:))
+          invH_knnn  = bath_from_sym(dummy_lambda(ibath)%element)
           Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
           call inv(Haux)
           invH_knnn = lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
-          Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ dummy_Vbath(ibath)*invH_knnn(:,:,:,:,:,:)*dummy_Vbath(ibath)          
+          Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ dummy_Vbath(ibath)*invH_knnn(:,:,:,:,:,:)*dummy_Vbath(ibath)
        enddo
     enddo
     !
-    deallocate(dummy_lambda)
+    do ibath=1,Nbath
+       deallocate(dummy_lambda(ibath)%element)
+    enddo
     !
   end function delta_replica
 
@@ -412,20 +416,44 @@ contains
     !
   end function g0and_replica
 
+  subroutine bath2vector(input,output)
+    real(8),dimension(:)                :: input
+    real(8),dimension(:)                :: output
+    integer                             :: ibath,stride
+    !
+    stride=0
+    !
+    do ibath=1,Nbath   
+      Nlambdas(ibath)=dmft_bath%item(ibath)%N_dec
+      stride=stride+1
+      output(stride)=dmft_bath%item(ibath)%v
+      output(stride+1:stride+Nlambdas(ibath))=dmft_bath%item(ibath)%lambda
+      stride=stride+Nlambdas(ibath)
+    enddo
+  end subroutine bath2vector
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+  subroutine vector2bath(input,output)
+    real(8),dimension(:)                :: input
+    real(8),dimension(:)                :: output
+    integer                             :: ibath,stride_input,stride_output
+    !
+    stride_input=0
+    stride_output=0
+    !
+    do ibath=1,Nbath
+      !add N_dec
+      stride_output=stride_output+1
+      output(stride_output)=Nlambdas(ibath)
+      !add V
+      stride_output=stride_output+1
+      stride_input=stride_input+1
+      output(stride_output)=input(stride_input)
+      !add Lambdas
+      output(stride_output+1:stride_output+Nlambdas(ibath))=input(stride_input+1:stride_input+Nlambdas(ibath))
+      stride_output=stride_output+Nlambdas(ibath)
+      stride_input=stride_input+Nlambdas(ibath)
+    enddo
+  end subroutine vector2bath
 
 end MODULE ED_FIT_CHI2

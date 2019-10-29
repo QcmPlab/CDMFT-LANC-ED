@@ -57,8 +57,8 @@ contains
     max_exc=-huge(1d0)          !find the max excitation
     !Spin-Orbital diagonal:
     do ispin=1,Nspin
-       do iorb=1,Norb
-          do isite=1,Nlat
+       do isite=1,Nlat
+          do iorb=1,Norb
              !site-digonal:
              call GFmatrix_allocate(impGmatrix(isite,isite,ispin,ispin,iorb,iorb),Nstate=Nstates) !2= add,del exc. c^+_i|psi>             
              call lanc_build_gf_normal_main(isite,iorb,ispin)
@@ -67,7 +67,7 @@ contains
              do jsite=1,Nlat
                 do jorb=1,Norb
                    if(isite==jsite .and. iorb==jorb)cycle
-                   if(.not.Hmask(isite,jsite,ispin,ispin,iorb,jorb))cycle
+                   !if(.not.Hmask(isite,jsite,ispin,ispin,iorb,jorb))cycle
                    call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),Nstate=Nstates)!4=add,del exc. (c^+_i + c^+_j)/(c^+_i +ic^+_j)|psi>
                    !if(vca_gf_symmetric)then
                       call lanc_build_gf_normal_mix_chan2(isite,jsite,iorb,jorb,ispin)

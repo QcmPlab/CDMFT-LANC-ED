@@ -74,8 +74,7 @@ program cdn_hm_1dchain
    allocate(lambdasym_vector(1))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
    
-   !Build Hk and Hloc
-   call generate_hk_hloc()
+   !Build Hbasis and lambda vector
    Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
    lambdasym_vector=[-1.d0]
    

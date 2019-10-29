@@ -20,11 +20,14 @@ program cdn_hm_2dsquare
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   !SYMMETRIES TEST
+   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
    integer                                                                :: rank
    integer                                                                :: mpi_size
-   logical                                                                :: master,hermiticize
+   logical                                                                :: master
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -41,7 +44,7 @@ program cdn_hm_2dsquare
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
-   call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
+
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -73,11 +76,21 @@ program cdn_hm_2dsquare
 
    !Build Hk and Hloc
    call generate_hk_hloc()
+   allocate(lambdasym_vector(1))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
+   
+   !Build Hbasis and lambda vector
+   Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
+   lambdasym_vector=[-1.d0]
+   
    !setup solver
-   Nb=get_bath_dimension(lso2nnn(hloc))
+   call set_Hloc(Hsym_basis,lambdasym_vector)
+   Nb=get_bath_dimension(Hsym_basis)
+   !Nb=get_bath_dimension(lso2nnn(Hloc))
    allocate(bath(Nb))
    allocate(bathold(Nb))
-   call ed_init_solver(comm,bath,lso2nnn(Hloc))
+   !call set_Hloc(lso2nnn(Hloc))
+   call ed_init_solver(comm,bath)
    Weiss_old=zero
 
    !DMFT loop
@@ -107,8 +120,6 @@ program cdn_hm_2dsquare
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
-         !
-         if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
