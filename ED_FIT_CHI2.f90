@@ -94,7 +94,7 @@ contains
     logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
     real(8),dimension(:),intent(inout)                    :: bath_
     real(8),dimension(:),allocatable                      :: array_bath
-    integer                                               :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,io,jo
+    integer                                               :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,ibath,io,jo
     integer                                               :: iter,stride,counter,Asize
     real(8)                                               :: chi
     logical                                               :: check
@@ -107,7 +107,12 @@ contains
     call allocate_dmft_bath()
     call set_dmft_bath(bath_)
     allocate(array_bath(size(bath_)-Nbath))
-    call bath2vector(bath_,array_bath)
+    counter=0
+    do ibath=1,Nbath
+       counter=counter+1
+       Nlambdas(ibath)=bath_(counter)
+    enddo
+    array_bath=bath_(Nbath+1:size(bath_))
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
@@ -219,7 +224,7 @@ contains
     write(unit,"(ES18.9,1x,I5)") chi,iter
     close(unit)
     !
-    call vector2bath(array_bath,bath_)
+    bath_(Nbath+1:size(bath_))=array_bath
     call set_dmft_bath(bath_)           ! *** bath_ --> dmft_bath ***    (per write fit result)
     call write_dmft_bath(LOGfile)
     call save_dmft_bath()
@@ -416,44 +421,5 @@ contains
     !
   end function g0and_replica
 
-  subroutine bath2vector(input,output)
-    real(8),dimension(:)                :: input
-    real(8),dimension(:)                :: output
-    integer                             :: ibath,stride
-    !
-    stride=0
-    !
-    do ibath=1,Nbath   
-      Nlambdas(ibath)=dmft_bath%item(ibath)%N_dec
-      stride=stride+1
-      output(stride)=dmft_bath%item(ibath)%v
-      output(stride+1:stride+Nlambdas(ibath))=dmft_bath%item(ibath)%lambda
-      stride=stride+Nlambdas(ibath)
-    enddo
-  end subroutine bath2vector
-
-
-  subroutine vector2bath(input,output)
-    real(8),dimension(:)                :: input
-    real(8),dimension(:)                :: output
-    integer                             :: ibath,stride_input,stride_output
-    !
-    stride_input=0
-    stride_output=0
-    !
-    do ibath=1,Nbath
-      !add N_dec
-      stride_output=stride_output+1
-      output(stride_output)=Nlambdas(ibath)
-      !add V
-      stride_output=stride_output+1
-      stride_input=stride_input+1
-      output(stride_output)=input(stride_input)
-      !add Lambdas
-      output(stride_output+1:stride_output+Nlambdas(ibath))=input(stride_input+1:stride_input+Nlambdas(ibath))
-      stride_output=stride_output+Nlambdas(ibath)
-      stride_input=stride_input+Nlambdas(ibath)
-    enddo
-  end subroutine vector2bath
 
 end MODULE ED_FIT_CHI2

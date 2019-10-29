@@ -77,14 +77,15 @@ end function bath_from_sym
 !reading previous (converged) solution
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
-   real(8)              :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
-   real(8)              :: re,im
-   integer              :: i,ibath,isym,unit,flen,Nh,Nsym,Nsym_
-   integer              :: io,jo,iorb,ispin,jorb,jspin
-   logical              :: IOfile
-   real(8)              :: de
-   real(8)              :: offset_b(Nbath),noise_b(Nlat*Nspin*Norb)
-   character(len=21)    :: space
+   real(8)                  :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   real(8)                  :: re,im
+   integer                  :: i,ibath,isym,unit,flen,Nh,Nsym,Nsym_
+   integer,dimension(Nbath) :: Nlambdas
+   integer                  :: io,jo,iorb,ispin,jorb,jspin
+   logical                  :: IOfile
+   real(8)                  :: de
+   real(8)                  :: offset_b(Nbath),noise_b(Nlat*Nspin*Norb)
+   character(len=21)        :: space
    !  
    if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
    !
@@ -129,11 +130,13 @@ subroutine init_dmft_bath()
       !
       do ibath=1,Nbath
          !read number of lambdas
-         read(unit,"(I3)")Nsym
+         read(unit,"(I3)")Nlambdas(ibath)
+      enddo
+      do ibath=1,Nbath
          !read V
          read(unit,"(F21.12,1X)")dmft_bath%item(ibath)%v
          !read lambdas
-         read(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,Nsym)
+         read(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,Nlambdas(ibath))
       enddo
       close(unit)
    endif
@@ -177,6 +180,8 @@ subroutine write_dmft_bath(unit)
       do ibath=1,Nbath
         !write number of lambdas
         write(unit,"(I3)")dmft_bath%item(ibath)%N_dec
+      enddo
+      do ibath=1,Nbath
         !write Vs
         write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
         !write lambdas
@@ -240,6 +245,8 @@ subroutine set_dmft_bath(bath_)
       !Get N_dec
       stride = stride + 1
       dmft_bath%item(ibath)%N_dec=NINT(bath_(stride))
+   enddo
+   do ibath=1,Nbath
       !Get Vs
       stride = stride + 1
       dmft_bath%item(ibath)%v = bath_(stride)
@@ -275,6 +282,8 @@ subroutine get_dmft_bath(bath_)
       !Get N_dec
       stride = stride + 1
       bath_(stride)=dmft_bath%item(ibath)%N_dec
+   enddo
+   do ibath=1,Nbath
       !Get Vs
       stride = stride + 1
       bath_(stride)=dmft_bath%item(ibath)%v
