@@ -28,7 +28,7 @@ program cdn_hm_2dsquare
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master
-
+   character(len=6)                                                       :: scheme
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
    rank   = get_Rank_MPI(comm)
@@ -44,6 +44,7 @@ program cdn_hm_2dsquare
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
+   call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
 
    !
    call ed_read_input(trim(finput),comm)
@@ -141,13 +142,17 @@ program cdn_hm_2dsquare
       Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
    enddo
    call dmft_kinetic_energy(comm,Hk(:,:,:),Wt,Smats_lso)
-
+   
+   !PERIODIZE
+   call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
 
    call finalize_MPI()
 
 
 contains
 
+   include "auxiliary_routines.f90"
+   
    !-------------------------------------------------------------------------------------------
    !PURPOSE:  Hk model for the 2d square lattice
    !-------------------------------------------------------------------------------------------
@@ -217,6 +222,25 @@ contains
       Hk=nnn2lso(hopping_matrix)+hloc_model(N)
    end function hk_model
 
+   function hk_periodized(kpoint,N) result(Hk)
+      real(8),dimension(:)                          :: kpoint
+      integer                                       :: Nlat_,Nx_,Ny_,N
+      complex(8),dimension(N,N)                     :: Hk
+      !
+      Nlat_=Nlat
+      Nx_=Nx
+      Ny_=Ny
+      Nlat=1
+      Nx=1
+      Ny=1
+      !
+      Hk=hk_model(kpoint,Nspin*Norb)
+      !
+      Nlat=Nlat_
+      Nx=Nx_
+      Ny=Ny_
+      !
+   end function hk_periodized
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
