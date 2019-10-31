@@ -16,6 +16,11 @@ MODULE ED_OBSERVABLES
   implicit none
   private
   !
+  interface add_custom_observable
+     module procedure :: add_custom_observable_local
+     module procedure :: add_custom_observable_kdep
+  end interface add_custom_observable
+  
   public :: observables_impurity
   public :: local_energy_impurity
   public :: init_custom_observables
@@ -88,10 +93,9 @@ contains
     !
   end subroutine init_custom_observables
     
-  subroutine add_custom_observable(o_name,sij,sijk)
+  subroutine add_custom_observable_local(o_name,sij)
     integer                               :: i
-    complex(8),dimension(:,:),optional    :: sij
-    complex(8),dimension(:,:,:),optional  :: sijk
+    complex(8),dimension(:,:)             :: sij
     character(len=*)                      :: o_name
     !
     if(custom_o%init)then
@@ -99,26 +103,43 @@ contains
         STOP "add_custom_observable: too many observables given"
         call clear_custom_observables
       endif
-      if(present(sij).and.present(sijk))STOP "add_custom_observable: too many input matrices"
       !
       custom_o%N_filled=custom_o%N_filled+1
       custom_o%item(custom_o%N_filled)%o_name=o_name
       custom_o%item(custom_o%N_filled)%o_value=0.d0
       !
       allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
-      if(present(sijk))then
-        custom_o%item(custom_o%N_filled)%sij=sijk
-      elseif(present(sij))then
-        do i=1,size(custom_o%item(custom_o%N_filled)%sij,3)
-          custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
-        enddo
-      else
-        STOP "add_custom_observable: no matrix given"
-      endif
+      do i=1,size(custom_o%item(custom_o%N_filled)%sij,3)
+        custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
+      enddo
     else
       STOP "add_custom_observable: custom observables not initialized"
     endif
-  end subroutine add_custom_observable
+  end subroutine add_custom_observable_local
+
+
+  subroutine add_custom_observable_kdep(o_name,sijk)
+    integer                               :: i
+    complex(8),dimension(:,:,:)           :: sijk
+    character(len=*)                      :: o_name
+    !
+    if(custom_o%init)then
+      if(custom_o%N_filled .gt. custom_o%N_asked)then
+        STOP "add_custom_observable: too many observables given"
+        call clear_custom_observables
+      endif
+      !
+      custom_o%N_filled=custom_o%N_filled+1
+      custom_o%item(custom_o%N_filled)%o_name=o_name
+      custom_o%item(custom_o%N_filled)%o_value=0.d0
+      !
+      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      custom_o%item(custom_o%N_filled)%sij=sijk
+    else
+      STOP "add_custom_observable: custom observables not initialized"
+    endif
+  end subroutine add_custom_observable_kdep
+
 
   subroutine get_custom_observables()
     integer            :: i
