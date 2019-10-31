@@ -96,9 +96,10 @@ contains
     !
     if(custom_o%init)then
       if(custom_o%N_filled .gt. custom_o%N_asked)then
-        STOP "Too many observables given"
+        STOP "add_custom_observable: too many observables given"
         call clear_custom_observables
       endif
+      if(present(sij).and.present(sijk))STOP "add_custom_observable: too many input matrices"
       !
       custom_o%N_filled=custom_o%N_filled+1
       custom_o%item(custom_o%N_filled)%o_name=o_name
@@ -112,10 +113,10 @@ contains
           custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
         enddo
       else
-        STOP "wrong observable matrix given"
+        STOP "add_custom_observable: no matrix given"
       endif
     else
-      STOP "custom observables not initialized"
+      STOP "add_custom_observable: custom observables not initialized"
     endif
   end subroutine add_custom_observable
 
