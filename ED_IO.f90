@@ -186,7 +186,7 @@ MODULE ED_IO
   public :: ed_get_invG0and_realaxis
 
 
-
+  public :: ed_gf_cluster
 
   public :: ed_get_dens
   public :: ed_get_mag

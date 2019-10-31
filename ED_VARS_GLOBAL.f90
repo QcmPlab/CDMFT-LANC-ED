@@ -29,6 +29,20 @@ MODULE ED_VARS_GLOBAL
   end type effective_bath
 
 
+  !-------------------- CUSTOM OBSERVABLE STRUCTURE ----------------------!
+  type observable
+    complex(8),dimension(:,:,:),allocatable :: sij
+    character(len=32)                       :: o_name
+    real(8)                                 :: o_value
+  end type observable
+
+  type custom_observables
+     type(observable),dimension(:),allocatable               :: item
+     complex(8),dimension(:,:,:),allocatable                 :: Hk
+     integer                                                 :: N_asked
+     integer                                                 :: N_filled
+     logical                                                 :: init=.false.
+  end type custom_observables
 
  !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
   !type effective_bath_component
@@ -157,6 +171,7 @@ MODULE ED_VARS_GLOBAL
   !=========================================================
   real(8)                                            :: zeta_function
   real(8)                                            :: gs_energy
+  real(8)                                            :: max_exc
 
 
 
@@ -222,7 +237,7 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:),allocatable                   ::  ed_docc
   !--------------- LATTICE WRAP VARIABLES -----------------!
   ! real(8),dimension(:,:),allocatable,save            ::  nii,dii,mii
-
+  type(custom_observables)                             ::  custom_o
 
 
   !Local energies and generalized double occupancies

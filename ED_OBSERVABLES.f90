@@ -2,6 +2,7 @@ MODULE ED_OBSERVABLES
   USE SF_CONSTANTS, only:zero,pi,xi
   USE SF_IOTOOLS, only:free_unit,reg,txtfy
   USE SF_ARRAYS, only: arange
+  USE SF_INTEGRATE, only: quad
   USE SF_LINALG
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
@@ -10,44 +11,51 @@ MODULE ED_OBSERVABLES
   USE ED_HAMILTONIAN
   USE ED_BATH
   USE ED_AUX_FUNX
+  USE ED_IO
+  USE ED_BATH_FUNCTIONS
   implicit none
   private
   !
   public :: observables_impurity
   public :: local_energy_impurity
+  public :: init_custom_observables
+  public :: add_custom_observable
+  public :: get_custom_observables
 
 
-  logical,save                           :: iolegend=.true.
-  real(8),dimension(:,:),allocatable     :: dens,dens_up,dens_dw
-  real(8),dimension(:,:),allocatable     :: docc
-  real(8),dimension(:,:),allocatable     :: magz
-  real(8),dimension(:,:,:,:),allocatable :: sz2,n2
-  real(8),dimension(:,:,:),allocatable   :: zimp,simp
-  real(8),dimension(:),allocatable       :: s2tot
-  real(8)                                :: Egs
-  real(8)                                :: Ei
-  real(8)                                :: integrationR
+  logical,save                                    :: iolegend=.true.
+  real(8),dimension(:,:),allocatable              :: dens,dens_up,dens_dw
+  real(8),dimension(:,:),allocatable              :: docc
+  real(8),dimension(:,:),allocatable              :: magz
+  real(8),dimension(:,:,:,:),allocatable          :: sz2,n2
+  real(8),dimension(:,:,:),allocatable            :: zimp,simp
+  real(8),dimension(:),allocatable                :: s2tot
+  real(8)                                         :: Egs
+  real(8)                                         :: Ei
+  real(8)                                         :: integrationR
+  complex(8),allocatable,dimension(:,:,:)         :: sij
+  complex(8),allocatable,dimension(:,:,:)         :: Hk
   !
-  integer                                :: iorb,jorb,iorb1,jorb1
-  integer                                :: ispin,jspin
-  integer                                :: ilat,jlat
-  integer                                :: ibath
-  integer                                :: r,m,k,k1,k2
-  integer                                :: iup,idw
-  integer                                :: jup,jdw
-  integer                                :: mup,mdw
-  real(8)                                :: sgn,sgn1,sgn2,sg1,sg2
-  real(8)                                :: gs_weight
+  integer                                         :: iorb,jorb,iorb1,jorb1
+  integer                                         :: ispin,jspin
+  integer                                         :: ilat,jlat
+  integer                                         :: ibath
+  integer                                         :: r,m,k,k1,k2
+  integer                                         :: iup,idw
+  integer                                         :: jup,jdw
+  integer                                         :: mup,mdw
+  real(8)                                         :: sgn,sgn1,sgn2,sg1,sg2
+  real(8)                                         :: gs_weight
   !
-  real(8)                                :: peso
-  real(8)                                :: norm
+  real(8)                                         :: peso
+  real(8)                                         :: norm
   !
-  integer                                :: i,j,ii
-  integer                                :: isector,jsector
-  integer                                :: idim,idimUP,idimDW
+  integer                                         :: i,j,ii
+  integer                                         :: isector,jsector
+  integer                                         :: idim,idimUP,idimDW
   !
-  real(8),dimension(:),pointer           :: state_cvec
-  logical                                :: Jcondition
+  real(8),dimension(:),pointer                    :: state_cvec
+  logical                                         :: Jcondition
   !
 
 
@@ -62,13 +70,102 @@ contains
   end subroutine observables_impurity
 
 
-
   subroutine local_energy_impurity()
     call lanc_local_energy()
   end subroutine local_energy_impurity
 
+  
+  subroutine init_custom_observables(N,Hk)
+    integer                      :: N
+    complex(8),dimension(:,:,:)  :: Hk
+    !
+    custom_o%N_filled=0
+    custom_o%N_asked=N
+    allocate(custom_o%Hk(size(Hk,1),size(Hk,2),size(Hk,3)))
+    custom_o%Hk=Hk
+    allocate(custom_o%item(N))
+    custom_o%init=.true.
+    !
+  end subroutine init_custom_observables
+    
+  subroutine add_custom_observable(o_name,sij,sijk)
+    integer                               :: i
+    complex(8),dimension(:,:),optional    :: sij
+    complex(8),dimension(:,:,:),optional  :: sijk
+    character(len=*)                      :: o_name
+    !
+    if(custom_o%init)then
+      if(custom_o%N_filled .gt. custom_o%N_asked)then
+        STOP "Too many observables given"
+        call clear_custom_observables
+      endif
+      !
+      custom_o%N_filled=custom_o%N_filled+1
+      custom_o%item(custom_o%N_filled)%o_name=o_name
+      custom_o%item(custom_o%N_filled)%o_value=0.d0
+      !
+      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      if(present(sijk))then
+        custom_o%item(custom_o%N_filled)%sij=sijk
+      elseif(present(sij))then
+        do i=1,size(custom_o%item(custom_o%N_filled)%sij,3)
+          custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
+        enddo
+      else
+        STOP "wrong observable matrix given"
+      endif
+    else
+      STOP "custom observables not initialized"
+    endif
+  end subroutine add_custom_observable
 
+  subroutine get_custom_observables()
+    integer            :: i
+    !
+    if(custom_o%init)then
+      if(custom_o%N_filled .eq. 0)then
+        write(Logfile,*)"WARNING! Custom observables initialized but none given."
+        RETURN
+      endif
+      !
+      write(LOGfile,*)"Calculating custom observables"
+      !
+      allocate(sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      allocate(Hk(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      sij=zero
+      Hk=zero
+      !
+      Hk=custom_o%Hk
+      do i=1,custom_o%N_filled
+        sij=custom_o%item(i)%sij
+        if(finiteT) then
+          custom_o%item(i)%o_value=calculate_observable_integral_finite_t()
+        else
+          custom_o%item(i)%o_value=calculate_observable_integral_zero_t()
+        endif
+        write(LOGfile,"(A,10f18.12,A)")reg(custom_o%item(i)%o_name)//" = ",custom_o%item(i)%o_value
+      enddo
+      call write_custom_legend()
+      call write_custom_observables()
+      call clear_custom_observables()
+      deallocate(sij,Hk)
+    endif
+    !
+  end subroutine get_custom_observables
+  
 
+  subroutine clear_custom_observables()
+    integer                       :: i
+    do i=1,custom_o%N_filled
+      deallocate(custom_o%item(i)%sij)
+      custom_o%item(i)%o_name=""
+      custom_o%item(i)%o_value=0.d0
+    enddo
+    deallocate(custom_o%Hk)
+    custom_o%N_asked=0
+    custom_o%N_filled=0
+    custom_o%init=.false.
+  end subroutine clear_custom_observables
 
   !+-------------------------------------------------------------------+
   !PURPOSE  : Lanc method
@@ -223,6 +320,150 @@ contains
   end subroutine lanc_observables
 
 
+!+---------------------------------------------------------------------------------+
+!PURPOSE  : Evaluate and print out custom observable
+!+---------------------------------------------------------------------------------+
+  
+  !T=0
+  function calculate_observable_integral_zero_t() result(out_2)
+    integer                                                   :: inf
+    real(8)                                                   :: out_2,spin_multiplicity
+    !
+    out_2=0.d0
+    spin_multiplicity=3.d0-Nspin
+    !
+    call quad(sum_observable_kmesh,a=0.0d0,inf=1,verbose=(ED_VERBOSE>=3),result=out_2,strict=.false.)
+    !
+    out_2=spin_multiplicity*out_2/pi 
+    return
+  end function calculate_observable_integral_zero_t
+
+  !T finite
+
+  function calculate_observable_integral_finite_t() result(out_2)
+    integer                         :: inf,Nmax,ii
+    real(8)                         :: out_2,spin_multiplicity,omegamax,integralpart
+    !
+    !1) Find the real omegamax
+    nmax=int(2*(abs(max_exc)+2.d0*hwband)*beta/pi)
+    if (mod(nmax,2)==0)then
+      nmax=nmax/2    
+    else
+      nmax=(nmax+1)/2
+    endif
+    integrationR=2*(nmax+1)*pi/beta
+    !2) Evaluate discrete sum
+    !
+    out_2=0.d0
+    do ii=0,Nmax
+      out_2=out_2+dreal(sum_observable_kmesh_complex(xi*(2*ii+1)*pi/beta))
+    enddo
+    !
+    out_2=2.d0*(1/beta)*out_2
+    !
+    !3) Evaluate integral part
+    integralpart=0.d0
+    call quad(integral_contour,a=-pi,b=pi,verbose=(ED_VERBOSE>=3),key=6,result=integralpart,strict=.false.)
+    !
+    !4) Sum all
+    out_2=out_2+integralpart
+    !5) Spin trick
+    spin_multiplicity=3.d0-Nspin 
+    out_2=spin_multiplicity*out_2/Nlat
+    return
+  end function calculate_observable_integral_finite_t
+
+
+ function integral_contour(zeta) result(f)
+    real(8)                 :: zeta,f
+    complex(8)              :: w,fermi
+    !
+    w=integrationR*exp(xi*zeta)
+    if(dreal((w-XMU)*beta)>= 100)then
+      fermi=0.d0
+    else
+      fermi=(1/(exp(beta*(w-XMU))+1))
+    endif
+    !
+    f=dreal((1.d0/pi)*w*fermi*sum_observable_kmesh_complex(w))
+ end function integral_contour
+
+
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : sum on k-vectors
+  !+-------------------------------------------------------------------+
+
+  function sum_observable_kmesh(omega) result(out_1)
+    integer                                                           :: ii,jj,kk
+    real(8)                                                           :: omega
+    real(8)                                                           :: out_1
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
+    !
+    out_1=0.d0
+    !
+    g=zero
+    invg0=zero
+    invg_lso=zero
+    invg0_lso=zero
+    Gk_lso=zero
+    Sigma=zero
+    !
+    !Obtain Sigma(iw)
+    call ed_gf_cluster(dcmplx(0.d0,omega),g)
+    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
+    call inv(invg_lso)
+    invg0=invg0_bath(dcmplx(0.d0,omega))
+    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
+    Sigma=invg0_lso-invg_lso
+    !
+    !Do the k-sum
+    do ii=1,size(Hk,3)
+       Gk_lso=(dcmplx(0d0,omega)+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii) - Sigma    
+       call inv(Gk_lso)
+       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)) - trace(sij(:,:,ii))/(dcmplx(-1.1d0,omega)))
+    enddo
+    !
+    out_1=out_1/(size(Hk,3))
+    !
+    return
+    !
+  end function sum_observable_kmesh
+
+  function sum_observable_kmesh_complex(omega) result(out_1)
+    integer                                                           :: ii,jj,kk
+    complex(8)                                                        :: omega
+    complex(8)                                                        :: out_1
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
+    !
+    out_1=0.d0
+    !
+    g=zero
+    invg0=zero
+    invg_lso=zero
+    invg0_lso=zero
+    Gk_lso=zero
+    Sigma=zero
+    !
+    !    
+    call ed_gf_cluster(omega,g)
+    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
+    call inv(invg_lso)
+    invg0=invg0_bath(omega)
+    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
+    Sigma=invg0_lso-invg_lso
+    !
+    do ii=1,size(Hk,3)
+       Gk_lso=(xi*omega+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii)- Sigma    
+       call inv(Gk_lso)
+       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)))
+    enddo
+    out_1=out_1/(size(Hk,3))
+    !
+    return
+    !
+  end function sum_observable_kmesh_complex
 
 
 
@@ -510,6 +751,15 @@ contains
     iolegend=.false.
   end subroutine write_legend
 
+  subroutine write_custom_legend()
+    integer :: unit,i
+    unit = free_unit()
+    open(unit,file="custom_observables_info.ed")
+    write(unit,"(A1,90(A10,6X))")"#",(reg(txtfy(i))//reg(custom_o%item(i)%o_name),i=1,custom_o%N_filled)
+    close(unit)
+  end subroutine write_custom_legend
+  
+
   subroutine write_energy_info()
     integer :: unit
     unit = free_unit()
@@ -595,6 +845,28 @@ contains
     enddo
     close(unit)
   end subroutine write_observables
+
+
+
+  subroutine write_custom_observables()
+    integer :: i
+    integer :: unit
+    unit = free_unit()
+    open(unit,file="custom_observables_all.ed",position='append')
+    write(unit,"(90(F15.9,1X))")&
+         (custom_o%item(i)%o_value,i=1,custom_o%N_filled)
+    close(unit)
+    !
+    unit = free_unit()
+    open(unit,file="custom_observables_last.ed")
+    write(unit,"(90(F15.9,1X))")&
+         (custom_o%item(i)%o_value,i=1,custom_o%N_filled)
+    close(unit)
+    !
+  end subroutine write_custom_observables
+
+
+
 
   subroutine write_energy()
     integer :: unit

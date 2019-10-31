@@ -10,7 +10,7 @@ program cdn_bhz_2d
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,Mh,lambda,wmixing
+   real(8)                                                                :: ts,Mh,lambda,wmixing,observable
    !Bath:
    real(8),allocatable                                                    :: Bath(:),BathOld(:)
    !The local hybridization function:
@@ -20,6 +20,7 @@ program cdn_bhz_2d
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   complex(8),dimension(:,:,:,:,:,:),allocatable                          :: observable_matrix
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -76,11 +77,16 @@ program cdn_bhz_2d
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
 
+   !Allocate custom observable matrix (test with n_11)
+   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+   observable_matrix=zero
+   observable_matrix(1,1,1,1,1,1)=one
+
    !Build Hk and Hloc
    call generate_hk_hloc()
    allocate(lambdasym_vector(3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
-   !
+   
    !SETUP SYMMETRIES (EXPERIMENTAL)
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
@@ -90,7 +96,7 @@ program cdn_bhz_2d
    !
    lambdasym_vector(3)=lambda
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
-   !
+   
    !setup solver
    Nb=get_bath_dimension(lso2nnn(hloc))
    allocate(bath(Nb))
@@ -109,7 +115,10 @@ program cdn_bhz_2d
       call ed_solve(comm,bath) 
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
-
+      
+      !get custom observable
+      observable=get_custom_observable(Hk,observable_matrix)
+      print*,"THE CUSTOM OBSERVABLE IS ",observable
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)

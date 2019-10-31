@@ -19,6 +19,8 @@ program cdn_hm_1dchain
    real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   !custom observable example
+   complex(8),dimension(:,:),allocatable                                  :: observable_matrix
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -74,6 +76,14 @@ program cdn_hm_1dchain
    allocate(lambdasym_vector(1))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
    
+   !Allocate custom observable matrix (test with n_11)
+   allocate(observable_matrix(Nlat*Nspin*Norb,Nlat*Nspin*Norb))
+   observable_matrix=zero
+   observable_matrix(1,1)=one
+   call init_custom_observables(1,Hk)
+   call add_custom_observable("test",observable_matrix)
+   
+
    !Build Hbasis and lambda vector
    Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
    lambdasym_vector=[-1.d0]

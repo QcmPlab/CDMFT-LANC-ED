@@ -35,6 +35,9 @@ MODULE CDMFT_ED
        ed_init_solver                         , &
        ed_solve
 
+  USE ED_OBSERVABLES,  only:                    &
+       init_custom_observables                , &
+       add_custom_observable
 
   USE ED_FIT_CHI2,  only: ed_chi2_fitgf
 

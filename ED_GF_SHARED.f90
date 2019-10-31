@@ -21,7 +21,7 @@ MODULE ED_GF_SHARED
   !Lanczos shared variables
   !=========================================================
   real(8),dimension(:),pointer                :: state_cvec
-  real(8)                                     :: state_e,max_exc
+  real(8)                                     :: state_e
 
   !Frequency and time arrays:
   !=========================================================
