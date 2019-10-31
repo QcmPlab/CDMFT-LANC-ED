@@ -26,6 +26,7 @@ MODULE ED_OBSERVABLES
   public :: init_custom_observables
   public :: add_custom_observable
   public :: get_custom_observables
+  public :: clear_custom_observables
 
 
   logical,save                                    :: iolegend=.true.
@@ -169,7 +170,6 @@ contains
       enddo
       call write_custom_legend()
       call write_custom_observables()
-      call clear_custom_observables()
       deallocate(sij,Hk)
     endif
     !

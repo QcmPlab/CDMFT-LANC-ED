@@ -141,7 +141,9 @@ program cdn_hm_2dsquare
       !
       if(master)call end_loop
    enddo
-
+   !
+   !Cleanup after calculating custom observables
+   !call clear_custom_observables()
    !Compute the local gfs:
    call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)

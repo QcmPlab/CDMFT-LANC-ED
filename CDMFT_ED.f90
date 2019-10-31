@@ -37,6 +37,7 @@ MODULE CDMFT_ED
 
   USE ED_OBSERVABLES,  only:                    &
        init_custom_observables                , &
+       clear_custom_observables               , &
        add_custom_observable
 
   USE ED_FIT_CHI2,  only: ed_chi2_fitgf
