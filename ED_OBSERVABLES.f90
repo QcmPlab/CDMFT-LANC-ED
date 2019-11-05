@@ -178,7 +178,7 @@ contains
 
   subroutine clear_custom_observables()
     integer                       :: i
-     if(custom_o%init)then 
+    if(custom_o%init)then 
       do i=1,custom_o%N_filled
         deallocate(custom_o%item(i)%sij)
         custom_o%item(i)%o_name=""
