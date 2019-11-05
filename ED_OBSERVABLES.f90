@@ -85,12 +85,14 @@ contains
     integer                      :: N
     complex(8),dimension(:,:,:)  :: Hk
     !
-    custom_o%N_filled=0
-    custom_o%N_asked=N
-    allocate(custom_o%Hk(size(Hk,1),size(Hk,2),size(Hk,3)))
-    custom_o%Hk=Hk
-    allocate(custom_o%item(N))
-    custom_o%init=.true.
+    if(MpiMaster)then
+      custom_o%N_filled=0
+      custom_o%N_asked=N
+      allocate(custom_o%Hk(size(Hk,1),size(Hk,2),size(Hk,3)))
+      custom_o%Hk=Hk
+      allocate(custom_o%item(N))
+      custom_o%init=.true.
+    endif
     !
   end subroutine init_custom_observables
     
@@ -99,7 +101,7 @@ contains
     complex(8),dimension(:,:)             :: sij
     character(len=*)                      :: o_name
     !
-    if(custom_o%init)then
+    if(MpiMaster .and. custom_o%init)then
       if(custom_o%N_filled .gt. custom_o%N_asked)then
         STOP "add_custom_observable: too many observables given"
         call clear_custom_observables
@@ -124,7 +126,7 @@ contains
     complex(8),dimension(:,:,:)           :: sijk
     character(len=*)                      :: o_name
     !
-    if(custom_o%init)then
+    if(MpiMaster .and. custom_o%init)then
       if(custom_o%N_filled .gt. custom_o%N_asked)then
         STOP "add_custom_observable: too many observables given"
         call clear_custom_observables
@@ -145,7 +147,7 @@ contains
   subroutine get_custom_observables()
     integer            :: i
     !
-    if(custom_o%init)then
+    if(MpiMaster .and. custom_o%init)then
       if(custom_o%N_filled .eq. 0)then
         write(Logfile,*)"WARNING! Custom observables initialized but none given."
         RETURN
@@ -178,7 +180,7 @@ contains
 
   subroutine clear_custom_observables()
     integer                       :: i
-    if(custom_o%init)then 
+    if(MpiMaster .and. custom_o%init)then 
       do i=1,custom_o%N_filled
         deallocate(custom_o%item(i)%sij)
         custom_o%item(i)%o_name=""
