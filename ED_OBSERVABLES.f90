@@ -178,15 +178,17 @@ contains
 
   subroutine clear_custom_observables()
     integer                       :: i
-    do i=1,custom_o%N_filled
-      deallocate(custom_o%item(i)%sij)
-      custom_o%item(i)%o_name=""
-      custom_o%item(i)%o_value=0.d0
-    enddo
-    deallocate(custom_o%Hk)
-    custom_o%N_asked=0
-    custom_o%N_filled=0
-    custom_o%init=.false.
+     if(custom_o%init)then 
+      do i=1,custom_o%N_filled
+        deallocate(custom_o%item(i)%sij)
+        custom_o%item(i)%o_name=""
+        custom_o%item(i)%o_value=0.d0
+      enddo
+      deallocate(custom_o%Hk)
+      custom_o%N_asked=0
+      custom_o%N_filled=0
+      custom_o%init=.false.
+    endif
   end subroutine clear_custom_observables
 
   !+-------------------------------------------------------------------+

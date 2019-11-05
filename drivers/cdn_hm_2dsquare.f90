@@ -143,7 +143,7 @@ program cdn_hm_2dsquare
    enddo
    !
    !Cleanup after calculating custom observables
-   !call clear_custom_observables()
+   call clear_custom_observables()
    !Compute the local gfs:
    call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
@@ -155,14 +155,15 @@ program cdn_hm_2dsquare
    call dmft_kinetic_energy(comm,Hk(:,:,:),Wt,Smats_lso)
    
    !PERIODIZE
-   call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
+   !call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
 
    call finalize_MPI()
 
 
 contains
 
-   include "auxiliary_routines.f90"
+   !include "auxiliary_routines.f90"
+
    
    !-------------------------------------------------------------------------------------------
    !PURPOSE:  Hk model for the 2d square lattice
