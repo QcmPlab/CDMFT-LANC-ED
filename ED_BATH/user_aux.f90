@@ -5,19 +5,34 @@
 function get_bath_dimension_direct(Hloc_nn) result(bath_size)
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb),intent(in)          :: Hloc_nn
   real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hloc
-  integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,iorb,jorb,io,jo
+  integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,jspin,iorb,jorb,io,jo,counter
   logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hmask
   !
   Hloc=dreal(Hloc_nn)
+  counter=0
   !
   !Real part of nonzero elements
-  Hmask = mask_hloc(Hloc,wdiag=.true.,uplo=.true.)
-  ndx   = count(Hmask)          !all elements
-  !
-  !
-  !COMPLEX:Imaginary part of nondiagonal elements
-  !Hmask = mask_hloc(Hloc,wdiag=.false.,uplo=.true.)
-  !ndx   = ndx+count(Hmask)          !all elements
+  do ispin=1,Nspin
+     do jspin=1,Nspin
+        do ilat=1,Nlat
+           do jlat=1,Nlat
+              do iorb=1,Norb
+                 do jorb=1,Norb
+                    io=index_stride_lso(ilat,ispin,iorb)
+                    jo=index_stride_lso(jlat,jspin,jorb)
+                    if((Hloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                       counter=counter+1
+                       !COMPLEX
+                       !if(io.ne.jo)counter=counter+1
+                    endif
+                 enddo
+              enddo
+           enddo
+        enddo
+     enddo
+  enddo
+  ndx   = counter + 1         !all elements (plus identity for offset)
+  ndx   = ndx + 1             !we also print n_Dec
   !
   !number of non vanishing elements for each replica
   ndx = ndx * Nbath
