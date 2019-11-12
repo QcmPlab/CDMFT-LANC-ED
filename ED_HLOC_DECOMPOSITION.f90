@@ -207,9 +207,6 @@ MODULE ED_HLOC_DECOMPOSITION
       complex(8),dimension(:,:,:,:,:,:,:)       :: Hvec
       real(8),dimension(:)                      :: lambdavec
       !
-      if(size(lambdavec).ne.size(H_basis)) STOP "Init_hloc: Wrong coefficient vector size"
-      if(size(Hvec(1,1,1,1,1,1,:)).ne.size(H_basis)) STOP "Init_hloc: Wrong H_basis size"
-      !
       allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
       impHloc=zero
       !
