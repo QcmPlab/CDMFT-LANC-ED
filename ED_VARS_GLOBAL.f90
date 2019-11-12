@@ -44,21 +44,6 @@ MODULE ED_VARS_GLOBAL
      logical                                                 :: init=.false.
   end type custom_observables
 
- !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
-  !type effective_bath_component
-     !real(8)                                       :: v     !spin-keep hyb.
-     !real(8),dimension(:,:,:,:,:,:),allocatable    :: h     !Replica hamilt [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-  !end type effective_bath_component
-
-  !type effective_bath
-     !integer                                                 :: Nmask
-     !type(effective_bath_component),dimension(:),allocatable :: item
-     !logical(8),dimension(:,:,:,:,:,:),allocatable           :: mask  !impHloc mask   [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-     !logical                                                 :: status=.false.
-  !end type effective_bath
-
-
-
 
   !---------------- SECTOR-TO-FOCK SPACE STRUCTURE -------------------!
   type sector_map
@@ -82,11 +67,11 @@ MODULE ED_VARS_GLOBAL
   !SPARSE MATRIX-VECTOR PRODUCTS USED IN ED_MATVEC
   !dbleMat*dbleVec
   abstract interface
-     subroutine dd_sparse_HxV(Nloc,v,Hv)
-       integer                 :: Nloc
-       real(8),dimension(Nloc) :: v
-       real(8),dimension(Nloc) :: Hv
-     end subroutine dd_sparse_HxV
+     subroutine cc_sparse_HxV(Nloc,v,Hv)
+       integer                    :: Nloc
+       complex(8),dimension(Nloc) :: v
+       complex(8),dimension(Nloc) :: Hv
+     end subroutine cc_sparse_HxV
   end interface
 
 
@@ -127,7 +112,7 @@ MODULE ED_VARS_GLOBAL
   !local part of the Hamiltonian
   !INTERNAL USE (accessed thru functions)
   !=========================================================
-  real(8),dimension(:,:,:,:,:,:),allocatable         :: impHloc           !local hamiltonian [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+  complex(8),dimension(:,:,:,:,:,:),allocatable         :: impHloc           !local hamiltonian [Nlat][Nlat][Nspin][Nspin][Norb][Norb]
 
 
   !Some maps between sectors and full Hilbert space (pointers)
@@ -154,7 +139,7 @@ MODULE ED_VARS_GLOBAL
   type(sparse_matrix_csr)                            :: spH0nd !non-diagonal part
   type(sparse_matrix_csr),dimension(:),allocatable   :: spH0ups,spH0dws !reduced UP and DW parts
   !
-  procedure(dd_sparse_HxV),pointer                   :: spHtimesV_p=>null()
+  procedure(cc_sparse_HxV),pointer                   :: spHtimesV_p=>null()
 
 
   !Variables for DIAGONALIZATION

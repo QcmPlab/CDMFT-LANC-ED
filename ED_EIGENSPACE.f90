@@ -12,12 +12,12 @@ module ED_EIGENSPACE
 
 
   type sparse_estate
-     integer                      :: sector        !index of the sector
-     real(8)                      :: e             !energy of the eigen-state
-     real(8),dimension(:),pointer :: cvec=>null()  !double precision eigen-vector
-     logical                      :: itwin=.false. !twin sector label
-     type(sparse_estate),pointer  :: twin=>null()  !link to twin box 
-     type(sparse_estate),pointer  :: next=>null()  !link to next box (chain)
+     integer                         :: sector        !index of the sector
+     real(8)                         :: e             !energy of the eigen-state
+     complex(8),dimension(:),pointer :: cvec=>null()  !double precision eigen-vector
+     logical                         :: itwin=.false. !twin sector label
+     type(sparse_estate),pointer     :: twin=>null()  !link to twin box 
+     type(sparse_estate),pointer     :: next=>null()  !link to next box (chain)
   end type sparse_estate
 
   type sparse_espace
@@ -196,14 +196,14 @@ contains        !some routine to perform simple operation on the lists
   !PURPOSE  : insert a state into the list using ener,vector,sector
   !+------------------------------------------------------------------+
   subroutine es_add_state_c(espace,e,cvec,sector,twin,size,verbose)
-    type(sparse_espace),intent(inout) :: espace
-    real(8),intent(in)                :: e
-    real(8),dimension(:),intent(in)   :: cvec
-    integer,intent(in)                :: sector
-    integer,intent(in),optional       :: size
-    logical,intent(in),optional       :: verbose
-    logical,intent(in),optional       :: twin
-    logical                           :: twin_
+    type(sparse_espace),intent(inout)    :: espace
+    real(8),intent(in)                   :: e
+    complex(8),dimension(:),intent(in)   :: cvec
+    integer,intent(in)                   :: sector
+    integer,intent(in),optional          :: size
+    logical,intent(in),optional          :: verbose
+    logical,intent(in),optional          :: twin
+    logical                              :: twin_
     twin_=.false.;if(present(twin))twin_=twin
     if(present(size))then !if present size add respecting the size constraint.
        if(espace%size<size)then
@@ -227,12 +227,12 @@ contains        !some routine to perform simple operation on the lists
   !PURPOSE  : insert a state into the list using ener,vector,sector
   !+------------------------------------------------------------------+
   subroutine es_insert_state_c(space,e,vec,sector,twin)
-    type(sparse_espace),intent(inout) :: space
-    real(8),intent(in)                :: e
-    real(8),dimension(:),intent(in)   :: vec
-    integer,intent(in)                :: sector
-    logical                           :: twin
-    type(sparse_estate),pointer       :: p,c
+    type(sparse_espace),intent(inout)    :: space
+    real(8),intent(in)                   :: e
+    complex(8),dimension(:),intent(in)   :: vec
+    integer,intent(in)                   :: sector
+    logical                              :: twin
+    type(sparse_estate),pointer          :: p,c
     p => space%root
     c => p%next
     do                            !traverse the list until e < value (ordered list)
@@ -463,13 +463,13 @@ contains        !some routine to perform simple operation on the lists
   !PURPOSE  : 
   !+------------------------------------------------------------------+
   function es_return_cvector_default(space,n) result(vector)
-    type(sparse_espace),intent(in)   :: space
-    integer,optional,intent(in)      :: n
-    real(8),dimension(:),pointer     :: vector
-    type(sparse_estate),pointer      :: c
-    integer                          :: i,pos
-    integer                          :: dim
-    integer,dimension(:),allocatable :: order
+    type(sparse_espace),intent(in)      :: space
+    integer,optional,intent(in)         :: n
+    complex(8),dimension(:),pointer     :: vector
+    type(sparse_estate),pointer         :: c
+    integer                             :: i,pos
+    integer                             :: dim
+    integer,dimension(:),allocatable    :: order
     !
     if(.not.space%status) stop "es_return_cvector ERRROR: espace not allocated"
     pos= space%size ; if(present(n))pos=n
@@ -498,16 +498,16 @@ contains        !some routine to perform simple operation on the lists
 
 #ifdef _MPI
   function es_return_cvector_mpi(MpiComm,space,n) result(vector)
-    integer                          :: MpiComm
-    type(sparse_espace),intent(in)   :: space
-    integer,optional,intent(in)      :: n
-    real(8),dimension(:),pointer     :: vtmp
-    real(8),dimension(:),pointer     :: vector
-    type(sparse_estate),pointer      :: c
-    integer                          :: i,pos,Nloc,Ndim
-    integer                          :: dim,ierr
-    logical                          :: MpiMaster
-    integer,dimension(:),allocatable :: order
+    integer                             :: MpiComm
+    type(sparse_espace),intent(in)      :: space
+    integer,optional,intent(in)         :: n
+    complex(8),dimension(:),pointer     :: vtmp
+    complex(8),dimension(:),pointer     :: vector
+    type(sparse_estate),pointer         :: c
+    integer                             :: i,pos,Nloc,Ndim
+    integer                             :: dim,ierr
+    logical                             :: MpiMaster
+    integer,dimension(:),allocatable    :: order
     !
     if(MpiComm==MPI_COMM_NULL)return
     if(MpiComm==MPI_UNDEFINED)stop "es_return_cvector ERRROR: MpiComm = MPI_UNDEFINED"
@@ -543,7 +543,7 @@ contains        !some routine to perform simple operation on the lists
        else
           allocate(Vector(1))
        endif
-       Vector = 0d0
+       Vector = zero
        call gather_vector_MPI(MpiComm,c%cvec,Vector)
     else
        !
@@ -554,7 +554,7 @@ contains        !some routine to perform simple operation on the lists
        else
           allocate(Vtmp(1))
        endif
-       Vtmp = 0d0
+       Vtmp = zero
        call gather_vector_MPI(MpiComm,c%twin%cvec,Vtmp)
        if(MpiMaster)then
           allocate(Vector(Ndim))
@@ -562,7 +562,7 @@ contains        !some routine to perform simple operation on the lists
           deallocate(Order)
        else
           allocate(Vector(1))
-          Vector = 0d0
+          Vector = zero
        endif
        deallocate(Vtmp)
     endif

@@ -29,7 +29,7 @@ MODULE ED_HLOC_DECOMPOSITION
       allocate(lambda_impHloc(N))
       do isym=1,N
          allocate(H_basis(isym)%O(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-         H_basis(isym)%O=0.d0
+         H_basis(isym)%O=zero
          lambda_impHloc(isym)=0.d0
       enddo
    end subroutine allocate_h_basis
@@ -83,9 +83,8 @@ MODULE ED_HLOC_DECOMPOSITION
                         io=index_stride_lso(ilat,ispin,iorb)
                         jo=index_stride_lso(jlat,jspin,jorb)
                         if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                           counter=counter+1
-                           !COMPLEX
-                           !if(io.ne.jo)counter=counter+1
+                           if(DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
+                           if(DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
                         endif
                      enddo
                   enddo
@@ -107,20 +106,19 @@ MODULE ED_HLOC_DECOMPOSITION
                         io=index_stride_lso(ilat,ispin,iorb)
                         jo=index_stride_lso(jlat,jspin,jorb)
                         if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                           counter=counter+1
-                           H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
-                           H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
-                           !REAL
-                           lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
-                           !COMPLEX
-                           !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           if(DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
+                              counter=counter+1
+                              H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                              H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                              lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                           endif
                            !
-                           !if(io.ne.jo)then
-                           !counter=counter+1
-                              !H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=xi
-                              !H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=-xi
-                              !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
-                           !endif
+                           if(DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
+                              counter=counter+1
+                              H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
+                              H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
+                              lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                           endif
                         endif
                      enddo
                   enddo
@@ -154,9 +152,8 @@ MODULE ED_HLOC_DECOMPOSITION
                         io=index_stride_lso(ilat,ispin,iorb)
                         jo=index_stride_lso(jlat,jspin,jorb)
                         if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                           counter=counter+1
-                           !COMPLEX
-                           !if(io.ne.jo)counter=counter+1
+                           if(DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
+                           if(DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
                         endif
                      enddo
                   enddo
@@ -178,20 +175,19 @@ MODULE ED_HLOC_DECOMPOSITION
                         io=index_stride_lso(ilat,ispin,iorb)
                         jo=index_stride_lso(jlat,jspin,jorb)
                         if((impHloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                           counter=counter+1
-                           H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
-                           H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
-                           !REAL
-                           lambda_impHloc(counter)=impHloc(ilat,jlat,ispin,ispin,iorb,jorb)
-                           !COMPLEX
-                           !lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
+                           if(DREAL(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
+                              counter=counter+1
+                              H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                              H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                              lambda_impHloc(counter)=DREAL(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                           endif
                            !
-                           !if(io.ne.jo)then
-                           !counter=counter+1
-                              !H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=xi
-                              !H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=-xi
-                              !lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb))
-                           !endif
+                           if(DIMAG(impHloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
+                              counter=counter+1
+                              H_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
+                              H_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
+                              lambda_impHloc(counter)=DIMAG(impHloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                           endif
                         endif
                      enddo
                   enddo
@@ -207,8 +203,7 @@ MODULE ED_HLOC_DECOMPOSITION
       complex(8),dimension(:,:,:,:,:,:,:)       :: Hvec
       real(8),dimension(:)                      :: lambdavec
       !
-      if(size(lambdavec).ne.size(H_basis)) STOP "Init_hloc: Wrong coefficient vector size"
-      if(size(Hvec(1,1,1,1,1,1,:)).ne.size(H_basis)) STOP "Init_hloc: Wrong H_basis size"
+      if(size(lambdavec).ne.size(Hvec,7)) STOP "Init_hloc: Wrong coefficient vector size"
       !
       allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
       impHloc=zero

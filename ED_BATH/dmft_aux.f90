@@ -77,7 +77,6 @@ end function bath_from_sym
 !reading previous (converged) solution
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
-   real(8)                  :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
    real(8)                  :: re,im
    integer                  :: i,ibath,isym,unit,flen,Nh,Nsym,Nsym_
    integer,dimension(Nbath) :: Nlambdas
@@ -160,19 +159,19 @@ subroutine write_dmft_bath(unit)
    integer              :: ibath
    integer              :: io,jo,iorb,ispin,isym
    complex(8)           :: hrep_aux_nnn(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
-   real(8)              :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   complex(8)           :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
    unit_=LOGfile;if(present(unit))unit_=unit
    if(.not.dmft_bath%status)stop "write_dmft_bath error: bath not allocated"
    !
    if(unit_==LOGfile)write(unit_,"(A9,a5,90(A9,1X))")"V"," ","H"        
    if(unit_==LOGfile)then
       do ibath=1,Nbath
-         hrep_aux=0d0
+         hrep_aux=zero
          hrep_aux_nnn=bath_from_sym(dmft_bath%item(ibath)%lambda)
          Hrep_aux=DREAL(nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb))
-         write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|",( hrep_aux(1,jo),jo=1,Nlat*Nspin*Norb)        
+         write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)        
          do io=2,Nlat*Nspin*Norb
-            write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|",(hrep_aux(io,jo),jo=1,Nlat*Nspin*Norb)
+            write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|  ",(DREAL(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
          enddo
          write(unit_,"(A9)")" "
       enddo
@@ -224,10 +223,9 @@ end subroutine save_dmft_bath
 !PURPOSE  : copy the bath components back to a 1-dim array 
 !+-------------------------------------------------------------------+
 subroutine set_dmft_bath(bath_)
-   real(8),dimension(:)                               :: bath_
-   integer                                            :: stride,ibath,Nmask,io,jo,isym
-   logical                                            :: check
-   real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Haux
+   real(8),dimension(:)                                  :: bath_
+   integer                                               :: stride,ibath,Nmask,io,jo,isym
+   logical                                               :: check
    !
    if(.not.dmft_bath%status)stop "get_dmft_bath error: bath not allocated"
    !

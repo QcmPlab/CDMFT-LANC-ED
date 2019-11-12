@@ -35,6 +35,7 @@ MODULE ED_INPUT_VARS
   !
   integer              :: ed_verbose          !
   logical              :: ed_sparse_H         !flag to select  storage of sparse matrix H (mem--, cpu++) if TRUE, or direct on-the-fly H*v product (mem++, cpu--
+  logical              :: ed_gf_symmetric     !flag to assume G_ij = G_ji
   logical              :: ed_print_Sigma      !flag to print impurity Self-energies
   logical              :: ed_print_G          !flag to print impurity Green`s functions
   logical              :: ed_print_G0         !flag to print impurity non-interacting Green`s functions
@@ -134,6 +135,7 @@ contains
     call parse_input_variable(ed_sectors,"ED_SECTORS",INPUTunit,default=.false.,comment="flag to reduce sector scan for the spectrum to specific sectors +/- ed_sectors_shift.")
     call parse_input_variable(ed_sectors_shift,"ED_SECTORS_SHIFT",INPUTunit,1,comment="shift to ed_sectors")
     call parse_input_variable(ed_sparse_H,"ED_SPARSE_H",INPUTunit,default=.true.,comment="flag to select  storage of sparse matrix H (mem--, cpu++) if TRUE, or direct on-the-fly H*v product (mem++, cpu--) if FALSE ")
+    call parse_input_variable(ed_gf_symmetric,"ED_GF_SYMMETRIC",INPUTunit,default=.true.,comment="flag to assume Gij = Gji")
     call parse_input_variable(ed_print_Sigma,"ED_PRINT_SIGMA",INPUTunit,default=.true.,comment="flag to print impurity Self-energies")
     call parse_input_variable(ed_print_G,"ED_PRINT_G",INPUTunit,default=.true.,comment="flag to print impurity Greens function")
     call parse_input_variable(ed_print_G0,"ED_PRINT_G0",INPUTunit,default=.true.,comment="flag to print non-interacting impurity Greens function")

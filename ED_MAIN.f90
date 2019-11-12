@@ -47,7 +47,6 @@ contains
   ! PURPOSE: allocate and initialize one or multiple baths -+!
   subroutine ed_init_solver_single(bath)
     real(8),dimension(:),intent(inout) :: bath
-    !complex(8),intent(in)              :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical                            :: check 
     logical,save                       :: isetup=.true.
     integer                            :: i
@@ -83,7 +82,6 @@ contains
   subroutine ed_init_solver_single_mpi(MpiComm,bath)
     integer                            :: MpiComm
     real(8),dimension(:),intent(inout) :: bath
-    !complex(8),intent(in)              :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical                            :: check 
     logical,save                       :: isetup=.true.
     integer                            :: i

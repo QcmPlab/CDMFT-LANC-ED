@@ -60,7 +60,7 @@ MODULE ED_OBSERVABLES
   integer                                         :: isector,jsector
   integer                                         :: idim,idimUP,idimDW
   !
-  real(8),dimension(:),pointer                    :: state_cvec
+  complex(8),dimension(:),pointer                 :: state_cvec
   logical                                         :: Jcondition
   !
 

@@ -28,13 +28,13 @@ contains
   !####################################################################
 #ifdef _MPI
   subroutine vector_transpose_MPI(nrow,qcol,a,ncol,qrow,b)    
-    integer                            :: nrow,ncol,qrow,qcol
-    real(8)                            :: a(nrow,qcol)
-    real(8)                            :: b(ncol,qrow)
-    integer,allocatable,dimension(:,:) :: send_counts,send_offset
-    integer,allocatable,dimension(:,:) :: recv_counts,recv_offset
-    integer                            :: counts,Ntot
-    integer                            :: i,j,irank,ierr
+    integer                               :: nrow,ncol,qrow,qcol
+    complex(8)                            :: a(nrow,qcol)
+    complex(8)                            :: b(ncol,qrow)
+    integer,allocatable,dimension(:,:)    :: send_counts,send_offset
+    integer,allocatable,dimension(:,:)    :: recv_counts,recv_offset
+    integer                               :: counts,Ntot
+    integer                               :: i,j,irank,ierr
     !
     counts = Nrow/MpiSize
     Ntot   = Ncol/MpiSize
@@ -83,8 +83,8 @@ contains
     !
     do j=1,Ntot
        call MPI_AllToAllV(&
-            A(:,j),send_counts(:,j),send_offset(:,j),MPI_DOUBLE_PRECISION,&
-            B(:,:),recv_counts(:,j),recv_offset(:,j),MPI_DOUBLE_PRECISION,&
+            A(:,j),send_counts(:,j),send_offset(:,j),MPI_DOUBLE_COMPLEX,&
+            B(:,:),recv_counts(:,j),recv_offset(:,j),MPI_DOUBLE_COMPLEX,&
             MpiComm,ierr)
     enddo
     !
@@ -95,8 +95,8 @@ contains
 
 
   subroutine local_transpose(mat,nrow,ncol)
-    integer                      :: nrow,ncol
-    real(8),dimension(Nrow,Ncol) :: mat
+    integer                         :: nrow,ncol
+    complex(8),dimension(Nrow,Ncol) :: mat
     mat = transpose(reshape(mat,[Ncol,Nrow]))
   end subroutine local_transpose
 #endif

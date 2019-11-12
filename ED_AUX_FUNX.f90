@@ -142,30 +142,6 @@ contains
   end subroutine print_Hloc_lso
 
 
-  !+------------------------------------------------------------------+
-  !PURPOSE  : Set Hloc to impHloc
-  !+------------------------------------------------------------------+
-  !subroutine set_Hloc_nnn(hloc)
-    !complex(8),dimension(:,:,:,:,:,:) :: Hloc
-    !call assert_shape(Hloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"set_Hloc_nnn","Hloc")
-    !!
-    !impHloc = dreal(Hloc)
-    !!
-    !write(LOGfile,"(A)")"Updated impHloc:"
-    !if(ed_verbose>2)call print_Hloc(impHloc)
-  !end subroutine set_Hloc_nnn
-  !!
-  !subroutine set_Hloc_lso(Hloc)
-    !complex(8),dimension(:,:) :: hloc
-    !call assert_shape(Hloc,[Nlat*Nspin*Norb,Nlat*Nspin*Norb],"set_Hloc_lso","Hloc")
-    !!
-    !impHloc = lso2nnn_reshape(dreal(Hloc),Nlat,Nspin,Norb)
-    !!
-    !write(LOGfile,"(A)")"Updated impHloc:"
-    !if(ed_verbose>2)call print_Hloc(impHloc)
-  !end subroutine set_Hloc_lso
-
-
 
   !##################################################################
   !                   RESHAPE ROUTINES

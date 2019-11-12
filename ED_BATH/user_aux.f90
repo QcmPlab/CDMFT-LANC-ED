@@ -4,11 +4,8 @@
 !+-------------------------------------------------------------------+
 function get_bath_dimension_direct(Hloc_nn) result(bath_size)
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb),intent(in)          :: Hloc_nn
-  real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hloc
   integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,jspin,iorb,jorb,io,jo,counter
-  logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hmask
   !
-  Hloc=dreal(Hloc_nn)
   counter=0
   !
   !Real part of nonzero elements
@@ -20,10 +17,9 @@ function get_bath_dimension_direct(Hloc_nn) result(bath_size)
                  do jorb=1,Norb
                     io=index_stride_lso(ilat,ispin,iorb)
                     jo=index_stride_lso(jlat,jspin,jorb)
-                    if((Hloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                       counter=counter+1
-                       !COMPLEX
-                       !if(io.ne.jo)counter=counter+1
+                    if((Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                       if(DREAL(Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
+                       if(DIMAG(Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
                     endif
                  enddo
               enddo

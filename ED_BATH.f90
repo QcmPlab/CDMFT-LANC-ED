@@ -105,6 +105,8 @@ contains
      !
      flag=.true.
      !
+     if ( ANY( dimag(mnnn) .gt. 1d-6 ) ) flag=.false.
+     !
      mtmp=dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb))
      !
      do i=1,nlat*nspin*norb-1
@@ -128,6 +130,8 @@ contains
      !
      flag=.true.
      !
+     if ( ANY( dimag(mlso) .gt. 1d-6 ) ) flag=.false.
+     !
      mtmp=dreal(mlso)
      !
      do i=1,nlat*nspin*norb-1
@@ -147,11 +151,11 @@ contains
 !+-------------------------------------------------------------------+
 
 function mask_hloc(hloc,wdiag,uplo) result(Hmask)
-    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
-    logical,optional                                   :: wdiag,uplo
-    logical                                            :: wdiag_,uplo_
-    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
-    integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+    logical,optional                                      :: wdiag,uplo
+    logical                                               :: wdiag_,uplo_
+    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)    :: Hmask
+    integer                                               :: ilat,jlat,iorb,jorb,ispin,io,jo
     !
     wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
     uplo_ =.false.;if(present(uplo))  uplo_=uplo
