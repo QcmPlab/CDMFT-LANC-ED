@@ -104,6 +104,41 @@ end function check_bath_dimension
 !    by setting the positive energies in modulo identical to the negative
 !    ones.
 !+-------------------------------------------------------------------+
+subroutine impose_equal_lambda(bath_,ibath,lambdaindex_vec)
+  real(8),dimension(:)    :: bath_
+  real(8)                 :: val
+  integer,dimension(:)    :: lambdaindex_vec
+  integer                 :: i,N,ibath
+  !
+  call allocate_dmft_bath()
+  call set_dmft_bath(bath_)
+  !
+  N=size(lambdaindex_vec)
+  val=0.d0
+  do i=1,N
+    val=val+dmft_bath%item(ibath)%lambda(lambdaindex_vec(i))/N
+  enddo
+  !
+  do i=1,N
+    dmft_bath%item(ibath)%lambda(lambdaindex_vec(i))=val
+  enddo
+  !
+  call get_dmft_bath(bath_)
+  call deallocate_dmft_bath()
+end subroutine impose_equal_lambda
+
+
+
+!+-------------------------------------------------------------------+
+!PURPOSE  : given a bath array apply a specific transformation or 
+! impose a given symmetry:
+! - break spin symmetry by applying a symmetry breaking field
+! - given a bath array set both spin components to have 
+!    the same bath, i.e. impose non-magnetic solution
+! - given a bath array enforces the particle-hole symmetry 
+!    by setting the positive energies in modulo identical to the negative
+!    ones.
+!+-------------------------------------------------------------------+
 !subroutine break_symmetry_bath_site(bath_,field,sign,save)
   !real(8),dimension(:) :: bath_
   !real(8)              :: field

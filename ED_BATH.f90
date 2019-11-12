@@ -32,6 +32,10 @@ MODULE ED_BATH
   !interface ph_symmetrize_bath
      !module procedure ::  ph_symmetrize_bath_site
   !end interface ph_symmetrize_bath
+  
+  interface impose_equal_lambda
+     module procedure ::  impose_equal_lambda
+  end interface impose_equal_lambda
 
   interface get_bath_dimension
      module procedure ::  get_bath_dimension_direct
@@ -52,6 +56,7 @@ MODULE ED_BATH
   public :: get_bath_dimension
   public :: check_bath_dimension
   !explicit symmetries:
+  public :: impose_equal_lambda
   !public :: hermiticize_bath
   !public :: break_symmetry_bath
   !public :: spin_symmetrize_bath
