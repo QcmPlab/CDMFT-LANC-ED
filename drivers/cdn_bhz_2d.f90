@@ -85,15 +85,12 @@ program cdn_bhz_2d
    !SETUP SYMMETRIES (EXPERIMENTAL)
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
-   where(DREAL(Hsym_basis(:,:,:,:,:,:,1)).ne.0.d0)Hsym_basis(:,:,:,:,:,:,1)=dcmplx(1d0,0d0)
    !
    lambdasym_vector(2)=ts
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
-   where(DREAL(Hsym_basis(:,:,:,:,:,:,2)).ne.0.d0)Hsym_basis(:,:,:,:,:,:,2)=dcmplx(1d0,0d0)
    !
    lambdasym_vector(3)=lambda
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
-   where(DIMAG(Hsym_basis(:,:,:,:,:,:,3)).ne.0.d0)Hsym_basis(:,:,:,:,:,:,2)=dcmplx(0d0,1d0)
    !
    !setup solver
    call set_Hloc(Hsym_basis,lambdasym_vector)
@@ -391,7 +388,7 @@ contains
       enddo
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
-
+   !
 end program cdn_bhz_2d
 
 
