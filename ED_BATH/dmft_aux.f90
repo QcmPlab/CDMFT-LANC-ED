@@ -160,26 +160,31 @@ subroutine write_dmft_bath(unit)
    integer              :: io,jo,iorb,ispin,isym
    complex(8)           :: hrep_aux_nnn(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
    complex(8)           :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   character(len=64)    :: string_fmt,string_fmt_first
+   !
    unit_=LOGfile;if(present(unit))unit_=unit
    if(.not.dmft_bath%status)stop "write_dmft_bath error: bath not allocated"
    !
+   string_fmt_first="(F8.4,a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X),a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X))"
+   string_fmt      ="(A8,a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X),a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X))"
+   !
    if(unit_==LOGfile)then
-      if(Nlat*Nspin*Norb.le.4)then
-         write(unit_,"(A9,a5,90(A9,1X))")"V"," ","H"        
+      if(Nlat*Nspin*Norb.le.8)then
+         write(unit_,"(A1)")" "
+         write(unit_,"(A8,a3,a5,90(A15,1X))")"V","||"," ","Re(H) | Im(H)"        
          do ibath=1,Nbath
+            write(unit_,"(A1)")" "
             hrep_aux=zero
             hrep_aux_nnn=bath_from_sym(dmft_bath%item(ibath)%lambda)
             Hrep_aux=nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb)
-            write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)        
+            write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&        
+                                                                 "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)
             do io=2,Nlat*Nspin*Norb
-               write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|  ",(DREAL(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
+               write(unit_,string_fmt) "  "  ,"||  ",(DREAL(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb),&
+                                              "|  ",(DIMAG(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
             enddo
-            write(unit_,"(A9)")" "
-            do io=1,Nlat*Nspin*Norb
-               write(unit_,"(A9,a5,90(F9.4,1X))") "  "  ,"|  ",(DIMAG(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
-            enddo
-            write(unit_,"(A9)")" "
          enddo
+         write(unit_,"(A1)")" "
       else
          write(LOGfile,"(A)")"Bath matrix too large to print: printing the parameters (including eventual offset)."
          write(unit_,"(A9,a5,90(A9,1X))")"V"," ","lambdas"        
