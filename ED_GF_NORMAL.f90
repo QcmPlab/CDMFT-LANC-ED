@@ -68,7 +68,7 @@ contains
              call lanc_build_gf_normal_main(isite,iorb,ispin)
              !
              counter=counter+1
-             if(ED_VERBOSE .ge. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
+             if((ED_VERBOSE.ge.1).and.(MpiMaster))call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
              !
              !site-off-diagonal:
              do jsite=1,Nlat
