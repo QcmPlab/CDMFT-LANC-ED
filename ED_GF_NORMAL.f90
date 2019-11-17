@@ -81,7 +81,7 @@ contains
                       call lanc_build_gf_normal_mix_chan4(isite,jsite,iorb,jorb,ispin)
                    endif
                    counter=counter+1
-                   if(ED_VERBOSE .ge. 1)call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
+                   if((ED_VERBOSE.ge.1).and.(MpiMaster))call eta(counter,Nlat*Nlat*Nspin*Norb*Norb)
                 enddo
              enddo
           enddo
