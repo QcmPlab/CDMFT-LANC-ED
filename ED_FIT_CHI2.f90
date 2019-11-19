@@ -363,7 +363,6 @@ contains
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: V_k
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)         :: Haux
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)         :: invH_knnn
-    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath)      :: dummy_Hbath
     real(8),dimension(Nbath)                                      :: dummy_Vbath
     type(nsymm_vector),dimension(Nbath)                           :: dummy_lambda
     complex(8)                                                    :: iw

@@ -22,13 +22,14 @@ MODULE CDMFT_ED
        ed_get_g0and_realaxis
 
   USE ED_BATH, only:                            &
-       get_bath_dimension                     !, &
-       !hermiticize_bath                       , &
-       !spin_symmetrize_bath                   , &
-       !orb_equality_bath                      , &
+       get_bath_dimension                     , &
+       impose_equal_lambda                   !, &
+       !hermiticize_bath                      , &
+       !spin_symmetrize_bath                  , &
+       !orb_equality_bath                     , &
        !break_symmetry_bath
 
-  !USE ED_BATH_FUNCTIONS, only:                  &
+  !USE ED_BATH_FUNCTIONS, only:                 &
 
 
   USE ED_MAIN, only:                            &

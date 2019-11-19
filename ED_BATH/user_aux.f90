@@ -4,11 +4,8 @@
 !+-------------------------------------------------------------------+
 function get_bath_dimension_direct(Hloc_nn) result(bath_size)
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb),intent(in)          :: Hloc_nn
-  real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hloc
   integer                                                                   :: bath_size,ndx,ilat,jlat,ispin,jspin,iorb,jorb,io,jo,counter
-  logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                        :: Hmask
   !
-  Hloc=dreal(Hloc_nn)
   counter=0
   !
   !Real part of nonzero elements
@@ -20,10 +17,9 @@ function get_bath_dimension_direct(Hloc_nn) result(bath_size)
                  do jorb=1,Norb
                     io=index_stride_lso(ilat,ispin,iorb)
                     jo=index_stride_lso(jlat,jspin,jorb)
-                    if((Hloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
-                       counter=counter+1
-                       !COMPLEX
-                       !if(io.ne.jo)counter=counter+1
+                    if((Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
+                       if(DREAL(Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
+                       if(DIMAG(Hloc_nn(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)counter=counter+1
                     endif
                  enddo
               enddo
@@ -97,6 +93,41 @@ end function check_bath_dimension
 !     USER BATH PREDEFINED SYMMETRIES:
 !
 !##################################################################
+
+!+-------------------------------------------------------------------+
+!PURPOSE  : given a bath array apply a specific transformation or 
+! impose a given symmetry:
+! - break spin symmetry by applying a symmetry breaking field
+! - given a bath array set both spin components to have 
+!    the same bath, i.e. impose non-magnetic solution
+! - given a bath array enforces the particle-hole symmetry 
+!    by setting the positive energies in modulo identical to the negative
+!    ones.
+!+-------------------------------------------------------------------+
+subroutine impose_equal_lambda(bath_,ibath,lambdaindex_vec)
+  real(8),dimension(:)    :: bath_
+  real(8)                 :: val
+  integer,dimension(:)    :: lambdaindex_vec
+  integer                 :: i,N,ibath
+  !
+  call allocate_dmft_bath()
+  call set_dmft_bath(bath_)
+  !
+  N=size(lambdaindex_vec)
+  val=0.d0
+  do i=1,N
+    val=val+dmft_bath%item(ibath)%lambda(lambdaindex_vec(i))/N
+  enddo
+  !
+  do i=1,N
+    dmft_bath%item(ibath)%lambda(lambdaindex_vec(i))=val
+  enddo
+  !
+  call get_dmft_bath(bath_)
+  call deallocate_dmft_bath()
+end subroutine impose_equal_lambda
+
+
 
 !+-------------------------------------------------------------------+
 !PURPOSE  : given a bath array apply a specific transformation or 

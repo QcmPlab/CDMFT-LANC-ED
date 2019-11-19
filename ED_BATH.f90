@@ -32,6 +32,10 @@ MODULE ED_BATH
   !interface ph_symmetrize_bath
      !module procedure ::  ph_symmetrize_bath_site
   !end interface ph_symmetrize_bath
+  
+  interface impose_equal_lambda
+     module procedure ::  impose_equal_lambda
+  end interface impose_equal_lambda
 
   interface get_bath_dimension
      module procedure ::  get_bath_dimension_direct
@@ -52,6 +56,7 @@ MODULE ED_BATH
   public :: get_bath_dimension
   public :: check_bath_dimension
   !explicit symmetries:
+  public :: impose_equal_lambda
   !public :: hermiticize_bath
   !public :: break_symmetry_bath
   !public :: spin_symmetrize_bath
@@ -105,6 +110,8 @@ contains
      !
      flag=.true.
      !
+     if ( ANY( dimag(mnnn) .gt. 1d-6 ) ) flag=.false.
+     !
      mtmp=dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb))
      !
      do i=1,nlat*nspin*norb-1
@@ -128,6 +135,8 @@ contains
      !
      flag=.true.
      !
+     if ( ANY( dimag(mlso) .gt. 1d-6 ) ) flag=.false.
+     !
      mtmp=dreal(mlso)
      !
      do i=1,nlat*nspin*norb-1
@@ -147,11 +156,11 @@ contains
 !+-------------------------------------------------------------------+
 
 function mask_hloc(hloc,wdiag,uplo) result(Hmask)
-    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
-    logical,optional                                   :: wdiag,uplo
-    logical                                            :: wdiag_,uplo_
-    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
-    integer                                            :: ilat,jlat,iorb,jorb,ispin,io,jo
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
+    logical,optional                                      :: wdiag,uplo
+    logical                                               :: wdiag_,uplo_
+    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)    :: Hmask
+    integer                                               :: ilat,jlat,iorb,jorb,ispin,io,jo
     !
     wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
     uplo_ =.false.;if(present(uplo))  uplo_=uplo

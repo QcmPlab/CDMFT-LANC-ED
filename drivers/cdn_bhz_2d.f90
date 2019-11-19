@@ -77,11 +77,6 @@ program cdn_bhz_2d
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
 
-   !Allocate custom observable matrix (test with n_11)
-   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-   observable_matrix=zero
-   observable_matrix(1,1,1,1,1,1)=one
-
    !Build Hk and Hloc
    call generate_hk_hloc()
    allocate(lambdasym_vector(3))
@@ -96,13 +91,13 @@ program cdn_bhz_2d
    !
    lambdasym_vector(3)=lambda
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
-   
+   !
    !setup solver
-   Nb=get_bath_dimension(lso2nnn(hloc))
+   call set_Hloc(Hsym_basis,lambdasym_vector)
+   Nb=get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bathold(Nb))
-   call set_Hloc(lso2nnn(hloc))
-   call ed_init_solver(comm,bath,lso2nnn(Hloc))
+   call ed_init_solver(comm,bath)
    Weiss_old=zero
 
    !DMFT loop
@@ -116,10 +111,6 @@ program cdn_bhz_2d
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
       
-      !get custom observable
-      observable=get_custom_observable(Hk,observable_matrix)
-      print*,"THE CUSTOM OBSERVABLE IS ",observable
-
       !Compute the local gfs:
       call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
@@ -135,8 +126,6 @@ program cdn_bhz_2d
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
          call ed_chi2_fitgf(Weiss,bath)
-         !
-         !if(hermiticize)call hermiticize_bath(bath)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
@@ -399,7 +388,7 @@ contains
       enddo
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
-
+   !
 end program cdn_bhz_2d
 
 

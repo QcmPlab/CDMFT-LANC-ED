@@ -37,11 +37,11 @@ contains
   !                 MAIN ROUTINES: BUILD/DELETE SECTOR
   !####################################################################
   subroutine build_Hv_sector(isector,Hmat)
-    integer                         :: isector,SectorDim
-    real(8),dimension(:,:),optional :: Hmat   
-    integer                         :: irank,ierr
-    integer                         :: i,iup,idw
-    integer                         :: j,jup,jdw
+    integer                            :: isector,SectorDim
+    complex(8),dimension(:,:),optional :: Hmat   
+    integer                            :: irank,ierr
+    integer                            :: i,iup,idw
+    integer                            :: j,jup,jdw
     !
     Hsector=isector
     Hstatus=.true.

@@ -13,11 +13,11 @@
     !
     if(.not.allocated(impGmatrix))stop "ed_gf_cluster ERROR: impGmatrix not allocated!"
     !
-!    if(vca_gf_symmetric)then   FOR NOW ASSUME ALWAYS SYMMETRIC
+    if(ed_gf_symmetric)then
       chan4=0.d0
-!    else
-!      chan4=1.d0
-!    endif
+    else
+      chan4=1.d0
+    endif
     gf = zero
     !
     do ilat=1,Nlat

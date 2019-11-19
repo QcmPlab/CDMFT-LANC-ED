@@ -60,7 +60,7 @@ MODULE ED_OBSERVABLES
   integer                                         :: isector,jsector
   integer                                         :: idim,idimUP,idimDW
   !
-  real(8),dimension(:),pointer                    :: state_cvec
+  complex(8),dimension(:),pointer                 :: state_cvec
   logical                                         :: Jcondition
   !
 
@@ -320,11 +320,11 @@ contains
        call write_observables()
        !
        do ilat=1,Nlat
-          write(LOGfile,"(A,10f18.12,f18.12,A)")"dens"//reg(ed_file_suffix)//"=",(dens(ilat,iorb),iorb=1,Norb),sum(dens(ilat,:))
+          write(LOGfile,"(A,10f18.12,f18.12,A)")"dens site "//str(ilat)//" "//reg(ed_file_suffix)//"=",(dens(ilat,iorb),iorb=1,Norb),sum(dens(ilat,:))
        enddo
-       write(LOGfile,"(A,10f18.12,f18.12,A)")"dens"//reg(ed_file_suffix)//"=",(sum(dens(:,iorb))/Nlat,iorb=1,Norb),sum(dens)/Nlat
+       write(LOGfile,"(A,10f18.12,f18.12,A)")"dens  avg  "//reg(ed_file_suffix)//" =",(sum(dens(:,iorb))/Nlat,iorb=1,Norb),sum(dens)/Nlat
        !
-       write(LOGfile,"(A,10f18.12,A)")"docc"//reg(ed_file_suffix)//"=",(sum(docc(:,iorb))/Nlat,iorb=1,Norb)
+       write(LOGfile,"(A,10f18.12,A)")"docc       "//reg(ed_file_suffix)//" =",(sum(docc(:,iorb))/Nlat,iorb=1,Norb)
        if(Nspin==2)write(LOGfile,"(A,10f18.12,A)") "mag "//reg(ed_file_suffix)//"=",(sum(magz(:,iorb))/Nlat,iorb=1,Norb)
        !
        ed_dens_up=dens_up

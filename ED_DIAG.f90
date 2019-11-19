@@ -21,7 +21,7 @@ module ED_DIAG
 
   public :: diagonalize_impurity
 
-  real(8),dimension(:),pointer       :: state_cvec
+  complex(8),dimension(:),pointer       :: state_cvec
 
 
 contains
@@ -51,17 +51,17 @@ contains
   ! spectrum DOUBLE PRECISION
   !+------------------------------------------------------------------+
   subroutine ed_diag_d
-    integer             :: isector,Dim,istate
-    integer             :: DimUps(Ns_Ud),DimUp
-    integer             :: DimDws(Ns_Ud),DimDw
-    integer             :: Nups(Ns_Ud)
-    integer             :: Ndws(Ns_Ud)
-    integer             :: i,j,iter,unit,vecDim,PvecDim
-    integer             :: Nitermax,Neigen,Nblock
-    real(8)             :: oldzero,enemin,Ei
-    real(8),allocatable :: eig_values(:)
-    real(8),allocatable :: eig_basis(:,:),eig_basis_tmp(:,:)
-    logical             :: lanc_solve,Tflag,lanc_verbose,bool
+    integer                :: isector,Dim,istate
+    integer                :: DimUps(Ns_Ud),DimUp
+    integer                :: DimDws(Ns_Ud),DimDw
+    integer                :: Nups(Ns_Ud)
+    integer                :: Ndws(Ns_Ud)
+    integer                :: i,j,iter,unit,vecDim,PvecDim
+    integer                :: Nitermax,Neigen,Nblock
+    real(8)                :: oldzero,enemin,Ei
+    real(8),allocatable    :: eig_values(:)
+    complex(8),allocatable :: eig_basis(:,:),eig_basis_tmp(:,:)
+    logical                :: lanc_solve,Tflag,lanc_verbose,bool
     !
     if(state_list%status)call es_delete_espace(state_list)
     state_list=es_init_espace()
@@ -194,24 +194,24 @@ contains
           !
           !
           allocate(eig_values(Dim)) ; eig_values=0d0
-          allocate(eig_basis_tmp(Dim,Dim)) ; eig_basis_tmp=0d0
+          allocate(eig_basis_tmp(Dim,Dim)) ; eig_basis_tmp=zero
           call build_Hv_sector(isector,eig_basis_tmp)
           if(MpiMaster)call eigh(eig_basis_tmp,eig_values)
-          if(dim==1)eig_basis_tmp(dim,dim)=1d0
+          if(dim==1)eig_basis_tmp(dim,dim)=one
           !
           call delete_Hv_sector()
 #ifdef _MPI
           if(MpiStatus)then
              call Bcast_MPI(MpiComm,eig_values)
              vecDim = vecDim_Hv_sector(isector)
-             allocate(eig_basis(vecDim,Neigen)) ; eig_basis=0d0
+             allocate(eig_basis(vecDim,Neigen)) ; eig_basis=zero
              call scatter_basis_MPI(MpiComm,eig_basis_tmp,eig_basis)
           else
-             allocate(eig_basis(Dim,Neigen)) ; eig_basis=0d0
+             allocate(eig_basis(Dim,Neigen)) ; eig_basis=zero
              eig_basis = eig_basis_tmp(:,1:Neigen)
           endif
 #else
-          allocate(eig_basis(Dim,Neigen)) ; eig_basis=0d0
+          allocate(eig_basis(Dim,Neigen)) ; eig_basis=zero
           eig_basis = eig_basis_tmp(:,1:Neigen)
 #endif
           !
