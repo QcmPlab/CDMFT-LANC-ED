@@ -29,7 +29,7 @@ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is c
 
 ### MILESTONE 2
 
-- [x] Include complex routines for diagonalization (and bath?)
+- [x] Include complex routines for diagonalization and bath
 - [ ] Test 2d BHZ model 
 
 ### MILESTONE 3
