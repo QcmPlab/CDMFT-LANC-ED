@@ -12,7 +12,7 @@ program cdn_hm_2dsquare
    logical                                                                :: converged
    real(8)                                                                :: ts,tsp,wmixing
    !Bath:
-   real(8),allocatable                                                    :: Bath(:),BathOld(:)
+   real(8),allocatable                                                    :: Bath(:),Bath_fitted(:)
    !The local hybridization function:
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
@@ -63,7 +63,8 @@ program cdn_hm_2dsquare
 
    !set global variables
    !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
-   !Ny=Nx
+   !Ny=Nx:w
+
    !Nky=Nkx
    Nlat=Nx*Ny
    Nlso=Nlat*Nspin*Norb
@@ -97,12 +98,10 @@ program cdn_hm_2dsquare
    !setup solver
    call set_Hloc(Hsym_basis,lambdasym_vector)
    Nb=get_bath_dimension(Hsym_basis)
-   !Nb=get_bath_dimension(lso2nnn(Hloc))
    allocate(bath(Nb))
-   allocate(bathold(Nb))
-   !call set_Hloc(lso2nnn(Hloc))
+   allocate(bath_fitted(Nb))
    call ed_init_solver(comm,bath)
-   Weiss_old=zero
+   !Weiss_old=zero
 
    !DMFT loop
    iloop=0;converged=.false.
@@ -124,12 +123,16 @@ program cdn_hm_2dsquare
       call Bcast_MPI(comm,Weiss)
       !
       !MIXING:
-      if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
-      Weiss_old=Weiss
+      !if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
+      !Weiss_old=Weiss
       !
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
+         bath_fitted=bath
+         call ed_chi2_fitgf(Weiss,bath_fitted)
+         !
+         !MIXING
+         call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
