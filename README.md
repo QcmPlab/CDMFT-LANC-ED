@@ -29,13 +29,14 @@ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is c
 
 ### MILESTONE 2
 
-- [ ] Include complex routines for diagonalization (and bath?)
+- [x] Include complex routines for diagonalization (and bath?)
 - [ ] Test 2d BHZ model 
 
 ### MILESTONE 3
 
-- [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Add real-space CDMFT case for finite systems
+- [ ] Test Kane-Mele model with real-space CDMFT
+- [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
 
 
