@@ -128,6 +128,28 @@ subroutine impose_equal_lambda(bath_,ibath,lambdaindex_vec)
 end subroutine impose_equal_lambda
 
 
+subroutine impose_bath_offset(bath_,ibath,offset)
+  real(8),dimension(:)    :: bath_
+  real(8)                 :: offset
+  integer                 :: isym,N,ibath
+  !
+  call allocate_dmft_bath()
+  call set_dmft_bath(bath_)
+  !
+  if(size(lambda_impHloc) .ne. dmft_bath%item(ibath)%N_dec)then
+    dmft_bath%item(ibath)%lambda(dmft_bath%item(ibath)%N_dec)=offset
+  else
+    do isym=1,size(lambda_impHloc)
+      if(is_identity(H_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym)=offset
+      return
+    enddo
+  endif
+  !
+  !
+  call get_dmft_bath(bath_)
+  call deallocate_dmft_bath()
+  !
+end subroutine impose_bath_offset
 
 !+-------------------------------------------------------------------+
 !PURPOSE  : given a bath array apply a specific transformation or 

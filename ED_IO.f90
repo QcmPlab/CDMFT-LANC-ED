@@ -204,8 +204,8 @@ MODULE ED_IO
 
   ! public :: ed_get_density_matrix
 
-  ! public :: ed_read_impSigma_single
-  ! public :: ed_read_impSigma_lattice
+  public :: ed_read_impSigma
+  public :: ed_read_impG
 
   !****************************************************************************************!
   !****************************************************************************************!
@@ -443,92 +443,70 @@ contains
 
 
 
-  ! ! PURPOSE: Read self-energy function(s) - also for inequivalent sites.
-  ! !+-----------------------------------------------------------------------------+!
-  ! subroutine read_impSigma_normal
-  !   integer                                           :: i,ispin,isign,unit(2),iorb,jorb
-  !   character(len=20)                                 :: suffix
-  !   integer,dimension(:),allocatable                  :: getIorb,getJorb
-  !   integer                                           :: totNorb,l
-  !   !
-  !   if(.not.allocated(wm))allocate(wm(Lmats))
-  !   if(.not.allocated(wr))allocate(wr(Lreal))
-  !   wm     = pi/beta*real(2*arange(1,Lmats)-1,8)
-  !   wr     = linspace(wini,wfin,Lreal)
-  !   !
-  !   select case(bath_type)
-  !   case default                !Diagonal in both spin and orbital
-  !      totNorb=Norb
-  !      allocate(getIorb(totNorb),getJorb(totNorb))
-  !      l=0
-  !      do iorb=1,Norb
-  !         L=l+1
-  !         getIorb(l)=iorb
-  !         getJorb(l)=iorb
-  !      enddo
-  !      totNorb=l
-  !   case ('hybrid')             !Diagonal in spin only. Full Orbital structure
-  !      totNorb=Norb*(Norb+1)/2
-  !      allocate(getIorb(totNorb),getJorb(totNorb))
-  !      l=0
-  !      do iorb=1,Norb
-  !         do jorb=iorb,Norb
-  !            l=l+1
-  !            getIorb(l)=iorb
-  !            getJorb(l)=jorb
-  !         enddo
-  !      enddo
-  !   end select
-  !   if(l/=totNorb)stop "print_gf_normal error counting the orbitals"
-  !   !!
-  !   !Print the impurity functions:
-  !   do ispin=1,Nspin
-  !      do l=1,totNorb
-  !         iorb=getIorb(l)
-  !         jorb=getJorb(l)
-  !         suffix="_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
-  !         call sread("impSigma"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impSmats(ispin,ispin,iorb,jorb,:))
-  !         call sread("impSigma"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impSreal(ispin,ispin,iorb,jorb,:))
-  !      enddo
-  !   enddo
-  !   !
-  !   if(allocated(wm))deallocate(wm)
-  !   if(allocated(wr))deallocate(wr)
-  !   !
-  ! end subroutine read_impSigma_normal
+   ! PURPOSE: Read self-energy function(s) - also for inequivalent sites.
+   !+-----------------------------------------------------------------------------+!
+   subroutine ed_read_impSigma
+     integer                                           :: i,ispin,isign,unit(2),iorb,jorb,ilat,jlat
+     character(len=30)                                 :: suffix
+     integer,dimension(:),allocatable                  :: getIorb,getJorb
+     integer                                           :: totNorb,l
+     !
+     if(.not.allocated(wm))allocate(wm(Lmats))
+     if(.not.allocated(wr))allocate(wr(Lreal))
+     wm     = pi/beta*real(2*arange(1,Lmats)-1,8)
+     wr     = linspace(wini,wfin,Lreal)
+     !
+     !!
+     !Print the impurity functions:
+     do ispin=1,Nspin
+      do ilat=1,Nlat
+        do jlat=1,Nlat
+          do iorb=1,Norb
+            do jorb=1,Norb
+              suffix="_Isite"//str(ilat,4)//"_Jsite"//str(jlat,4)//"_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
+              call sread("impSigma"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impSmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+              call sread("impSigma"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impSreal(ilat,jlat,ispin,ispin,iorb,jorb,:))
+            enddo
+          enddo
+        enddo
+      enddo
+     enddo
+     !
+     if(allocated(wm))deallocate(wm)
+     if(allocated(wr))deallocate(wr)
+     !
+   end subroutine ed_read_impSigma
 
-  ! subroutine ed_read_impSigma_single
-  !   !
-  !   if(allocated(impSmats))deallocate(impSmats)
-  !   if(allocated(impSreal))deallocate(impSreal)
-  !   allocate(impSmats(Nspin,Nspin,Norb,Norb,Lmats))
-  !   allocate(impSreal(Nspin,Nspin,Norb,Norb,Lreal))
-  !   impSmats=zero
-  !   impSreal=zero
-  !   !
-  !   call read_impSigma_normal
-  ! end subroutine ed_read_impSigma_single
-
-  ! subroutine ed_read_impSigma_lattice(Nineq)
-  !   integer :: Nineq
-  !   integer :: ilat
-  !   !
-  !   if(allocated(Smatsii))deallocate(Smatsii)
-  !   if(allocated(Srealii))deallocate(Srealii)
-  !   allocate(Smatsii(Nineq,Nspin,Nspin,Norb,Norb,Lmats))
-  !   allocate(Srealii(Nineq,Nspin,Nspin,Norb,Norb,Lreal))
-  !   Smatsii  = zero 
-  !   Srealii  = zero 
-  !   !
-  !   do ilat=1,Nineq
-  !      ed_file_suffix=reg(ineq_site_suffix)//str(ilat,site_indx_padding)
-  !      call ed_read_impSigma_single
-  !      Smatsii(ilat,:,:,:,:,:)  = impSmats
-  !      Srealii(ilat,:,:,:,:,:)  = impSreal
-  !   enddo
-  !   ed_file_suffix=""
-  ! end subroutine ed_read_impSigma_lattice
-
+   subroutine ed_read_impG
+     integer                                           :: i,ispin,isign,unit(2),iorb,jorb,ilat,jlat
+     character(len=30)                                 :: suffix
+     integer,dimension(:),allocatable                  :: getIorb,getJorb
+     integer                                           :: totNorb,l
+     !
+     if(.not.allocated(wm))allocate(wm(Lmats))
+     if(.not.allocated(wr))allocate(wr(Lreal))
+     wm     = pi/beta*real(2*arange(1,Lmats)-1,8)
+     wr     = linspace(wini,wfin,Lreal)
+     !
+     !Print the impurity functions:
+     do ispin=1,Nspin
+      do ilat=1,Nlat
+        do jlat=1,Nlat
+          do iorb=1,Norb
+            do jorb=1,Norb
+              suffix="_Isite"//str(ilat,4)//"_Jsite"//str(jlat,4)//"_l"//str(iorb)//str(jorb)//"_s"//str(ispin)
+              call sread("impG"//reg(suffix)//"_iw"//reg(ed_file_suffix)//".ed"   ,wm,impGmats(ilat,jlat,ispin,ispin,iorb,jorb,:))
+              call sread("impG"//reg(suffix)//"_realw"//reg(ed_file_suffix)//".ed",wr,impGreal(ilat,jlat,ispin,ispin,iorb,jorb,:))
+            enddo
+          enddo
+        enddo
+      enddo
+     enddo
+     !
+     if(allocated(wm))deallocate(wm)
+     if(allocated(wr))deallocate(wr)
+     !
+   end subroutine ed_read_impG
 
 END MODULE ED_IO
 

@@ -8,7 +8,9 @@ MODULE CDMFT_ED
 
   USE ED_IO,      only:                         &
        ed_print_impSigma                      , &
+       ed_read_impSigma                       , &
        ed_print_impG                          , &
+       ed_read_impG                           , &
        ed_print_impG0                         , &
        ed_get_sigma_matsubara                 , &
        ed_get_sigma_realaxis                  , &
@@ -23,6 +25,7 @@ MODULE CDMFT_ED
 
   USE ED_BATH, only:                            &
        get_bath_dimension                     , &
+       impose_bath_offset                     , &
        impose_equal_lambda                   !, &
        !hermiticize_bath                      , &
        !spin_symmetrize_bath                  , &

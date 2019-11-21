@@ -57,6 +57,7 @@ MODULE ED_BATH
   public :: check_bath_dimension
   !explicit symmetries:
   public :: impose_equal_lambda
+  public :: impose_bath_offset
   !public :: hermiticize_bath
   !public :: break_symmetry_bath
   !public :: spin_symmetrize_bath
