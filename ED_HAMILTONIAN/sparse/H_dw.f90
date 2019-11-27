@@ -1,5 +1,5 @@
-  do idw=1,DimDw
-     mdw  = Hs(2)%map(idw)
+  do jdw=1,DimDw
+     mdw  = Hs(2)%map(jdw)
      ibdw  = bdecomp(mdw,Ns)
      !
      !
@@ -11,12 +11,12 @@
               do jorb=1,Norb
                  is = imp_state_index(ilat,iorb) 
                  js = imp_state_index(jlat,jorb)
-                 Jcondition = (impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)/=0d0)&
+                 Jcondition = (impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)/=zero)&
                       .AND.(ibdw(js)==1).AND.(ibdw(is)==0)
                  if (Jcondition) then
                     call c(js,mdw,k1,sg1)
                     call cdg(is,k1,k2,sg2)
-                    jdw = binary_search(Hs(2)%map,k2)
+                    idw = binary_search(Hs(2)%map,k2)
                     htmp = impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)*sg1*sg2
                     !
                     call sp_insert_element(spH0dws(1),htmp,idw,jdw)
@@ -37,13 +37,13 @@
                     ialfa = getBathStride(ilat,iorb,ibath)
                     ibeta = getBathStride(jlat,jorb,ibath)
                     Jcondition = &
-                         (hbath_Reconstructed(ilat,jlat,Nspin,Nspin,iorb,jorb,ibath)/=0d0) &
+                         (hbath_Reconstructed(ilat,jlat,Nspin,Nspin,iorb,jorb,ibath)/=zero) &
                          .AND. (ibdw(ibeta)==1) .AND. (ibdw(ialfa)==0)
                     !
                     if (Jcondition)then
                        call c(ibeta,mdw,k1,sg1)
                        call cdg(ialfa,k1,k2,sg2)
-                       jdw = binary_search(Hs(2)%map,k2)
+                       idw = binary_search(Hs(2)%map,k2)
                        htmp = hbath_reconstructed(ilat,jlat,Nspin,Nspin,iorb,jorb,ibath)*sg1*sg2
                        !
                        call sp_insert_element(spH0dws(1),htmp,idw,jdw)
@@ -66,7 +66,7 @@
                    .AND. (ibdw(is)==1) .AND. (ibdw(ialfa)==0) )then
                  call c(is,mdw,k1,sg1)
                  call cdg(ialfa,k1,k2,sg2)
-                 jdw=binary_search(Hs(2)%map,k2)
+                 idw=binary_search(Hs(2)%map,k2)
                  htmp=diag_hybr(ilat,Nspin,iorb,ibath)*sg1*sg2
                  !
                  call sp_insert_element(spH0dws(1),htmp,idw,jdw)
@@ -76,7 +76,7 @@
                    .AND. (ibdw(is)==0) .AND. (ibdw(ialfa)==1) )then
                  call c(ialfa,mdw,k1,sg1)
                  call cdg(is,k1,k2,sg2)
-                 jdw=binary_search(Hs(2)%map,k2)
+                 idw=binary_search(Hs(2)%map,k2)
                  htmp=diag_hybr(ilat,Nspin,iorb,ibath)*sg1*sg2
                  !
                  call sp_insert_element(spH0dws(1),htmp,idw,jdw)
