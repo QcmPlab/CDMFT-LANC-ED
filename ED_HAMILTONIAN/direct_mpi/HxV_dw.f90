@@ -1,9 +1,9 @@
-  do idw=1,MpiQup
-     do iup=1,DimDw
-        mdw  = Hs(2)%map(iup)
+  do jdw=1,MpiQup
+     do jup=1,DimDw
+        mdw  = Hs(2)%map(jup)
         ibdw  = bdecomp(mdw,Ns)
         !
-        i    = iup + (idw-1)*DimDw
+        j    = jup + (jdw-1)*DimDw
         !
         !
         !> H_imp: Off-diagonal elements, i.e. non-local part. 
@@ -19,9 +19,9 @@
                     if (Jcondition) then
                        call c(js,mdw,k1,sg1)
                        call cdg(is,k1,k2,sg2)
-                       jup = binary_search(Hs(2)%map,k2)
-                       jdw = idw             
-                       j   = jup + (jdw-1)*DimDw
+                       iup = binary_search(Hs(2)%map,k2)
+                       idw = jdw             
+                       i   = iup + (idw-1)*DimDw
                        htmp = impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)*sg1*sg2
                        !
                        Hvt(i) = Hvt(i) + htmp*vt(j)
@@ -48,9 +48,9 @@
                        if (Jcondition)then
                           call c(ibeta,mdw,k1,sg1)
                           call cdg(ialfa,k1,k2,sg2)
-                          jup = binary_search(Hs(2)%map,k2)
-                          jdw = idw             
-                          j   = jup + (jdw-1)*DimDw
+                          iup = binary_search(Hs(2)%map,k2)
+                          idw = jdw             
+                          i   = iup + (idw-1)*DimDw
                           htmp = hbath_reconstructed(ilat,jlat,Nspin,Nspin,iorb,jorb,ibath)*sg1*sg2
                           !
                           hvt(i) = hvt(i) + htmp*vt(j)
@@ -74,9 +74,9 @@
                       .AND. (ibdw(is)==1) .AND. (ibdw(ialfa)==0) )then
                     call c(is,mdw,k1,sg1)
                     call cdg(ialfa,k1,k2,sg2)
-                    jup = binary_search(Hs(2)%map,k2)
-                    jdw = idw             
-                    j   = jup + (jdw-1)*DimDw
+                    iup = binary_search(Hs(2)%map,k2)
+                    idw = jdw             
+                    i   = iup + (idw-1)*DimDw
                     htmp=diag_hybr(ilat,Nspin,iorb,ibath)*sg1*sg2
                     !
                     hvt(i) = hvt(i) + htmp*vt(j)
@@ -86,9 +86,9 @@
                       .AND. (ibdw(is)==0) .AND. (ibdw(ialfa)==1) )then
                     call c(ialfa,mdw,k1,sg1)
                     call cdg(is,k1,k2,sg2)
-                    jup = binary_search(Hs(2)%map,k2)
-                    jdw = idw             
-                    j   = jup + (jdw-1)*DimDw
+                    iup = binary_search(Hs(2)%map,k2)
+                    idw = jdw             
+                    i   = iup + (idw-1)*DimDw
                     htmp=diag_hybr(ilat,Nspin,iorb,ibath)*sg1*sg2
                     !
                     hvt(i) = hvt(i) + htmp*vt(j)

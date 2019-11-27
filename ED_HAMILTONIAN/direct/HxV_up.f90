@@ -1,8 +1,8 @@
-  do idw=1,DimDw
-     do iup=1,DimUp
-        mup = Hs(1)%map(iup)
+  do jdw=1,DimDw
+     do jup=1,DimUp
+        mup = Hs(1)%map(jup)
         ibup = bdecomp(mup,Ns)
-        i    = iup + (idw-1)*dimUp
+        j    = jup + (jdw-1)*dimUp
         !
         !
         !> H_imp: Off-diagonal elements, i.e. non-local part. 
@@ -18,8 +18,8 @@
                     if (Jcondition) then
                        call c(js,mup,k1,sg1)
                        call cdg(is,k1,k2,sg2)
-                       jup = binary_search(Hs(1)%map,k2)
-                       j   = jup + (idw-1)*DimUp
+                       iup = binary_search(Hs(1)%map,k2)
+                       i   = iup + (jdw-1)*DimUp
                        htmp = impHloc(ilat,jlat,1,1,iorb,jorb)*sg1*sg2
 
                        !
@@ -47,8 +47,8 @@
                        if (Jcondition)then
                           call c(ibeta,mup,k1,sg1)
                           call cdg(ialfa,k1,k2,sg2)
-                          jup = binary_search(Hs(1)%map,k2)
-                          j   = jup + (idw-1)*DimUp
+                          iup = binary_search(Hs(1)%map,k2)
+                          i   = iup + (jdw-1)*DimUp
                           htmp = hbath_Reconstructed(ilat,jlat,1,1,iorb,jorb,ibath)*sg1*sg2
                           !
                           hv(i) = hv(i) + htmp*vin(j)
@@ -71,8 +71,8 @@
                       (ibup(is)==1) .AND. (ibup(ialfa)==0) )then              
                     call c(is,mup,k1,sg1)
                     call cdg(ialfa,k1,k2,sg2)
-                    jup = binary_search(Hs(1)%map,k2)
-                    j   = jup + (idw-1)*DimUp
+                    iup = binary_search(Hs(1)%map,k2)
+                    i   = iup + (jdw-1)*DimUp
                     htmp = diag_hybr(ilat,1,iorb,ibath)*sg1*sg2
                     !
                     hv(i) = hv(i) + htmp*vin(j)
@@ -82,8 +82,8 @@
                       (ibup(is)==0) .AND. (ibup(ialfa)==1) )then
                     call c(ialfa,mup,k1,sg1)
                     call cdg(is,k1,k2,sg2)
-                    jup = binary_search(Hs(1)%map,k2)
-                    j   = jup + (idw-1)*DimUp
+                    iup = binary_search(Hs(1)%map,k2)
+                    i   = iup + (jdw-1)*DimUp
                     htmp = diag_hybr(ilat,1,iorb,ibath)*sg1*sg2
                     !
                     hv(i) = hv(i) + htmp*vin(j)
