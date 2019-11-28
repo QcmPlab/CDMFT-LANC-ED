@@ -35,11 +35,11 @@ subroutine periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,hk_unper)
       gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
    enddo
    !
-   do ii=1,Lreal
-      tmpmat=(wr(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Sreal(:,:,:,:,:,:,ii))
-      call inv(tmpmat)
-      greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-   enddo
+   !do ii=1,Lreal
+   !   tmpmat=(wr(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Sreal(:,:,:,:,:,:,ii))
+   !   call inv(tmpmat)
+   !   greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
+   !enddo
    !
    do ii=1,Lmats
       do ilat=1,Nlat
@@ -51,15 +51,15 @@ subroutine periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,hk_unper)
       enddo
    enddo
    !
-   do ii=1,Lreal   
-      do ilat=1,Nlat
-         ind1=N2indices(ilat)        
-         do jlat=1,Nlat
-            ind2=N2indices(jlat)
-            greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-         enddo
-      enddo
-   enddo
+   !do ii=1,Lreal   
+   !   do ilat=1,Nlat
+   !      ind1=N2indices(ilat)        
+   !      do jlat=1,Nlat
+   !         ind2=N2indices(jlat)
+   !         greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
+   !      enddo
+   !   enddo
+   !enddo
    !
    deallocate(ind1,ind2)
    !if(allocated(wm))deallocate(wm)
@@ -93,33 +93,34 @@ subroutine build_sigma_g_scheme(kpoint,gmats_periodized,greal_periodized,smats_p
    !
    !Get G0^-1
    do ii=1,Lmats
-      invG0mats(:,:,ii) = (xi*wm(ii)+xmu)  - Hk_per            
+      invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_per            
    enddo
-   do ii=1,Lreal
-      invG0real(:,:,ii) = (wr(ii)+xmu)   - Hk_per   
-   enddo
+   !do ii=1,Lreal
+   !   invG0real(:,:,ii) = (wr(ii)+xmu)*eye(Nspin*Norb)   - Hk_per   
+   !enddo
    !
    !Get Gimp^-1
    call periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,Hk_unper)
+   !
    do ii=1,Lmats
       invGmats(:,:,ii) = nn2so(gmats_periodized(:,:,:,:,ii))
       call inv(invGmats(:,:,ii))
    enddo
-   do ii=1,Lmats
-      invGreal(:,:,ii) = nn2so(greal_periodized(:,:,:,:,ii))
-      call inv(invGreal(:,:,ii))
-   enddo
+   !do ii=1,Lreal
+   !   invGreal(:,:,ii) = nn2so(greal_periodized(:,:,:,:,ii))
+   !   call inv(invGreal(:,:,ii))
+   !enddo
    !
    !Get Sigma functions: Sigma= G0^-1 - G^-1
    Smats_periodized=zero
-   Sreal_periodized=zero
+   !Sreal_periodized=zero
    !
    do ii=1,Lmats
       Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
    enddo
-   do ii=1,Lreal
-      Sreal_periodized(:,:,:,:,ii) = so2nn(invG0real(:,:,ii) - invGreal(:,:,ii))
-   enddo
+   !do ii=1,Lreal
+   !   Sreal_periodized(:,:,:,:,ii) = so2nn(invG0real(:,:,ii) - invGreal(:,:,ii))
+   !enddo
    !
    !if(allocated(wm))deallocate(wm)
    !if(allocated(wr))deallocate(wr)
@@ -159,15 +160,15 @@ subroutine periodize_sigma_scheme(kpoint,smats_periodized,sreal_periodized)
       enddo
    enddo
    !
-   do ii=1,Lreal   
-      do ilat=1,Nlat
-         ind1=N2indices(ilat)        
-         do jlat=1,Nlat
-            ind2=N2indices(jlat)
-            sreal_periodized(:,:,:,:,ii)=sreal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Sreal(ilat,jlat,:,:,:,:,ii)/Nlat
-         enddo
-      enddo
-   enddo
+   !do ii=1,Lreal   
+   !   do ilat=1,Nlat
+   !      ind1=N2indices(ilat)        
+   !      do jlat=1,Nlat
+   !         ind2=N2indices(jlat)
+   !         sreal_periodized(:,:,:,:,ii)=sreal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Sreal(ilat,jlat,:,:,:,:,ii)/Nlat
+   !      enddo
+   !   enddo
+   !enddo
    !
    deallocate(ind1,ind2)
    !if(allocated(wm))deallocate(wm)
@@ -198,11 +199,11 @@ subroutine build_g_sigma_scheme(kpoint,gmats_periodized,greal_periodized,smats_p
       gmats_periodized(:,:,:,:,ii)=so2nn(tmpmat)
    enddo
    !
-   do ii=1,Lreal
-      tmpmat=(wr(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Sreal_periodized(:,:,:,:,ii))
-      call inv(tmpmat)
-      greal_periodized(:,:,:,:,ii)=so2nn(tmpmat)
-   enddo
+   !do ii=1,Lreal
+   !   tmpmat=(wr(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Sreal_periodized(:,:,:,:,ii))
+   !   call inv(tmpmat)
+   !   greal_periodized(:,:,:,:,ii)=so2nn(tmpmat)
+   !enddo
    !
    !if(allocated(wm))deallocate(wm)
    !if(allocated(wr))deallocate(wr)
@@ -270,8 +271,8 @@ subroutine print_periodized(Nkpts,func1,func2,scheme)
    if(master)call dmft_print_gf_matsubara(gloc_per_iw,"Gloc_periodized",iprint=4)
    if(master)call dmft_print_gf_matsubara(sloc_per_iw,"Sigma_periodized",iprint=4)
    !
-   if(master)call dmft_print_gf_realaxis(gloc_per_rw,"Gloc_periodized",iprint=4)
-   if(master)call dmft_print_gf_realaxis(sloc_per_rw,"Sigma_periodized",iprint=4)
+   !if(master)call dmft_print_gf_realaxis(gloc_per_rw,"Gloc_periodized",iprint=4)
+   !if(master)call dmft_print_gf_realaxis(sloc_per_rw,"Sigma_periodized",iprint=4)
    !
 end subroutine print_periodized
 
