@@ -162,7 +162,7 @@ contains
                      iverbose=(ed_verbose>3))
              endif
 #else
-             call call sp_eigh(spHtimesV_p,eig_values,eig_basis,&
+                call sp_eigh(spHtimesV_p,eig_values,eig_basis,&
                   Nblock,&
                   Nitermax,&
                   tol=lanc_tolerance,&
