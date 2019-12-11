@@ -1,9 +1,12 @@
-  do j=MpiIstart,MpiIend
-     jup = iup_index(j,DimUp)
-     jdw = idw_index(j,DimUp)
+!We build the transposed H_non_local here (symmetric)
+!to comply with the MPI decomposition of the matrix.
+!A better MPI handling might be necessary here... 
+do i=MpiIstart,MpiIend
+     iup = iup_index(i,DimUp)
+     idw = idw_index(i,DimUp)
      !
-     mup = Hs(1)%map(jup)
-     mdw = Hs(2)%map(jdw)
+     mup = Hs(1)%map(iup)
+     mdw = Hs(2)%map(idw)
      !
      ibup = bdecomp(mup,Ns)
      ibdw = bdecomp(mdw,Ns)
@@ -35,12 +38,12 @@
                  if(Jcondition)then
                     call c(is,mdw,k1,sg1)  !DW
                     call cdg(js,k1,k2,sg2) !DW
-                    idw=binary_search(Hs(2)%map,k2)
+                    jdw=binary_search(Hs(2)%map,k2)
                     call c(js,mup,k3,sg3)  !UP
                     call cdg(is,k3,k4,sg4) !UP
-                    iup=binary_search(Hs(1)%map,k4)
+                    jup=binary_search(Hs(1)%map,k4)
                     htmp = Jx*sg1*sg2*sg3*sg4
-                    i = iup + (idw-1)*DimUp
+                    j = jup + (jdw-1)*DimUp
                     !
                     ! if(j==0)cycle
                     select case(MpiStatus)
@@ -73,12 +76,12 @@
                  if(Jcondition)then
                     call c(js,mdw,k1,sg1)       !c_jorb_dw
                     call cdg(is,k1,k2,sg2)      !c^+_iorb_dw
-                    idw = binary_search(Hs(2)%map,k2)
+                    jdw = binary_search(Hs(2)%map,k2)
                     call c(js,mup,k3,sg3)       !c_jorb_up
                     call cdg(is,k3,k4,sg4)      !c^+_iorb_up
-                    iup = binary_search(Hs(1)%map,k4)
+                    jup = binary_search(Hs(1)%map,k4)
                     htmp = Jp*sg1*sg2*sg3*sg4
-                    i = iup + (idw-1)*dimup
+                    j = jup + (jdw-1)*dimup
                     !
                     ! if(j==0)cycle
                     select case(MpiStatus)
