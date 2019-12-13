@@ -76,7 +76,6 @@ program cdn_bhz_2d
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
-
    !Build Hk and Hloc
    call generate_hk_hloc()
    allocate(lambdasym_vector(3))
@@ -98,7 +97,6 @@ program cdn_bhz_2d
    allocate(bath(Nb))
    allocate(bath_fitted(Nb))
    call ed_init_solver(comm,bath)
-
    !DMFT loop
    iloop=0;converged=.false.
    do while(.not.converged.AND.iloop<nloop)
@@ -200,15 +198,17 @@ contains
       !
       H0=nnn2lso(hopping_matrix)
       !
-      open(free_unit(unit),file=trim(file_))
-      do ilat=1,Nlat*Nspin*Norb
-         write(unit,"(5000(F5.2,1x))")(REAL(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
-      enddo
-      write(unit,*)"                  "
-      do ilat=1,Nlat*Nspin*Norb
-         write(unit,"(5000(F5.2,1x))")(IMAG(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
-      enddo
-      close(unit)
+      !if(master)then
+         !open(free_unit(unit),file=trim(file_))
+         !do ilat=1,Nlat*Nspin*Norb
+         !   write(unit,"(5000(F5.2,1x))")(REAL(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
+         !enddo
+         !write(unit,*)"                  "
+         !do ilat=1,Nlat*Nspin*Norb
+         !   write(unit,"(5000(F5.2,1x))")(IMAG(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
+         !enddo
+         !close(unit)
+      !endif
    end function hloc_model
 
 
@@ -293,12 +293,12 @@ contains
       hk=zero
       wt=zero
       hloc=zero
+      Wt = 1d0/(Nkx*Nky)
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
-      Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
       where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
-         !
+      !
    end subroutine generate_hk_hloc
 
    !+------------------------------------------------------------------+
