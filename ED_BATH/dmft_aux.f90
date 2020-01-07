@@ -28,12 +28,13 @@ subroutine allocate_dmft_bath()
    allocate(dmft_bath%item(Nbath))
    !
    !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   Nsym=size(lambda_impHloc)+1
+   !Nsym=size(lambda_impHloc)+1
    !
-   do isym=1,size(lambda_impHloc)
-      if(is_identity(H_Basis(isym)%O)) Nsym=Nsym-1
-      exit
-   enddo
+   !do isym=1,size(lambda_impHloc)
+   !   if(is_identity(H_Basis(isym)%O)) Nsym=Nsym-1
+   !   exit
+   !enddo
+   Nsym=size(lambda_impHloc)
    !
    !ALLOCATE coefficients vectors
    !
@@ -67,7 +68,7 @@ function bath_from_sym(lambdavec) result (Hbath)
    !
    !IF NO IDENTITY WAS DECLARED, ADD IT WITH THE OFFSET
    !
-   if(Nsym.ne.Nsym_)Hbath=Hbath+lso2nnn_reshape(lambdavec(Nsym_+1)*eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
+   !if(Nsym.ne.Nsym_)Hbath=Hbath+lso2nnn_reshape(lambdavec(Nsym_+1)*eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
    !
 end function bath_from_sym
 
@@ -103,18 +104,18 @@ subroutine init_dmft_bath()
    do ibath=1,Nbath
       Nsym = dmft_bath%item(ibath)%N_dec
       Nsym_= size(lambda_impHloc)
-      if(Nsym .ne. Nsym_)then
+      !if(Nsym .ne. Nsym_)then
          do isym=1,Nsym_
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
          enddo
-         dmft_bath%item(ibath)%lambda(Nsym_+1) =  -(xmu+offset_b(ibath))  !ADD THE OFFSET (IDENTITY)
-      else
-         do isym=1,Nsym
-            dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
-            if(is_identity(H_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym) =&
-               dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
-         enddo
-      endif
+     !    dmft_bath%item(ibath)%lambda(Nsym_+1) =  -(xmu+offset_b(ibath))  !ADD THE OFFSET (IDENTITY)
+     ! else
+     !    do isym=1,Nsym
+     !       dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
+     !       if(is_identity(H_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym) =&
+     !          dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
+     !    enddo
+     ! endif
    enddo
    !
    !Read from file if exist:
