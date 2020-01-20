@@ -25,6 +25,7 @@ subroutine periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,hk_unper)
    greal_periodized=zero
    tmpmat=zero
    !
+   !
    do ii=1,Lmats
       tmpmat=(xi*wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Smats(:,:,:,:,:,:,ii))
       call inv(tmpmat)

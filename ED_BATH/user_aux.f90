@@ -27,7 +27,7 @@ function get_bath_dimension_direct(Hloc_nn) result(bath_size)
         enddo
      enddo
   enddo
-  ndx   = counter + 1         !all elements (plus identity for offset)
+  ndx   = counter
   ndx   = ndx + 1             !we also print n_Dec
   !
   !number of non vanishing elements for each replica
@@ -48,11 +48,7 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   Nsym=size(Hloc_nn(1,1,1,1,1,1,:))
   !
   !add identity
-  ndx=Nsym+1
-  !if already there remove it
-  do isym=1,Nsym
-     if(is_identity(Hloc_nn(:,:,:,:,:,:,isym)))Nsym=Nsym-1
-  enddo
+  ndx=Nsym
   !
   !for each replica we also print N_dec
   ndx=ndx+1
