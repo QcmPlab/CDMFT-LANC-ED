@@ -53,22 +53,18 @@ end subroutine allocate_dmft_bath
 !+-------------------------------------------------------------------+
 
 function bath_from_sym(lambdavec) result (Hbath)
-   integer                                               :: Nsym,Nsym_,isym
+   integer                                               :: Nsym,isym
    real(8),dimension(:)                                  :: lambdavec
    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hbath
    !
-   Nsym=size(lambdavec)
-   Nsym_=size(lambda_impHloc)
+   Nsym=size(lambda_impHloc)
    !
    Hbath=zero
    !
-   do isym=1,Nsym_
+   do isym=1,Nsym
       Hbath=Hbath+lambdavec(isym)*H_Basis(isym)%O
    enddo
    !
-   !IF NO IDENTITY WAS DECLARED, ADD IT WITH THE OFFSET
-   !
-   !if(Nsym.ne.Nsym_)Hbath=Hbath+lso2nnn_reshape(lambdavec(Nsym_+1)*eye(Nlat*Nspin*Norb),Nlat,Nspin,Norb)
    !
 end function bath_from_sym
 
@@ -79,20 +75,20 @@ end function bath_from_sym
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
    real(8)                  :: re,im
-   integer                  :: i,ibath,isym,unit,flen,Nh,Nsym,Nsym_
+   integer                  :: i,ibath,isym,unit,flen,Nh,Nsym
    integer,dimension(Nbath) :: Nlambdas
    integer                  :: io,jo,iorb,ispin,jorb,jspin
    logical                  :: IOfile
    real(8)                  :: de
-   real(8)                  :: offset_b(Nbath),noise_b(Nlat*Nspin*Norb)
+   real(8)                  :: rescale(Nbath),offset_b(Nbath)
    character(len=21)        :: space
    !  
    if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
    !
    if(Nbath>1)then
-      offset_b=linspace(-HWBAND,HWBAND,Nbath)
+      rescale=linspace(HWBAND/Nbath,HWBAND,Nbath)
    else
-      offset_b(1)=0.d0
+      rescale(1)=0.d0
    endif
    !
    !BATH V INITIALIZATION
@@ -102,20 +98,14 @@ subroutine init_dmft_bath()
    !
    !BATH LAMBDAS INITIALIZATION
    do ibath=1,Nbath
-      Nsym = dmft_bath%item(ibath)%N_dec
-      Nsym_= size(lambda_impHloc)
-      !if(Nsym .ne. Nsym_)then
-         do isym=1,Nsym_
+     Nsym = dmft_bath%item(ibath)%N_dec
+     do isym=1,Nsym
+        if(is_diagonal(H_basis(isym)%O))then
+            dmft_bath%item(ibath)%lambda(isym)=rescale(ibath)*lambda_impHloc(isym)
+        else
             dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
-         enddo
-     !    dmft_bath%item(ibath)%lambda(Nsym_+1) =  -(xmu+offset_b(ibath))  !ADD THE OFFSET (IDENTITY)
-     ! else
-     !    do isym=1,Nsym
-     !       dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
-     !       if(is_identity(H_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym) =&
-     !          dmft_bath%item(ibath)%lambda(isym) - (xmu+offset_b(ibath))
-     !    enddo
-     ! endif
+        endif
+     enddo
    enddo
    !
    !Read from file if exist:

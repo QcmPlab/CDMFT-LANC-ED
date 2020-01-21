@@ -47,7 +47,6 @@ function get_bath_dimension_symmetries(Hloc_nn) result(bath_size)
   !number of symmetries
   Nsym=size(Hloc_nn(1,1,1,1,1,1,:))
   !
-  !add identity
   ndx=Nsym
   !
   !for each replica we also print N_dec
