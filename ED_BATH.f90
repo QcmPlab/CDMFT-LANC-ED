@@ -47,6 +47,10 @@ MODULE ED_BATH
      module procedure ::  is_identity_nnn
   end interface is_identity
 
+  interface is_diagonal
+     module procedure ::  is_identity_lso
+     module procedure ::  is_identity_nnn
+  end interface is_diagonal
 
   !##################################################################
   !
@@ -100,6 +104,50 @@ MODULE ED_BATH
 contains
 
 !+-------------------------------------------------------------------+
+!PURPOSE  : Check if a matrix is diagonal
+!+-------------------------------------------------------------------+
+
+   function is_diagonal_nnn(mnnn) result(flag)
+     complex(8),dimension(nlat,nlat,nspin,nspin,norb,norb)                    :: mnnn
+     real(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                       :: mtmp
+     integer                                                                  :: i,j
+     logical                                                                  :: flag
+     !
+     flag=.true.
+     !
+     if ( ANY( dimag(mnnn) .gt. 1d-6 ) ) flag=.false.
+     !
+     mtmp=abs(dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb)))
+     !
+     do i=1,nlat*nspin*norb
+        do j=1,nlat*nspin*norb
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+         enddo
+     enddo
+     !
+   end function is_diagonal_nnn
+
+
+   function is_diagonal_lso(mlso) result(flag)
+     complex(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                    :: mlso
+     real(8),dimension(nlat*nspin*norb,nlat*nspin*norb)                       :: mtmp
+     integer                                                                  :: i,j
+     logical                                                                  :: flag
+     !
+     flag=.true.
+     !
+     if ( ANY( dimag(mlso) .gt. 1d-6 ) ) flag=.false.
+     !
+     mtmp=abs(dreal(mlso))
+     !
+     do i=1,nlat*nspin*norb
+        do j=1,nlat*nspin*norb
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+         enddo
+     enddo
+     !
+   end function is_diagonal_lso
+!+-------------------------------------------------------------------+
 !PURPOSE  : Check if a matrix is the identity
 !+-------------------------------------------------------------------+
 
@@ -121,7 +169,7 @@ contains
      !
      do i=1,nlat*nspin*norb
         do j=1,nlat*nspin*norb
-           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+           if((i.ne.j).and.(abs(mtmp(i,j)).gt.1.d-6))flag=.false.
          enddo
      enddo
      !
@@ -146,7 +194,7 @@ contains
      !
      do i=1,nlat*nspin*norb
         do j=1,nlat*nspin*norb
-           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
+           if((i.ne.j).and.(abs(mtmp(i,j)).gt.1.d-6))flag=.false.
          enddo
      enddo
      !
