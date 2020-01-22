@@ -48,8 +48,8 @@ MODULE ED_BATH
   end interface is_identity
 
   interface is_diagonal
-     module procedure ::  is_identity_lso
-     module procedure ::  is_identity_nnn
+     module procedure ::  is_diagonal_lso
+     module procedure ::  is_diagonal_nnn
   end interface is_diagonal
 
   !##################################################################
@@ -115,7 +115,7 @@ contains
      !
      flag=.true.
      !
-     if ( ANY( dimag(mnnn) .gt. 1d-6 ) ) flag=.false.
+     if ( ANY( abs(dimag(mnnn)) .gt. 1d-6 ) ) flag=.false.
      !
      mtmp=abs(dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb)))
      !
@@ -136,7 +136,7 @@ contains
      !
      flag=.true.
      !
-     if ( ANY( dimag(mlso) .gt. 1d-6 ) ) flag=.false.
+     if ( ANY( abs(dimag(mlso)) .gt. 1d-6 ) ) flag=.false.
      !
      mtmp=abs(dreal(mlso))
      !
@@ -159,7 +159,7 @@ contains
      !
      flag=.true.
      !
-     if ( ANY( dimag(mnnn) .gt. 1d-6 ) ) flag=.false.
+     if ( ANY( abs(dimag(mnnn)) .gt. 1d-6 ) ) flag=.false.
      !
      mtmp=dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb))
      !
@@ -184,7 +184,7 @@ contains
      !
      flag=.true.
      !
-     if ( ANY( dimag(mlso) .gt. 1d-6 ) ) flag=.false.
+     if ( ANY( abs(dimag(mlso)) .gt. 1d-6 ) ) flag=.false.
      !
      mtmp=dreal(mlso)
      !
