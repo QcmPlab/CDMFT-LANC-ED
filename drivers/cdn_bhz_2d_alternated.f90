@@ -17,6 +17,7 @@ program cdn_bhz_2d
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
    character(len=16)                                                      :: finput
+   real(8),allocatable                                                    :: wt(:)
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    complex(8),dimension(:,:,:,:,:,:),allocatable                          :: observable_matrix
@@ -210,13 +211,15 @@ contains
       hopping_matrix=zero
       !
       do ispin=1,Nspin
-         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+dconjg(transpose(tx(ts,lambda,ispin)))*exp(xi*cdot(kpoint,[sqrt(2d0),sqrt(2d0)]))
-         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+ty(ts,lambda)*exp(xi*kpoint(1)*sqrt(2d0))
-         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+transpose(ty(ts,lambda))*exp(xi*kpoint(2)*sqrt(2d0))
+         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+&
+                                             dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*dot_product(kpoint,[sqrt(2d0),sqrt(2d0)]))
+         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+t_y(ts,lambda)*exp(xi*kpoint(1)*sqrt(2d0))
+         hopping_matrix(1,2,ispin,ispin,:,:)=hopping_matrix(1,2,ispin,ispin,:,:)+transpose(t_y(ts,lambda))*exp(xi*kpoint(2)*sqrt(2d0))
          !
-         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+tx(ts,lambda,ispin)*exp(-xi*cdot(kpoint,[sqrt(2d0),sqrt(2d0)]))
-         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+transpose(ty(ts,lambda))*exp(-xi*kpoint(1)*sqrt(2d0))
-         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+ty(ts,lambda)*exp(-xi*kpoint(2)*sqrt(2d0))
+         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+&
+                                             t_x(ts,lambda,ispin)*exp(-xi*dot_product(kpoint,[sqrt(2d0),sqrt(2d0)]))
+         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+transpose(t_y(ts,lambda))*exp(-xi*kpoint(1)*sqrt(2d0))
+         hopping_matrix(2,1,ispin,ispin,:,:)=hopping_matrix(2,1,ispin,ispin,:,:)+t_y(ts,lambda)*exp(-xi*kpoint(2)*sqrt(2d0))
       enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
@@ -278,6 +281,7 @@ contains
       hloc=zero
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
+      Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
       where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
          !
