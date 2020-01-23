@@ -161,7 +161,7 @@ contains
      !
      if ( ANY( abs(dimag(mnnn)) .gt. 1d-6 ) ) flag=.false.
      !
-     mtmp=dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb))
+     mtmp=abs(dreal(nnn2lso_reshape(mnnn,nlat,nspin,norb)))
      !
      do i=1,nlat*nspin*norb-1
        if((mtmp(i,i).ne.mtmp(i+1,i+1)).or.(mtmp(i,i).lt.1.d-6))flag=.false.
@@ -169,7 +169,7 @@ contains
      !
      do i=1,nlat*nspin*norb
         do j=1,nlat*nspin*norb
-           if((i.ne.j).and.(abs(mtmp(i,j)).gt.1.d-6))flag=.false.
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
          enddo
      enddo
      !
@@ -186,7 +186,7 @@ contains
      !
      if ( ANY( abs(dimag(mlso)) .gt. 1d-6 ) ) flag=.false.
      !
-     mtmp=dreal(mlso)
+     mtmp=abs(dreal(mlso))
      !
      do i=1,nlat*nspin*norb-1
        if((mtmp(i,i).ne.mtmp(i+1,i+1)).or.(mtmp(i,i).lt.1.d-6))flag=.false.
@@ -194,7 +194,7 @@ contains
      !
      do i=1,nlat*nspin*norb
         do j=1,nlat*nspin*norb
-           if((i.ne.j).and.(abs(mtmp(i,j)).gt.1.d-6))flag=.false.
+           if((i.ne.j).and.(mtmp(i,j).gt.1.d-6))flag=.false.
          enddo
      enddo
      !
