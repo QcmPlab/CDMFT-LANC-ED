@@ -199,6 +199,8 @@ contains
          enddo
       enddo
       !
+      H0=nnn2lso(hopping_matrix)
+      !
    end function hloc_model
 
 
