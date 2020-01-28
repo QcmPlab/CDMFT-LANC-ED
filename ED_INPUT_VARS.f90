@@ -62,6 +62,7 @@ MODULE ED_INPUT_VARS
   real(8)              :: cg_minimize_hh      !unknown parameter used in the CG minimize procedure.  
   character(len=5)     :: cg_Scheme           !fit scheme: delta (default), weiss for G0^
   integer              :: cg_method           !fit routine type:0=CGnr (default), 1=minimize (old f77), 2=CG+
+  integer              :: cg_grad             !gradient evaluation: 0=analytic, 1=numeric
   integer              :: cg_stop             !fit stop condition:0-3, 0=default
   real(8)              :: cg_eps              !fit eps tolerance
   !
@@ -177,6 +178,7 @@ contains
     call parse_input_variable(cg_minimize_hh,"CG_MINIMIZE_HH",INPUTunit,default=1d-4,comment="Unknown parameter used in the CG minimize procedure.")
     call parse_input_variable(cg_ftol,"CG_FTOL",INPUTunit,default=0.00001d0,comment="Conjugate-Gradient tolerance.")
     call parse_input_variable(cg_method,"CG_METHOD",INPUTunit,default=0,comment="Conjugate-Gradient method: 0=NR, 1=minimize.")
+    call parse_input_variable(cg_grad,"CG_GRAD",INPUTunit,default=0,comment="Gradient evaluation method: 0=analytic (default), 1=numeric.")    
     call parse_input_variable(cg_stop,"CG_STOP",INPUTunit,default=0,comment="Conjugate-Gradient stopping condition.")
     call parse_input_variable(cg_eps,"CG_EPS",INPUTunit,default=0.000001d0,comment="Conjugate-Gradient eps tolerance.")
     call parse_input_variable(cg_weight,"CG_WEIGHT",INPUTunit,default=1,comment="Conjugate-Gradient weight form: 1=1.0, 2=1/n , 3=1/w_n.")
