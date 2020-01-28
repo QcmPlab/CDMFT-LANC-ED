@@ -481,7 +481,7 @@ end function grad_chi2_delta_replica
     !
     Delta=zero
     do i=1,Ldelta
-       iw = xi*Xdelta(i)
+       iw = xi*Xdelta(i)+xmu
        do ibath=1,Nbath
           invH_knnn  = bath_from_sym(dummy_lambda(ibath)%element)
           Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
@@ -534,11 +534,10 @@ function grad_delta_replica(a) result(dDelta)
   do ibath=1,Nbath
      allocate(dummy_lambda(ibath)%element(Nlambdas(ibath)))
      !
-     !FIXME: to extend uncomment Nspin
+     !FIXME: to extend uncomment Nspin and 1->NSPIN
      !do ispin=1,Nspin
         count = count + 1
-        ispin=1
-        dummy_vbath(ispin,ibath) = a(count)
+        dummy_vbath(1,ibath) = a(count)
      !enddo
      !
      dummy_lambda(ibath)%element=a(count+1:count+Nlambdas(ibath))
@@ -548,9 +547,9 @@ function grad_delta_replica(a) result(dDelta)
   dDelta=zero
   count=0
   do ibath=1,Nbath
-     Htmp     = nnn2lso_reshape( bath_from_sym(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
+     Htmp     = nnn2lso_reshape(bath_from_sym(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
      do i=1,Ldelta
-        Haux = zeye(Nlat*Nspin*Norb)*xi*Xdelta(i) - Htmp
+        Haux = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(i)+xmu) - Htmp
         call inv(Haux)
         invH_knn(:,:,:,:,:,:,i) = lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
      enddo
