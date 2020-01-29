@@ -55,7 +55,7 @@ contains
     do ibath=1,Nbath
        invH_knn=bath_from_sym(dmft_Bath%item(ibath)%lambda)
        invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
-       invH_k = zeye(Nlat*Nspin*Norb)*()x+xmu) - invH_k
+       invH_k = zeye(Nlat*Nspin*Norb)*(x+xmu) - invH_k
        call inv(invH_k)
        Delta=Delta + (dmft_bath%item(ibath)%v**2)*lso2nnn_reshape(invH_k,Nlat,Nspin,Norb) !remember module of V for complex type
        !
