@@ -324,11 +324,12 @@ contains
   !+-------------------------------------------------------------+
 
   function chi2_delta_replica(a) result(chi2)
-    real(8),dimension(:)                                         ::  a
-    real(8)                                                      ::  chi2
-    real(8),dimension(totNlso)                                   ::  chi2_so
-    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) ::  Delta
-    integer                                                      ::  i,l,ilat,jlat,iorb,jorb,ispin,jspin
+    real(8),dimension(:)                                         :: a
+    real(8)                                                      :: chi2
+    real(8),dimension(totNlso)                                   :: chi2_lso
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: Delta
+    real(8),dimension(Ldelta)                                    :: Ctmp
+    integer                                                      :: i,l,ilat,jlat,iorb,jorb,ispin,jspin
     !
     Delta = delta_replica(a)
     !
@@ -339,10 +340,12 @@ contains
        jorb = getJorb(l)
        ispin = getIspin(l)
        jspin = getJspin(l)
-       chi2_so(l) = sum( (abs(Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:))**cg_pow)/Wdelta(:) )
+       !
+       Ctmp =  abs(Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:))
+       chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
     enddo
     !
-    chi2=sum(chi2_so)
+    chi2=sum(chi2_lso)
     chi2=chi2/Ldelta
     !
   end function chi2_delta_replica
@@ -357,6 +360,8 @@ function grad_chi2_delta_replica(a) result(dchi2)
   real(8),dimension(totNlso,size(a))                                   :: df
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)         :: Delta
   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dDelta
+  complex(8),dimension(Ldelta)                                         :: Ftmp
+  real(8),dimension(Ldelta)                                            :: Ctmp
   integer                                                              :: i,j,l,ilat,jlat,iorb,jorb,ispin,jspin
   !
   Delta  = delta_replica(a)
@@ -370,10 +375,12 @@ function grad_chi2_delta_replica(a) result(dchi2)
      ispin = getIspin(l)
      jspin = getJspin(l)
      !
+     Ftmp = Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:)
+     Ctmp = abs(Ftmp)**(cg_pow-2)
      do j=1,size(a)
         df(l,j)=&
-             sum( dreal(Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:))*dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))/Wdelta(:) ) + &
-             sum( dimag(Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:))*dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))/Wdelta(:) )
+             sum( dreal(Ftmp)*dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta ) + &
+             sum( dimag(Ftmp)*dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta )
      enddo
   enddo
   !
@@ -391,8 +398,9 @@ end function grad_chi2_delta_replica
   function chi2_weiss_replica(a) result(chi2)
     real(8),dimension(:)                                         :: a
     real(8)                                                      :: chi2
-    real(8),dimension(totNlso)                                   :: chi2_so
+    real(8),dimension(totNlso)                                   :: chi2_lso
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: g0and
+    real(8),dimension(Ldelta)                                    :: Ctmp
     integer                                                      :: i,l,ilat,jlat,iorb,jorb,ispin,jspin
     !
     g0and = g0and_replica(a)
@@ -404,14 +412,16 @@ end function grad_chi2_delta_replica
        jorb = getJorb(l)
        ispin = getIspin(l)
        jspin = getJspin(l)
-       chi2_so(l) = sum( (abs(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))**cg_pow)/Wdelta(:) )
+       !
+       Ctmp = abs(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))
+       chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
     enddo
     !
     !FIXME:THIS NEEDS A THOROUGH DISCUSSION
     !
-    chi2=sum(chi2_so)
-    !chi2=maxval(chi2_so)
-    maxchi_loc=maxloc(chi2_so,1)
+    chi2=sum(chi2_lso)
+    !chi2=maxval(chi2_lso)
+    maxchi_loc=maxloc(chi2_lso,1)
     chi2=chi2/Ldelta
     !
   end function chi2_weiss_replica
@@ -426,8 +436,9 @@ end function grad_chi2_delta_replica
      real(8),dimension(totNlso,size(a))                                   :: df
      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)         :: g0and
      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dg0and
+     complex(8),dimension(Ldelta)                                         :: Ftmp
+     real(8),dimension(Ldelta)                                            :: Ctmp
      integer                                                              :: i,j,l,ilat,jlat,iorb,jorb,ispin,jspin
-     integer,dimension(1)::loc
      !
      g0and  = g0and_replica(a)
      dg0and = grad_g0and_replica(a)
@@ -440,17 +451,18 @@ end function grad_chi2_delta_replica
         ispin = getIspin(l)
         jspin = getJspin(l)
         !
+        Ftmp = Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:)
+        Ctmp = abs(Ftmp)**(cg_pow-2)
         do j=1,size(a)
            df(l,j)=&
-                sum( dreal(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))*dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))/Wdelta(:) ) + &
-                sum( dimag(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))*dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))/Wdelta(:) )
+                sum( dreal(Ftmp)*dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta ) + &
+                sum( dimag(Ftmp)*dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta )
         enddo
      enddo
      !
      !dchi2 = -cg_pow*df(maxchi_loc,:)
      dchi2 = -cg_pow*sum(df,1)     !sum over all orbital indices
      dchi2 = dchi2/Ldelta
-     print*,dchi2
      !
    end function grad_chi2_weiss_replica
 
