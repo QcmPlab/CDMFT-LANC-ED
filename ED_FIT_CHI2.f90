@@ -415,8 +415,8 @@ contains
     !
     !FIXME:THIS NEEDS A THOROUGH DISCUSSION
     !
-    chi2=sum(chi2_lso)
-    !chi2=maxval(chi2_lso)
+    !chi2=sum(chi2_lso)
+    chi2=maxval(chi2_lso)
     maxchi_loc=maxloc(chi2_lso,1)
     chi2=chi2/Ldelta
     !
@@ -456,8 +456,8 @@ contains
        enddo
     enddo
     !
-    !dchi2 = -cg_pow*df(maxchi_loc,:)
-    dchi2 = -cg_pow*sum(df,1)     !sum over all orbital indices
+    !dchi2 = -cg_pow*sum(df,1)     !sum over all orbital indices
+    dchi2 = -cg_pow*df(maxchi_loc,:)
     dchi2 = dchi2/Ldelta
     !
   end function grad_chi2_weiss_replica
@@ -600,7 +600,7 @@ contains
              ! Htmp=matmul(Haux(:,:,l),Hbasis_lso)
              ! Htmp=matmul(Htmp,Haux(:,:,l))
              Htmp = ((Haux(:,:,l) .x. Hbasis_lso)) .x. Haux(:,:,l)
-             dDelta(:,:,:,:,:,:,l,counter)=lso2nnn_reshape(Htmp,Nlat,Nspin,Norb)
+             dDelta(:,:,:,:,:,:,l,counter)=lso2nnn_reshape((dummy_Vbath(1,ibath)**2)*Htmp,Nlat,Nspin,Norb)
           enddo
        enddo
     enddo
