@@ -170,6 +170,7 @@ contains
     select case(cg_method)     !0=NR-CG[default]; 1=CG-MINIMIZE
     case default
        if(cg_grad==0)then
+#if __GNUC__ >= 8
           write(LOGfile,*)"  Using analytic gradient"
           select case (cg_scheme)
           case ("weiss")
@@ -195,6 +196,9 @@ contains
           case default
              stop "chi2_fitgf_replica error: cg_scheme != [weiss,delta]"
           end select
+#else
+         STOP "analytic gradient not supported for gfortran < 8"
+#endif
        else
           write(LOGfile,*)"  Using numerical gradient"
           select case (cg_scheme)
@@ -346,6 +350,7 @@ contains
     !
   end function chi2_delta_replica
 
+#if __GNUC__ >= 8
   !+-------------------------------------------------------------+
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
   ! \Delta_Anderson function.
@@ -384,7 +389,7 @@ contains
     print*,dchi2
     !
   end function grad_chi2_delta_replica
-
+#endif
 
   !+-------------------------------------------------------------+
   !PURPOSE: Evaluate the \chi^2 distance of G_0_Anderson function 
@@ -422,6 +427,7 @@ contains
     !
   end function chi2_weiss_replica
 
+#if __GNUC__ >= 8
   !+-------------------------------------------------------------+
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
   ! \Delta_Anderson function.
@@ -461,8 +467,9 @@ contains
     dchi2 = dchi2/Ldelta
     !
   end function grad_chi2_weiss_replica
+#endif
 
-  !##################################################################
+!##################################################################
   ! THESE PROCEDURES EVALUATE THE 
   ! - \delta
   ! - g0
@@ -533,6 +540,7 @@ contains
     !
   end function g0and_replica
 
+#if __GNUC__ >= 8
   !##################################################################
   ! THESE PROCEDURES EVALUATE GRADIENT OF THE 
   ! - \delta
@@ -633,5 +641,6 @@ contains
     !
   end function grad_g0and_replica
 
+#endif
 
 end MODULE ED_FIT_CHI2
