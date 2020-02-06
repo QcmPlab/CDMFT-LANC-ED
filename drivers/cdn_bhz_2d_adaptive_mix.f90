@@ -12,7 +12,7 @@ program cdn_bhz_2d
    logical                                                                :: converged
    real(8)                                                                :: ts,Mh,lambda,wmixing,observable
    !Bath:
-   real(8),allocatable                                                    :: Bath(:),Bath_prev(:)
+   real(8),allocatable                                                    :: Bath(:),Bath_fitted(:)
    !The local hybridization function:
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
@@ -76,7 +76,6 @@ program cdn_bhz_2d
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
-
    !Build Hk and Hloc
    call generate_hk_hloc()
    allocate(lambdasym_vector(3))
@@ -96,9 +95,8 @@ program cdn_bhz_2d
    call set_Hloc(Hsym_basis,lambdasym_vector)
    Nb=get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
-   allocate(bath_prev(Nb))
+   allocate(bath_fitted(Nb))
    call ed_init_solver(comm,bath)
-
    !DMFT loop
    iloop=0;converged=.false.
    do while(.not.converged.AND.iloop<nloop)
@@ -124,12 +122,11 @@ program cdn_bhz_2d
       !
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
+         bath_fitted=bath
+         call ed_chi2_fitgf(Weiss,bath_fitted)
          !
          !MIXING:
-         !call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
-         if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
-         Bath_Prev=Bath
+         call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
@@ -168,6 +165,9 @@ contains
       real(8)                                               :: Mh_,ts_,lambda_
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
       complex(8),dimension(N,N)                             :: H0
+      character(len=64)                                     :: file_
+      integer                                               :: unit
+      file_ = "tcluster_matrix.dat"
       !
       hopping_matrix=zero
       !
@@ -198,6 +198,17 @@ contains
       !
       H0=nnn2lso(hopping_matrix)
       !
+      !if(master)then
+         !open(free_unit(unit),file=trim(file_))
+         !do ilat=1,Nlat*Nspin*Norb
+         !   write(unit,"(5000(F5.2,1x))")(REAL(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
+         !enddo
+         !write(unit,*)"                  "
+         !do ilat=1,Nlat*Nspin*Norb
+         !   write(unit,"(5000(F5.2,1x))")(IMAG(H0(ilat,jlat)),jlat=1,Nlat*Nspin*Norb)
+         !enddo
+         !close(unit)
+      !endif
    end function hloc_model
 
 
@@ -282,12 +293,12 @@ contains
       hk=zero
       wt=zero
       hloc=zero
+      Wt = 1d0/(Nkx*Nky)
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
-      Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
       where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
-         !
+      !
    end subroutine generate_hk_hloc
 
    !+------------------------------------------------------------------+

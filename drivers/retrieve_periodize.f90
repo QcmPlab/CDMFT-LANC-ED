@@ -12,7 +12,7 @@ program cdn_bhz_2d
    logical                                                                :: converged
    real(8)                                                                :: ts,Mh,lambda,wmixing,observable
    !Bath:
-   real(8),allocatable                                                    :: Bath(:),Bath_prev(:)
+   real(8),allocatable                                                    :: Bath(:),Bath_fitted(:)
    !The local hybridization function:
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
@@ -29,6 +29,7 @@ program cdn_bhz_2d
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master,hermiticize
+   character(len=6)                                                       :: scheme
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -48,6 +49,7 @@ program cdn_bhz_2d
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
    call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
+   call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -68,7 +70,12 @@ program cdn_bhz_2d
    Nlat=Nx*Ny
    Nlso=Nlat*Nspin*Norb
    if(.not.allocated(wm))allocate(wm(Lmats))
+   if(.not.allocated(wr))allocate(wr(Lreal))
    wm     = xi*pi/beta*real(2*arange(1,Lmats)-1,8)
+   wr     = linspace(wini,wfin,Lreal)
+   do iii=1,Lreal
+      wr(iii)=dcmplx(DREAL(wr(iii)),eps)
+   enddo
 
    if(ED_VERBOSE > 0)call naming_convention()
    !Allocate Weiss Field:
@@ -96,67 +103,32 @@ program cdn_bhz_2d
    call set_Hloc(Hsym_basis,lambdasym_vector)
    Nb=get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
-   allocate(bath_prev(Nb))
+   allocate(bath_fitted(Nb))
    call ed_init_solver(comm,bath)
-
-   !DMFT loop
-   iloop=0;converged=.false.
-   do while(.not.converged.AND.iloop<nloop)
-      iloop=iloop+1
-      if(master)call start_loop(iloop,nloop,"DMFT-loop")
-
-      !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath) 
-      call ed_get_sigma_matsubara(Smats)
-      call ed_get_sigma_realaxis(Sreal)
-      
-      !Compute the local gfs:
-      call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
-      !
-      !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(comm,Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
-      call Bcast_MPI(comm,Weiss)
-      !
-      !MIXING:
-      !if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
-      !Weiss_old=Weiss
-      !
-      !Perform the SELF-CONSISTENCY by fitting the new bath
-      if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
-         !
-         !MIXING:
-         !call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
-         if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
-         Bath_Prev=Bath
-         !
-         !Check convergence (if required change chemical potential)
-         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
-      endif
-      !
-      call Bcast_MPI(comm,bath)
-      call Bcast_MPI(comm,converged)
-      call Bcast_MPI(comm,xmu)
-      !
-      if(master)call end_loop
-   enddo
-
-   !Compute the local gfs:
-   call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-
-   !Compute the Kinetic Energy:
-   do iw=1,Lmats
-      Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
-   enddo
-   call dmft_kinetic_energy(comm,Hk(:,:,:),Wt,Smats_lso)
-
+   !
+   call ed_read_impG
+   call ed_read_impSigma
+   !
+   call ed_get_gimp_matsubara(Gmats)
+   call ed_get_gimp_realaxis(Greal)
+   call ed_get_sigma_matsubara(Smats)
+   call ed_get_sigma_realaxis(Sreal)
+   !
+   where(abs(Smats)<1.d-6)Smats=zero
+   where(abs(Sreal)<1.d-6)Sreal=zero
+   where(abs(Gmats)<1.d-6)Smats=zero
+   where(abs(Greal)<1.d-6)Sreal=zero
+   !
+   !PERIODIZE
+   call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
 
    call finalize_MPI()
 
 
 contains
+
+   include "auxiliary_routines.f90"
+   
 
    !+------------------------------------------------------------------+
    !PURPOSE  : Hloc for the 2d BHZ model
@@ -168,6 +140,9 @@ contains
       real(8)                                               :: Mh_,ts_,lambda_
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
       complex(8),dimension(N,N)                             :: H0
+      character(len=64)                                     :: file_
+      integer                                               :: unit
+      file_ = "tcluster_matrix.dat"
       !
       hopping_matrix=zero
       !
@@ -227,6 +202,27 @@ contains
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
       ! 
    end function hk_model
+   
+
+   function hk_periodized(kpoint,N) result(Hk)
+      real(8),dimension(:)                          :: kpoint
+      integer                                       :: Nlat_,Nx_,Ny_,N
+      complex(8),dimension(N,N)                     :: Hk
+      !
+      Nlat_=Nlat
+      Nx_=Nx
+      Ny_=Ny
+      Nlat=1
+      Nx=1
+      Ny=1
+      !
+      Hk=hk_model(kpoint,Nspin*Norb)
+      !
+      Nlat=Nlat_
+      Nx=Nx_
+      Ny=Ny_
+      !
+   end function hk_periodized
 
 
    !AUXILLIARY HOPPING MATRIX CONSTRUCTORS
