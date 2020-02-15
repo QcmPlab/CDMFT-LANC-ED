@@ -11,11 +11,13 @@ The code is based on:
 
 The code structure is as follow:  
 
-* The set of modules compile into a top layer named `DMFT_ED.f90`  
+* The set of modules compile into a top layer named `CDMFT_ED.f90`  
 * The actual implementation of the DMFT equations is case by case performed in a driver program, usually placed in the directory `drivers`. 
-* In the driver code the user must includes the `DMFT_ED` module and call the necessary procedures to solve the DMFT equations.
+* In the driver code the user must includes the `CDMFT_ED` module and call the necessary procedures to solve the DMFT equations.
 
-An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/ced_hm_1dchaom.f90`.
+ The only bath type implemented to date is the 'replica' one, in which the bath consits of multiple copies of the original cluster hamiltonian. 
+ The bath can be initialized in two ways: one can pass the hamiltonian of the cluster as a matrix or as a structure consisting of an array of bath parameters and an array of basis matrices coupling to each of the formers. This second way makes easier to adhere to the symmetries of the model.
+ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/cdn_hm_1dchaom.f90`.
 
 ## DEVELOPMENT
 

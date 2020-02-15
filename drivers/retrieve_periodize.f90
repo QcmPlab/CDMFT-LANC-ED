@@ -119,7 +119,12 @@ program cdn_bhz_2d
    where(abs(Gmats)<1.d-6)Smats=zero
    where(abs(Greal)<1.d-6)Sreal=zero
    !
-   !PERIODIZE
+   !RETRIEVE AND PERIODIZE
+   
+   call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
+   if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+   call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
+   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
    call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
 
    call finalize_MPI()
