@@ -17,7 +17,7 @@ The code structure is as follow:
 
  The only bath type implemented to date is the 'replica' one, in which the bath consits of multiple copies of the original cluster hamiltonian. 
  The bath can be initialized in two ways: one can pass the hamiltonian of the cluster as a matrix or as a structure consisting of an array of bath parameters and an array of basis matrices coupling to each of the formers. This second way makes easier to adhere to the symmetries of the model.
- An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/cdn_hm_1dchaom.f90`.
+ An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/cdn_hm_1dchain.f90`.
 
 ## DEVELOPMENT
 
