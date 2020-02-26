@@ -114,25 +114,22 @@ program cdn_bhz_2d
    call ed_get_sigma_matsubara(Smats)
    call ed_get_sigma_realaxis(Sreal)
    !
-   where(abs(Smats)<1.d-6)Smats=zero
-   where(abs(Sreal)<1.d-6)Sreal=zero
-   where(abs(Gmats)<1.d-6)Smats=zero
-   where(abs(Greal)<1.d-6)Sreal=zero
    !
    !RETRIEVE AND PERIODIZE
-   
-   call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
-   if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
-   call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-   call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
+   !call   print_hk_topological()
+   call   print_hk_topological_path()
+   !call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
+   !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+   !call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
+   !if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+   !call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
 
    call finalize_MPI()
 
 
 contains
 
-   include "auxiliary_routines.f90"
+   !include "auxiliary_routines.f90"
    
 
    !+------------------------------------------------------------------+
@@ -213,6 +210,9 @@ contains
       real(8),dimension(:)                          :: kpoint
       integer                                       :: Nlat_,Nx_,Ny_,N
       complex(8),dimension(N,N)                     :: Hk
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)   :: tmpmat
+      !
+      tmpmat=periodize_sigma(kpoint)
       !
       Nlat_=Nlat
       Nx_=Nx
@@ -221,13 +221,43 @@ contains
       Nx=1
       Ny=1
       !
-      Hk=hk_model(kpoint,Nspin*Norb)
+      Hk=hk_model(kpoint,Nspin*Norb)+nnn2lso(tmpmat)
       !
       Nlat=Nlat_
       Nx=Nx_
       Ny=Ny_
       !
    end function hk_periodized
+   
+   !
+
+   function periodize_sigma(kpoint) result(smats_periodized_omegazero)
+      integer                                                     :: ilat,jlat,ispin,iorb,ii
+      real(8),dimension(:)                                        :: kpoint
+      integer,dimension(:),allocatable                            :: ind1,ind2
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
+      !
+      !
+      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
+      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
+      !
+      smats_periodized=zero
+      !
+      do ii=1,Lmats
+         do ilat=1,Nlat
+            ind1=N2indices(ilat)        
+            do jlat=1,Nlat
+               ind2=N2indices(jlat)
+               smats_periodized(:,:,:,:,ii)=smats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Smats(ilat,jlat,:,:,:,:,ii)/Nlat
+            enddo
+         enddo
+      enddo
+      !
+      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
+      !
+      !   
+   end function periodize_sigma
 
 
    !AUXILLIARY HOPPING MATRIX CONSTRUCTORS
@@ -262,6 +292,65 @@ contains
       tmpmat(2,1)=hop2*0.5d0
       !
    end function t_y
+   
+   !-------------------------------------------------------------------------------------------
+   !PURPOSE: print_hk_topological
+   !-------------------------------------------------------------------------------------------
+
+   subroutine print_hk_topological()
+      integer                                     :: ikx,iky,unit
+      real(8)                                     :: kx,ky
+      real(8),dimension(Nspin*Norb)               :: eigvals
+      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: H_kpoint
+      !
+      !
+      unit=free_unit()
+      open(unit,file="bands2d.ed")
+      do ikx=1,Nkx
+         kx=-pi+2*pi/Nkx*ikx
+         do iky=1,Nky
+            ky=-pi+2*pi/Nky*iky
+            H_kpoint=Hk_periodized([kx,ky],Nspin*Norb)
+            call Eigh(H_kpoint,eigvals)
+            write(unit,*)kx,ky,eigvals
+         enddo
+            write(unit,*)" "
+      enddo
+      close(unit)
+      !
+   end subroutine print_hk_topological
+
+   subroutine print_hk_topological_path()
+    integer                                :: i,j,Lk,Nkpath
+    integer                                :: Npts
+    real(8),dimension(:,:),allocatable     :: kpath
+    character(len=64)                      :: file
+    !This routine build the H(k) along the GXMG path in BZ,
+    !Hk(k) is constructed along this path.
+       if(master)write(LOGfile,*)"Build H(k) haldane_square along the path GXMG:"
+       Npts = 7
+       Nkpath=500
+       Lk=(Npts-1)*Nkpath
+       allocate(kpath(Npts,2))
+       kpath(1,:)=-kpoint_X2(1:2)
+       kpath(2,:)=kpoint_Gamma(1:2)
+       kpath(3,:)=kpoint_X2(1:2)
+       kpath(4,:)=kpoint_M1(1:2)
+       kpath(5,:)=kpoint_X1(1:2)
+       kpath(6,:)=kpoint_Gamma(1:2)
+       kpath(7,:)=-kpoint_X1(1:2)
+       file="Eigenbands.nint"
+       !
+       if(allocated(Hk))deallocate(Hk)
+       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
+       !
+       call TB_set_bk([pi2,0d0],[0d0,pi2])
+       if(master)  call TB_Solve_model(hk_periodized,Nspin*Norb,kpath,Nkpath,&
+         colors_name=[red1,blue1],&
+         points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
+         file=reg(file))
+      !
+   end subroutine print_hk_topological_path
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
@@ -357,11 +446,15 @@ contains
 
    function N2indices(N) result(indices) 
       integer,dimension(2)         :: indices
-      integer                      :: N,i,N_
+      integer                      :: N,i
       !
       indices(1)=mod(N,Nx)
-      if(indices(1)==0)indices(1)=3
-      indices(2)=N/Nx
+      if(indices(1)==0)then
+         indices(1)=Nx
+         indices(2)=(N-Nx)/Nx+1
+      else
+         indices(2)=N/Nx+1
+      endif
    end function N2indices
 
    subroutine naming_convention()

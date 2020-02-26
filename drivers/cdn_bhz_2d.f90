@@ -356,11 +356,15 @@ contains
 
    function N2indices(N) result(indices) 
       integer,dimension(2)         :: indices
-      integer                      :: N,i,N_
+      integer                      :: N,i
       !
       indices(1)=mod(N,Nx)
-      if(indices(1)==0)indices(1)=3
-      indices(2)=N/Nx
+      if(indices(1)==0)then
+         indices(1)=Nx
+         indices(2)=(N-Nx)/Nx+1
+      else
+         indices(2)=N/Nx+1
+      endif
    end function N2indices
 
    subroutine naming_convention()

@@ -114,10 +114,6 @@ program cdn_bhz_2d
    call ed_get_sigma_matsubara(Smats)
    call ed_get_sigma_realaxis(Sreal)
    !
-   where(abs(Smats)<1.d-6)Smats=zero
-   where(abs(Sreal)<1.d-6)Sreal=zero
-   where(abs(Gmats)<1.d-6)Smats=zero
-   where(abs(Greal)<1.d-6)Sreal=zero
    !
    !PERIODIZE
    call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
@@ -349,11 +345,15 @@ contains
 
    function N2indices(N) result(indices) 
       integer,dimension(2)         :: indices
-      integer                      :: N,i,N_
+      integer                      :: N,i
       !
       indices(1)=mod(N,Nx)
-      if(indices(1)==0)indices(1)=3
-      indices(2)=N/Nx
+      if(indices(1)==0)then
+         indices(1)=Nx
+         indices(2)=(N-Nx)/Nx+1
+      else
+         indices(2)=N/Nx+1
+      endif
    end function N2indices
 
    subroutine naming_convention()
