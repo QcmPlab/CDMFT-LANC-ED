@@ -8,9 +8,10 @@ program cdn_bhz_2d
    !
    implicit none
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
+   integer                                                                :: il,jl,is,js,io,jo
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,Mh,lambda,wmixing,observable
+   real(8)                                                                :: ts,Mh,lambda,wmixing,observable,repart,impart
    !Bath:
    real(8),allocatable                                                    :: Bath(:),Bath_fitted(:)
    !The local hybridization function:
@@ -114,6 +115,25 @@ program cdn_bhz_2d
    call ed_get_sigma_matsubara(Smats)
    call ed_get_sigma_realaxis(Sreal)
    !
+   do iii=1,Lmats
+      do il=1,Nlat
+         do jl=1,Nlat
+            do is=1,Nspin
+               do js=1,Nspin
+                  do io=1,Norb
+                     do jo=1,Norb
+                        repart=real(Smats(il,jl,is,js,io,jo,iii))
+                        impart=imag(Smats(il,jl,is,js,io,jo,iii))
+                        if(abs(repart).le.1d-6)repart=0.d0
+                        if(abs(impart).le.1d-6)impart=0.d0
+                        Smats(il,jl,is,js,io,jo,iii)=repart+xi*impart
+                     enddo
+                  enddo
+               enddo
+            enddo
+         enddo
+      enddo
+   enddo
    !
    !RETRIEVE AND PERIODIZE
    !call   print_hk_topological()
@@ -206,61 +226,7 @@ contains
    end function hk_model
    
 
-   function hk_periodized(kpoint,N) result(Hk)
-      real(8),dimension(:)                          :: kpoint
-      integer                                       :: Nlat_,Nx_,Ny_,N
-      complex(8),dimension(N,N)                     :: Hk
-      complex(8),dimension(Nspin,Nspin,Norb,Norb)   :: tmpmat
-      !
-      tmpmat=periodize_sigma(kpoint)
-      !
-      Nlat_=Nlat
-      Nx_=Nx
-      Ny_=Ny
-      Nlat=1
-      Nx=1
-      Ny=1
-      !
-      Hk=hk_model(kpoint,Nspin*Norb)+nnn2lso(tmpmat)
-      !
-      Nlat=Nlat_
-      Nx=Nx_
-      Ny=Ny_
-      !
-   end function hk_periodized
-   
-   !
-
-   function periodize_sigma(kpoint) result(smats_periodized_omegazero)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
-      !
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      smats_periodized=zero
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               smats_periodized(:,:,:,:,ii)=smats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Smats(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
-      !
-      !   
-   end function periodize_sigma
-
-
-   !AUXILLIARY HOPPING MATRIX CONSTRUCTORS
+!AUXILLIARY HOPPING MATRIX CONSTRUCTORS
 
    function t_m(mass) result(tmpmat)
       complex(8),dimension(Norb,Norb) :: tmpmat
@@ -294,8 +260,138 @@ contains
    end function t_y
    
    !-------------------------------------------------------------------------------------------
-   !PURPOSE: print_hk_topological
+   !PURPOSE: periodization & print_hk_topological
    !-------------------------------------------------------------------------------------------
+
+   function hk_periodized(kpoint,N) result(Hk)
+      real(8),dimension(:)                          :: kpoint
+      integer                                       :: Nlat_,Nx_,Ny_,N
+      complex(8),dimension(N,N)                     :: Hk
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)   :: tmpmat
+      !
+      if(scheme=="g")then
+         tmpmat=periodize_g(kpoint)
+      else
+         tmpmat=periodize_sigma(kpoint)
+      endif
+      !
+      Nlat_=Nlat
+      Nx_=Nx
+      Ny_=Ny
+      Nlat=1
+      Nx=1
+      Ny=1
+      !
+      Hk=hk_model(kpoint,Nspin*Norb)+nn2so(tmpmat)
+      !
+      Nlat=Nlat_
+      Nx=Nx_
+      Ny=Ny_
+      !
+   end function hk_periodized
+   
+   !
+
+   function periodize_sigma(kpoint) result(smats_periodized_omegazero)
+      integer                                                     :: ilat,jlat,ispin,iorb,ii
+      real(8),dimension(:)                                        :: kpoint
+      integer,dimension(:),allocatable                            :: ind1,ind2
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
+      !
+      !
+      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
+      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
+      !
+      smats_periodized=zero
+      !
+      do ii=1,1!Lmats
+         do ilat=1,Nlat
+            ind1=N2indices(ilat)        
+            do jlat=1,Nlat
+               ind2=N2indices(jlat)
+               smats_periodized(:,:,:,:,ii)=smats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Smats(ilat,jlat,:,:,:,:,ii)/Nlat
+            enddo
+         enddo
+      enddo
+      !
+      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
+      !
+      !   
+   end function periodize_sigma
+
+
+   function periodize_g(kpoint) result(smats_periodized_omegazero)
+      integer                                                     :: ilat,jlat,ispin,iorb,ii
+      integer                                                     :: Nlat_,Nx_,Ny_,N
+      real(8),dimension(:)                                        :: kpoint
+      integer,dimension(:),allocatable                            :: ind1,ind2
+      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lmats)           :: invG0mats,invGmats
+      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat,Hk_unper
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats) :: gmats_unperiodized![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized,gmats_periodized
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
+      !
+      !
+      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
+      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
+      !
+      gmats_unperiodized=zero
+      gmats_periodized=zero
+      tmpmat=zero
+      !
+      do ii=1,1!Lmats
+         tmpmat=(xi*wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Smats(:,:,:,:,:,:,ii))
+         call inv(tmpmat)
+         gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
+      enddo
+      !
+      do ii=1,1!Lmats
+         do ilat=1,Nlat
+            ind1=N2indices(ilat)        
+            do jlat=1,Nlat
+               ind2=N2indices(jlat)
+               gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
+            enddo
+         enddo
+      enddo
+      !
+      !
+      !Get G0^-1
+      !
+      Nlat_=Nlat
+      Nx_=Nx
+      Ny_=Ny
+      Nlat=1
+      Nx=1
+      Ny=1
+      !
+      do ii=1,1!Lmats
+         invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_model(kpoint,Nspin*Norb)            
+      enddo
+      !
+      Nlat=Nlat_
+      Nx=Nx_
+      Ny=Ny_
+      !
+      !Get G^-1
+      !
+      do ii=1,1!Lmats
+         invGmats(:,:,ii) = nn2so(gmats_periodized(:,:,:,:,ii))
+         call inv(invGmats(:,:,ii))
+      enddo
+      !
+      !Get Sigma functions: Sigma= G0^-1 - G^-1
+      Smats_periodized=zero
+      !
+      do ii=1,1!Lmats
+         Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
+      enddo
+      !
+      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
+      !   
+   end function periodize_g
+
 
    subroutine print_hk_topological()
       integer                                     :: ikx,iky,unit
@@ -384,6 +480,44 @@ contains
    !PURPOSE  : Auxilliary reshape functions
    !+------------------------------------------------------------------+
 
+   function so2nn(Hso) result(Hnn)
+     complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
+     complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
+     integer                                     :: iorb,ispin,is
+     integer                                     :: jorb,jspin,js
+     Hnn=zero
+     do ispin=1,Nspin
+        do jspin=1,Nspin
+           do iorb=1,Norb
+              do jorb=1,Norb
+                  is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                 js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                 Hnn(ispin,jspin,iorb,jorb) = Hso(is,js)
+              enddo
+           enddo
+        enddo
+     enddo
+   end function so2nn
+   !
+   function nn2so(Hnn) result(Hso)
+     complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
+     complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
+     integer                                     :: iorb,ispin,is
+     integer                                     :: jorb,jspin,js
+     Hso=zero
+     do ispin=1,Nspin
+        do jspin=1,Nspin
+           do iorb=1,Norb
+              do jorb=1,Norb
+                 is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                 js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                 Hso(is,js) = Hnn(ispin,jspin,iorb,jorb)
+              enddo
+           enddo
+        enddo
+     enddo
+   end function nn2so
+   
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
