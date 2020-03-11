@@ -73,12 +73,21 @@ program cdn_hm_1dchain
 
    !Build Hk and Hloc
    call generate_hk_hloc()
-   allocate(lambdasym_vector(1))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
+   allocate(lambdasym_vector(2))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
    
    !Build Hbasis and lambda vector
    Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
-   lambdasym_vector=[-1.d0]
+   lambdasym_vector(1)=-1.d0
+   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(zeye(Nlso))
+   lambdasym_vector(2)=0.d0
+   
+   !Allocate custom observable matrix (test with n_11)
+   allocate(observable_matrix(Nlat*Nspin*Norb,Nlat*Nspin*Norb))
+   observable_matrix=zero
+   observable_matrix(1,1)=one
+   call init_custom_observables(1,Hk)
+   call add_custom_observable("test",observable_matrix)
    
    !setup solver
    call set_Hloc(Hsym_basis,lambdasym_vector)

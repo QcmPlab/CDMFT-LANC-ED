@@ -79,10 +79,18 @@ program cdn_bhz_2d
 
    !Build Hk and Hloc
    call generate_hk_hloc()
-   allocate(lambdasym_vector(3))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
+   
+   !CUSTOM OBSERVABLE: KINETIC ENERGY
+   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+   observable_matrix=zero
+   observable_matrix(1,1,1,1,1,1)=one
+   call init_custom_observables(1,Hk)
+   call add_custom_observable("test",nnn2lso(observable_matrix))
    
    !SETUP SYMMETRIES (EXPERIMENTAL)
+   allocate(lambdasym_vector(3))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
+   !
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
    !

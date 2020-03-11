@@ -394,8 +394,8 @@ contains
     !4) Sum all
     out_2=out_2+integralpart
     !5) Spin trick
-    spin_multiplicity=3.d0-Nspin 
-    out_2=spin_multiplicity*out_2/Nlat
+    spin_multiplicity=3.d0-Nspin
+    out_2=spin_multiplicity*out_2
     return
   end function calculate_observable_integral_finite_t
 

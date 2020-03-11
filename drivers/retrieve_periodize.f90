@@ -271,22 +271,22 @@ contains
       !
       if(scheme=="g")then
          tmpmat=periodize_g(kpoint)
+         Hk=nn2so(tmpmat)
       else
          tmpmat=periodize_sigma(kpoint)
+         Nlat_=Nlat
+         Nx_=Nx
+         Ny_=Ny
+         Nlat=1
+         Nx=1
+         Ny=1
+         !
+         Hk=hk_model(kpoint,Nspin*Norb)+nn2so(tmpmat)
+         !
+         Nlat=Nlat_
+         Nx=Nx_
+         Ny=Ny_
       endif
-      !
-      Nlat_=Nlat
-      Nx_=Nx
-      Ny_=Ny
-      Nlat=1
-      Nx=1
-      Ny=1
-      !
-      Hk=hk_model(kpoint,Nspin*Norb)+nn2so(tmpmat)
-      !
-      Nlat=Nlat_
-      Nx=Nx_
-      Ny=Ny_
       !
    end function hk_periodized
    
@@ -322,7 +322,7 @@ contains
 
 
    function periodize_g(kpoint) result(smats_periodized_omegazero)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
+      integer                                                     :: ilat,jlat,ispin,iorb,ii,itest,Ntest
       integer                                                     :: Nlat_,Nx_,Ny_,N
       real(8),dimension(:)                                        :: kpoint
       integer,dimension(:),allocatable                            :: ind1,ind2
@@ -346,12 +346,17 @@ contains
          gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
       enddo
       !
+      Ntest=1
+      !
       do ii=1,1!Lmats
          do ilat=1,Nlat
             ind1=N2indices(ilat)        
             do jlat=1,Nlat
                ind2=N2indices(jlat)
-               gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
+               do itest=1,Ntest
+                  gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)&
+                     +exp(-xi*dot_product(kpoint,(ind1-ind2))*itest/Ntest)*(itest/Ntest)*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/(Nlat*Ntest)
+               enddo
             enddo
          enddo
       enddo
@@ -359,20 +364,20 @@ contains
       !
       !Get G0^-1
       !
-      Nlat_=Nlat
-      Nx_=Nx
-      Ny_=Ny
-      Nlat=1
-      Nx=1
-      Ny=1
+      !Nlat_=Nlat
+      !Nx_=Nx
+      !Ny_=Ny
+      !Nlat=1
+      !Nx=1
+      !Ny=1
       !
-      do ii=1,1!Lmats
-         invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_model(kpoint,Nspin*Norb)            
-      enddo
+      !do ii=1,1!Lmats
+      !   invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_model(kpoint,Nspin*Norb)            
+      !enddo
       !
-      Nlat=Nlat_
-      Nx=Nx_
-      Ny=Ny_
+      !Nlat=Nlat_
+      !Nx=Nx_
+      !Ny=Ny_
       !
       !Get G^-1
       !
@@ -382,13 +387,14 @@ contains
       enddo
       !
       !Get Sigma functions: Sigma= G0^-1 - G^-1
-      Smats_periodized=zero
+      !Smats_periodized=zero
       !
-      do ii=1,1!Lmats
-         Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
-      enddo
+      !do ii=1,1!Lmats
+      !   Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
+      !enddo
       !
-      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
+      !smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
+      smats_periodized_omegazero=so2nn(-invGmats(:,:,1))
       !   
    end function periodize_g
 
