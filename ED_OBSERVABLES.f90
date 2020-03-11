@@ -615,16 +615,14 @@ contains
              !    "="\sum_ij (Uloc - 2*Jh)*(n_up_i*n_dn_j + n_up_j*n_dn_i)
              if(Norb>1)then
                 do ilat=1,Nlat
-                   do jlat=ilat+1,Nlat
-                      do iorb=1,Norb
-                         do jorb=iorb+1,Norb
-                            is = imp_state_index(ilat,iorb)
-                            js = imp_state_index(jlat,jorb)
-                            ed_Epot = ed_Epot + Ust*(nup(is)*ndw(js) + nup(js)*ndw(is))*gs_weight
-                            ed_Dust = ed_Dust + (nup(is)*ndw(js) + nup(js)*ndw(is))*gs_weight
-                         enddo
-                      enddo
-                   enddo
+                    do iorb=1,Norb
+                       do jorb=iorb+1,Norb
+                          is = imp_state_index(ilat,iorb)
+                          js = imp_state_index(ilat,jorb)
+                          ed_Epot = ed_Epot + Ust*(nup(is)*ndw(js) + nup(js)*ndw(is))*gs_weight
+                          ed_Dust = ed_Dust + (nup(is)*ndw(js) + nup(js)*ndw(is))*gs_weight
+                       enddo
+                    enddo
                 enddo
              endif
              !
@@ -634,16 +632,14 @@ contains
              !    "="\sum_ij (Uloc-3*Jh)*(n_up_i*n_up_j + n_dn_i*n_dn_j)
              if(Norb>1)then
                 do ilat=1,Nlat
-                   do jlat=ilat+1,Nlat
-                      do iorb=1,Norb
-                         do jorb=iorb+1,Norb
-                            is = imp_state_index(ilat,iorb)
-                            js = imp_state_index(jlat,jorb)
-                            ed_Epot = ed_Epot + (Ust-Jh)*(nup(is)*nup(js) + ndw(is)*ndw(js))*gs_weight
-                            ed_Dund = ed_Dund + (nup(is)*nup(js) + ndw(is)*ndw(js))*gs_weight
-                         enddo
-                      enddo
-                   enddo
+                    do iorb=1,Norb
+                       do jorb=iorb+1,Norb
+                          is = imp_state_index(ilat,iorb)
+                          js = imp_state_index(ilat,jorb)
+                          ed_Epot = ed_Epot + (Ust-Jh)*(nup(is)*nup(js) + ndw(is)*ndw(js))*gs_weight
+                          ed_Dund = ed_Dund + (nup(is)*nup(js) + ndw(is)*ndw(js))*gs_weight
+                       enddo
+                    enddo
                 enddo
              endif
              !
@@ -658,16 +654,14 @@ contains
                 enddo
                 if(Norb>1)then
                    do ilat=1,Nlat
-                      do jlat=ilat+1,Nlat
-                         do iorb=1,Norb
-                            do jorb=iorb+1,Norb
-                               is=imp_state_index(ilat,iorb)
-                               js=imp_state_index(jlat,jorb)
-                               ed_Ehartree=ed_Ehartree - 0.5d0*Ust*(nup(is)+ndw(is)+nup(js)+ndw(js))*gs_weight + 0.25d0*Ust*gs_weight
-                               ed_Ehartree=ed_Ehartree - 0.5d0*(Ust-Jh)*(nup(is)+ndw(is)+nup(js)+ndw(js))*gs_weight + 0.25d0*(Ust-Jh)*gs_weight
-                            enddo
-                         enddo
-                      enddo
+                       do iorb=1,Norb
+                          do jorb=iorb+1,Norb
+                             is=imp_state_index(ilat,iorb)
+                             js=imp_state_index(ilat,jorb)
+                             ed_Ehartree=ed_Ehartree - 0.5d0*Ust*(nup(is)+ndw(is)+nup(js)+ndw(js))*gs_weight + 0.25d0*Ust*gs_weight
+                             ed_Ehartree=ed_Ehartree - 0.5d0*(Ust-Jh)*(nup(is)+ndw(is)+nup(js)+ndw(js))*gs_weight + 0.25d0*(Ust-Jh)*gs_weight
+                          enddo
+                       enddo
                    enddo
                 endif
              endif
@@ -898,7 +892,7 @@ contains
     integer :: unit
     unit = free_unit()
     open(unit,file="energy_last"//reg(ed_file_suffix)//".ed")
-    write(unit,"(90F15.9)")ed_Epot,ed_Epot-ed_Ehartree,ed_Eknot,ed_Ehartree,ed_Dust,ed_Dund,ed_Dse,ed_Dph
+    write(unit,"(90F15.9)")ed_Epot,ed_Epot-ed_Ehartree,ed_Eknot,ed_Ehartree,ed_Dust,ed_Dund!,ed_Dse,ed_Dph
     close(unit)
   end subroutine write_energy
 

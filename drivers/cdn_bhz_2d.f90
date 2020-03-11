@@ -80,12 +80,16 @@ program cdn_bhz_2d
    !Build Hk and Hloc
    call generate_hk_hloc()
    
-   !CUSTOM OBSERVABLE: KINETIC ENERGY
+   !CUSTOM OBSERVABLES: n1, n2, Ekin
    allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+   call init_custom_observables(3,Hk)
    observable_matrix=zero
    observable_matrix(1,1,1,1,1,1)=one
-   call init_custom_observables(1,Hk)
-   call add_custom_observable("test",nnn2lso(observable_matrix))
+   call add_custom_observable("n1",nnn2lso(observable_matrix))
+   observable_matrix=zero
+   observable_matrix(1,1,1,1,2,2)=one
+   call add_custom_observable("n2",nnn2lso(observable_matrix))
+   call add_custom_observable("Ekin",Hk)
    
    !SETUP SYMMETRIES (EXPERIMENTAL)
    allocate(lambdasym_vector(3))
