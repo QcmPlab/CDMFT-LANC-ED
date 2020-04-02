@@ -7,7 +7,7 @@ program cdn_bhz_2d
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
+   integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,Nkpath
    integer                                                                :: il,jl,is,js,io,jo
    integer,dimension(2):: recover
    logical                                                                :: converged
@@ -18,8 +18,8 @@ program cdn_bhz_2d
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
    character(len=16)                                                      :: finput
-   real(8),allocatable                                                    :: wt(:)
-   complex(8),allocatable                                                 :: wm(:),wr(:)
+   real(8),allocatable                                                    :: wt(:),wr(:)
+   complex(8),allocatable                                                 :: wm(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    complex(8),dimension(:,:,:,:,:,:),allocatable                          :: observable_matrix
    !SYMMETRIES TEST
@@ -29,8 +29,8 @@ program cdn_bhz_2d
    integer                                                                :: comm
    integer                                                                :: rank
    integer                                                                :: mpi_size
-   logical                                                                :: master,hermiticize
-   character(len=6)                                                       :: scheme
+   logical                                                                :: master
+  type(finter_type)      :: finter_func
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -49,8 +49,7 @@ program cdn_bhz_2d
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
-   call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
-   call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
+   call parse_input_variable(nkpath,"NKPATH",finput,default=500)
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -74,10 +73,7 @@ program cdn_bhz_2d
    if(.not.allocated(wr))allocate(wr(Lreal))
    wm     = xi*pi/beta*real(2*arange(1,Lmats)-1,8)
    wr     = linspace(wini,wfin,Lreal)
-   do iii=1,Lreal
-      wr(iii)=dcmplx(DREAL(wr(iii)),eps)
-   enddo
-
+   !
    if(ED_VERBOSE > 0)call naming_convention()
    !Allocate Weiss Field:
    allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Weiss_old(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
@@ -89,7 +85,7 @@ program cdn_bhz_2d
    call generate_hk_hloc()
    allocate(lambdasym_vector(3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
-   
+
    !SETUP SYMMETRIES (EXPERIMENTAL)
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
@@ -115,42 +111,18 @@ program cdn_bhz_2d
    call ed_get_sigma_matsubara(Smats)
    call ed_get_sigma_realaxis(Sreal)
    !
-   do iii=1,Lmats
-      do il=1,Nlat
-         do jl=1,Nlat
-            do is=1,Nspin
-               do js=1,Nspin
-                  do io=1,Norb
-                     do jo=1,Norb
-                        repart=real(Smats(il,jl,is,js,io,jo,iii))
-                        impart=imag(Smats(il,jl,is,js,io,jo,iii))
-                        if(abs(repart).le.1d-6)repart=0.d0
-                        if(abs(impart).le.1d-6)impart=0.d0
-                        Smats(il,jl,is,js,io,jo,iii)=repart+xi*impart
-                     enddo
-                  enddo
-               enddo
-            enddo
-         enddo
-      enddo
-   enddo
    !
    !RETRIEVE AND PERIODIZE
-   !call   print_hk_topological()
+   !
    call   print_hk_topological_path()
-   !call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
-   !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
-   !call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
-   !if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-   !call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
-
+   call   get_Akw()
+   call   get_poles()
+   !
    call finalize_MPI()
 
 
 contains
 
-   !include "auxiliary_routines.f90"
-   
 
    !+------------------------------------------------------------------+
    !PURPOSE  : Hloc for the 2d BHZ model
@@ -224,9 +196,9 @@ contains
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
       ! 
    end function hk_model
-   
 
-!AUXILLIARY HOPPING MATRIX CONSTRUCTORS
+
+   !AUXILLIARY HOPPING MATRIX CONSTRUCTORS
 
    function t_m(mass) result(tmpmat)
       complex(8),dimension(Norb,Norb) :: tmpmat
@@ -258,46 +230,60 @@ contains
       tmpmat(2,1)=hop2*0.5d0
       !
    end function t_y
-   
+
    !-------------------------------------------------------------------------------------------
    !PURPOSE: periodization & print_hk_topological
    !-------------------------------------------------------------------------------------------
 
-   function hk_periodized(kpoint,N) result(Hk)
-      real(8),dimension(:)                          :: kpoint
-      integer                                       :: Nlat_,Nx_,Ny_,N
-      complex(8),dimension(N,N)                     :: Hk
-      complex(8),dimension(Nspin,Nspin,Norb,Norb)   :: tmpmat
-      !
-      if(scheme=="g")then
-         tmpmat=periodize_g(kpoint)
-         Hk=nn2so(tmpmat)
-      else
-         tmpmat=periodize_sigma(kpoint)
-         Nlat_=Nlat
-         Nx_=Nx
-         Ny_=Ny
-         Nlat=1
-         Nx=1
-         Ny=1
-         !
-         Hk=hk_model(kpoint,Nspin*Norb)+nn2so(tmpmat)
-         !
-         Nlat=Nlat_
-         Nx=Nx_
-         Ny=Ny_
-      endif
-      !
+   function hk_periodized(kvec,N) result(hk)
+    integer                   :: N,ii
+    real(8),dimension(:)      :: kvec
+    complex(8),dimension(N,N) :: hk
+    real(8)                   :: kx,ky
+    kx=kvec(1)
+    ky=kvec(2)
+    Hk  = zero
+    Hk(1:Norb,1:Norb) = hk_bhz2x2(kx,ky)
+    if(Nspin .eq. 2)then
+      Hk(Nspin+1:Nspin*Norb,Nspin+1:Nspin*Norb) = conjg(hk_bhz2x2(-kx,-ky))
+    endif
    end function hk_periodized
-   
-   !
 
-   function periodize_sigma(kpoint) result(smats_periodized_omegazero)
+   function hk_bhz2x2(kx,ky) result(hk)
+     real(8)                   :: kx,ky,epsik
+     complex(8),dimension(2,2) :: hk
+     epsik   = 2.d0*ts*(cos(kx)+cos(ky))
+     hk(1,1) = mh - epsik
+     hk(2,2) =-mh + epsik
+     hk(1,2) = lambda*(sin(kx)-xi*sin(ky))
+     hk(2,1) = lambda*(sin(kx)+xi*sin(ky))
+   end function hk_bhz2x2
+   !
+   !
+   function hk_topological(kpoint,N) result(Hk)
+      real(8),dimension(:)                                         :: kpoint
+      integer                                                      :: Nlat_,Nx_,Ny_,N,i
+      complex(8),dimension(N,N)                                    :: Hk
+      complex(8),dimension(Nspin*Norb,Nspin*Norb)                  :: Zmats,Sigma_lso
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)            :: sigmamat
+      !
+      sigmamat=periodize_sigma_mats(kpoint)
+      sigma_lso=nn2so(sigmamat(:,:,:,:,1))
+      Hk=hk_periodized(kpoint,Nspin*Norb)+sigma_lso
+      !
+      Zmats=abs( zeye(Nspin*Norb) - IMAG(sigma_lso)/(pi/beta))
+      call inv(Zmats)
+      Hk = matmul(Zmats,Hk)
+      !
+   end function hk_topological
+   !
+   !
+   !
+   function periodize_sigma_mats(kpoint) result(smats_periodized)
       integer                                                     :: ilat,jlat,ispin,iorb,ii
       real(8),dimension(:)                                        :: kpoint
       integer,dimension(:),allocatable                            :: ind1,ind2
       complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
       !
       !
       if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
@@ -305,7 +291,7 @@ contains
       !
       smats_periodized=zero
       !
-      do ii=1,1!Lmats
+      do ii=1,Lmats
          do ilat=1,Nlat
             ind1=N2indices(ilat)        
             do jlat=1,Nlat
@@ -314,140 +300,63 @@ contains
             enddo
          enddo
       enddo
-      !
-      smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
-      !
       !   
-   end function periodize_sigma
-
-
-   function periodize_g(kpoint) result(smats_periodized_omegazero)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii,itest,Ntest
-      integer                                                     :: Nlat_,Nx_,Ny_,N
+   end function periodize_sigma_mats
+   !
+   !
+   !
+   function periodize_sigma_real(kpoint) result(sreal_periodized)
+      integer                                                     :: ilat,jlat,ispin,iorb,ii
       real(8),dimension(:)                                        :: kpoint
       integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lmats)           :: invG0mats,invGmats
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat,Hk_unper
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats) :: gmats_unperiodized![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized,gmats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb)                 :: smats_periodized_omegazero
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: sreal_periodized
       !
       !
       if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
       if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
       !
-      gmats_unperiodized=zero
-      gmats_periodized=zero
-      tmpmat=zero
+      sreal_periodized=zero
       !
-      do ii=1,1!Lmats
-         tmpmat=(xi*wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Smats(:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      Ntest=1
-      !
-      do ii=1,1!Lmats
+      do ii=1,Lreal
          do ilat=1,Nlat
             ind1=N2indices(ilat)        
             do jlat=1,Nlat
                ind2=N2indices(jlat)
-               do itest=1,Ntest
-                  gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)&
-                     +exp(-xi*dot_product(kpoint,(ind1-ind2))*itest/Ntest)*(itest/Ntest)*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/(Nlat*Ntest)
-               enddo
+               sreal_periodized(:,:,:,:,ii)=sreal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Sreal(ilat,jlat,:,:,:,:,ii)/Nlat
             enddo
          enddo
       enddo
       !
-      !
-      !Get G0^-1
-      !
-      !Nlat_=Nlat
-      !Nx_=Nx
-      !Ny_=Ny
-      !Nlat=1
-      !Nx=1
-      !Ny=1
-      !
-      !do ii=1,1!Lmats
-      !   invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_model(kpoint,Nspin*Norb)            
-      !enddo
-      !
-      !Nlat=Nlat_
-      !Nx=Nx_
-      !Ny=Ny_
-      !
-      !Get G^-1
-      !
-      do ii=1,1!Lmats
-         invGmats(:,:,ii) = nn2so(gmats_periodized(:,:,:,:,ii))
-         call inv(invGmats(:,:,ii))
-      enddo
-      !
-      !Get Sigma functions: Sigma= G0^-1 - G^-1
-      !Smats_periodized=zero
-      !
-      !do ii=1,1!Lmats
-      !   Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
-      !enddo
-      !
-      !smats_periodized_omegazero=smats_periodized(:,:,:,:,1)
-      smats_periodized_omegazero=so2nn(-invGmats(:,:,1))
       !   
-   end function periodize_g
-
-
-   subroutine print_hk_topological()
-      integer                                     :: ikx,iky,unit
-      real(8)                                     :: kx,ky
-      real(8),dimension(Nspin*Norb)               :: eigvals
-      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: H_kpoint
-      !
-      !
-      unit=free_unit()
-      open(unit,file="bands2d.ed")
-      do ikx=1,Nkx
-         kx=-pi+2*pi/Nkx*ikx
-         do iky=1,Nky
-            ky=-pi+2*pi/Nky*iky
-            H_kpoint=Hk_periodized([kx,ky],Nspin*Norb)
-            call Eigh(H_kpoint,eigvals)
-            write(unit,*)kx,ky,eigvals
-         enddo
-            write(unit,*)" "
-      enddo
-      close(unit)
-      !
-   end subroutine print_hk_topological
-
+   end function periodize_sigma_real
+   !
+   !
+   !
    subroutine print_hk_topological_path()
-    integer                                :: i,j,Lk,Nkpath
-    integer                                :: Npts
-    real(8),dimension(:,:),allocatable     :: kpath
-    character(len=64)                      :: file
-    !This routine build the H(k) along the GXMG path in BZ,
-    !Hk(k) is constructed along this path.
-       if(master)write(LOGfile,*)"Build H(k) haldane_square along the path GXMG:"
-       Npts = 7
-       Nkpath=500
-       Lk=(Npts-1)*Nkpath
-       allocate(kpath(Npts,2))
-       kpath(1,:)=-kpoint_X2(1:2)
-       kpath(2,:)=kpoint_Gamma(1:2)
-       kpath(3,:)=kpoint_X2(1:2)
-       kpath(4,:)=kpoint_M1(1:2)
-       kpath(5,:)=kpoint_X1(1:2)
-       kpath(6,:)=kpoint_Gamma(1:2)
-       kpath(7,:)=-kpoint_X1(1:2)
-       file="Eigenbands.nint"
-       !
-       if(allocated(Hk))deallocate(Hk)
-       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
-       !
-       call TB_set_bk([pi2,0d0],[0d0,pi2])
-       if(master)  call TB_Solve_model(hk_periodized,Nspin*Norb,kpath,Nkpath,&
+      integer                                :: i,j,Lk
+      integer                                :: Npts
+      real(8),dimension(:,:),allocatable     :: kpath
+      character(len=64)                      :: file
+      !
+      if(master)write(LOGfile,*)"Build H(k) BHZ along path"
+      !
+      Npts = 7
+      Lk=(Npts-1)*Nkpath
+      allocate(kpath(Npts,2))
+      kpath(1,:)=-kpoint_X2(1:2)
+      kpath(2,:)=kpoint_Gamma(1:2)
+      kpath(3,:)=kpoint_X2(1:2)
+      kpath(4,:)=kpoint_M1(1:2)
+      kpath(5,:)=kpoint_X1(1:2)
+      kpath(6,:)=kpoint_Gamma(1:2)
+      kpath(7,:)=-kpoint_X1(1:2)
+      file="Eigenbands.nint"
+      !
+      if(allocated(Hk))deallocate(Hk)
+      allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
+      !
+      call TB_set_bk([pi2,0d0],[0d0,pi2])
+      if(master)  call TB_Solve_model(hk_topological,Nspin*Norb,kpath,Nkpath,&
          colors_name=[red1,blue1],&
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
@@ -483,47 +392,136 @@ contains
    end subroutine generate_hk_hloc
 
    !+------------------------------------------------------------------+
+   !PURPOSE  : Get A(k,w) along the Y-G-X direction
+   !+------------------------------------------------------------------+
+   !
+   !
+   subroutine get_Akw()
+      integer                                       :: ik,ispin,iorb,ilat
+      integer                                       :: Npts,Nktot,unit
+      !
+      complex(8),allocatable,dimension(:,:,:,:,:,:) :: Sigma
+      complex(8),allocatable,dimension(:,:,:)       :: Hk_bare,Hk_topo
+      real(8),allocatable,dimension(:,:)            :: Eigval_bare,Eigval_topo
+      complex(8),allocatable,dimension(:,:,:,:,:,:) :: Gkreal
+      real(8),allocatable,dimension(:,:)            :: Akreal
+      real(8),dimension(:),allocatable              :: knumber
+      real(8),dimension(:,:),allocatable            :: kpath,kpoints
+      !
+      if(master)write(LOGfile,*)"Build A(k,w) BHZ along path"
+      !
+      !path: Y G X
+      allocate(kpath(3,2))
+      kpath(1,:)=[0d0, pi]
+      kpath(2,:)=[0d0,0d0]
+      kpath(3,:)=[ pi,0d0]
+      !
+      !get kpoints
+      Npts  = size(kpath,1)
+      Nktot = (Npts-1)*Nkpath
+      allocate(knumber(Nktot))
+      !
+      !Explicitly write kpoints (needed for Sigma)
+      allocate(kpoints(Nktot,2))
+      call TB_build_kgrid(kpath,Nkpath,kpoints)
+      !
+      !Generate Sigma(k,w) along path
+      allocate(Sigma(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
+      do ik=1,Nktot
+         Sigma(ik,:,:,:,:,:)=periodize_sigma_real(kpoints(ik,:))
+      enddo
+      !
+      !allocate Hamiltonian and build model along path
+      allocate(Hk_bare(Nspin*Norb,Nspin*Norb,Nktot));Hk_bare=zero
+      allocate(Hk_topo(Nspin*Norb,Nspin*Norb,Nktot));Hk_topo=zero
+      allocate(eigval_bare(Nspin*Norb,Nktot));eigval_bare=zero
+      allocate(eigval_topo(Nspin*Norb,Nktot));eigval_topo=zero
+      call TB_build_model(hk_bare,hk_periodized,Nspin*Norb,kpath,Nkpath)
+      call TB_build_model(hk_topo,hk_topological,Nspin*Norb,kpath,Nkpath)
+      !
+      !allocate and compute Gkw
+      allocate(Gkreal(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
+      do ik=1,Nktot
+         knumber(ik)=ik
+         call eigh(hk_topo(:,:,ik),eigval_topo(:,ik))
+         call dmft_gk_realaxis(Hk_bare(:,:,ik),1d0,Gkreal(ik,:,:,:,:,:),Sigma(ik,:,:,:,:,:)) 
+         call eigh(hk_bare(:,:,ik),eigval_bare(:,ik)) !THIS AFTER GK!!!!!
+      enddo
+      !
+      !get Akw
+      allocate(Akreal(Nktot,Lreal))
+      Akreal=zero
+      do ispin=1,Nspin
+         do iorb=1,Norb
+            Akreal = Akreal - dimag(Gkreal(:,ispin,ispin,iorb,iorb,:))/pi/Nspin/Norb
+         enddo
+      enddo
+      !
+      !print
+      !
+      call splot3d("Akw.dat",knumber,wr,Akreal(:,:))
+      unit=free_unit()
+      open(unit,file="Bands_topo.dat")
+      do ik=1,Nktot
+        write(unit,*)knumber(ik),Eigval_topo(:,ik)
+      enddo
+      close(unit)
+      unit=free_unit()
+      open(unit,file="Bands_bare.dat")
+      do ik=1,Nktot
+        write(unit,*)knumber(ik),Eigval_bare(:,ik)
+      enddo
+      close(unit)
+      !
+      !
+      ! 
+   end subroutine get_Akw
+
+
+
+
+   !+------------------------------------------------------------------+
    !PURPOSE  : Auxilliary reshape functions
    !+------------------------------------------------------------------+
 
    function so2nn(Hso) result(Hnn)
-     complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-     complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-     integer                                     :: iorb,ispin,is
-     integer                                     :: jorb,jspin,js
-     Hnn=zero
-     do ispin=1,Nspin
-        do jspin=1,Nspin
-           do iorb=1,Norb
-              do jorb=1,Norb
+      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
+      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
+      integer                                     :: iorb,ispin,is
+      integer                                     :: jorb,jspin,js
+      Hnn=zero
+      do ispin=1,Nspin
+         do jspin=1,Nspin
+            do iorb=1,Norb
+               do jorb=1,Norb
                   is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                 js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                 Hnn(ispin,jspin,iorb,jorb) = Hso(is,js)
-              enddo
-           enddo
-        enddo
-     enddo
+                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                  Hnn(ispin,jspin,iorb,jorb) = Hso(is,js)
+               enddo
+            enddo
+         enddo
+      enddo
    end function so2nn
    !
    function nn2so(Hnn) result(Hso)
-     complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-     complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-     integer                                     :: iorb,ispin,is
-     integer                                     :: jorb,jspin,js
-     Hso=zero
-     do ispin=1,Nspin
-        do jspin=1,Nspin
-           do iorb=1,Norb
-              do jorb=1,Norb
-                 is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                 js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                 Hso(is,js) = Hnn(ispin,jspin,iorb,jorb)
-              enddo
-           enddo
-        enddo
-     enddo
+      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
+      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
+      integer                                     :: iorb,ispin,is
+      integer                                     :: jorb,jspin,js
+      Hso=zero
+      do ispin=1,Nspin
+         do jspin=1,Nspin
+            do iorb=1,Norb
+               do jorb=1,Norb
+                  is = iorb + (ispin-1)*Norb  !spin-orbit stride
+                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
+                  Hso(is,js) = Hnn(ispin,jspin,iorb,jorb)
+               enddo
+            enddo
+         enddo
+      enddo
    end function nn2so
-   
+
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
@@ -615,6 +613,133 @@ contains
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
    !
+  !---------------------------------------------------------------------
+  !PURPOSE: GET POLES ON THE REAL AXIS
+  !---------------------------------------------------------------------
+  subroutine get_poles()
+    integer                                       :: i,j,ik,ix,iy,Nso,Nktot,Npts
+    integer                                       :: iorb,jorb
+    integer                                       :: isporb,jsporb
+    integer                                       :: ispin,jspin
+    integer                                       :: iso,unit
+    real(8),dimension(Nspin*Norb)                 :: dzeta
+    complex(8),allocatable,dimension(:,:,:)       :: Hk_bare,Hk_topo
+    complex(8),dimension(Nspin*Norb,Nspin*Norb)   :: zeta,fg,gdelta,fgk
+    complex(8),dimension(:,:,:,:,:),allocatable   :: gloc
+    complex(8),dimension(:,:,:,:,:,:),allocatable :: Sigmareal,Sigmamats
+    complex(8),dimension(:,:,:,:),allocatable     :: gk,gfoo,ReSmat
+    complex(8)                                    :: iw
+    complex(8),dimension(:,:),allocatable         :: detGiw
+    real(8),dimension(Lreal)                      :: Den
+    real(8),dimension(:),allocatable              :: Ipoles,Xcsign,Iweight
+    real(8),dimension(:,:),allocatable            :: Ipoles3d,kpoints
+    real(8),dimension(:,:),allocatable            :: Mpoles,Mweight
+    real(8),dimension(:,:,:),allocatable          :: Mpoles3d
+    integer                                       :: Linterval
+    integer                                       :: count,Ninterval,maxNinterval,int
+    real(8)                                       :: sign,sign_old
+    real(8),dimension(:,:),allocatable :: kpath
+    !
+    Nso=Nspin*Norb
+    !
+    allocate(kpath(3,2))
+    kpath(1,:)=[0.0,1.0]!G-e<-R
+    kpath(2,:)=[0.0,0.0]!G
+    kpath(3,:)=[1.0,0.0]!G+e->R
+    !kpath(4,:)=[1.0-0.35,0.0]!G-e<-R
+    !kpath(5,:)=[1.0,0.0]!G
+    !kpath(6,:)=[1.0+0.35,0.0]!G+e->R
+    kpath=kpath*pi
+    Npts  = size(kpath,1)
+    Nktot = (Npts-1)*Nkpath
+    !
+    if(allocated(Hk_bare))deallocate(Hk_bare)
+    allocate(Hk_bare(Nspin*Norb,Nspin*Norb,Nktot));Hk_bare=zero
+    call TB_build_model(hk_bare,hk_periodized,Nspin*Norb,kpath,Nkpath)
+    !
+    allocate(kpoints(Nktot,2))
+    call TB_build_kgrid(kpath,Nkpath,kpoints)
+    if(allocated(Sigmamats))deallocate(Sigmamats)
+    if(allocated(Sigmareal))deallocate(Sigmareal)
+    allocate(Sigmamats(Nktot,Nspin,Nspin,Norb,Norb,Lmats))
+    allocate(Sigmareal(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
+    do ik=1,Nktot
+      Sigmamats(ik,:,:,:,:,:)=periodize_sigma_mats(kpoints(ik,:))
+      Sigmareal(ik,:,:,:,:,:)=periodize_sigma_real(kpoints(ik,:))
+    enddo
+    !
+    Linterval = 50000 !Maximum number of allowed intervals to look for zeros&poles
+    !
+    allocate(Xcsign(0:Linterval))
+    allocate(Ipoles(Nktot),Iweight(Nktot))
+    allocate(Mpoles(Nktot,Linterval),Mweight(Nktot,Linterval))
+    !
+    !FINDING THE POLES:
+    !assume \eps=0.d0 ==> the ImSigma(poles)=0 this condition should be automatically
+    !verified at the pole from definition of the pole (the ImSigma at the pole is just
+    !an artificial broadening of an otherwise delta function, whose position should be 
+    !determined by ReSigma only.
+    Ipoles=0.d0   
+    Mpoles=0.d0
+    write(LOGfile,*)"Solving for the poles..."
+    maxNinterval=-1
+    do ik=1,Nktot
+       do i=1,Lreal
+          zeta(:,:) = (wr(i)+xmu)*eye(Nso) - dreal(nn2so(Sigmareal(ik,:,:,:,:,i)))
+          Den(i) = dreal((zeta(1,1) - Hk_bare(1,1,ik))*(zeta(2,2) - Hk_bare(2,2,ik))) - Hk_bare(1,2,ik)*Hk_bare(2,1,ik)
+       enddo
+       Xcsign(0)=0.d0
+       count=0
+       sign_old=sgn(Den(Lreal/2+1))
+       do i=Lreal/2+1,Lreal
+          sign=sgn(Den(i))
+          if(sign*sign_old<1)then
+             count=count+1
+             if(count>Linterval)stop "Allocate Xcsign to a larger array."
+             Xcsign(count)=wr(i)
+          endif
+          sign_old=sign
+       enddo
+       Ninterval=count
+       if(count>maxNinterval)maxNinterval=count
+       call init_finter(finter_func,wr,Den,3)
+       do int=1,Ninterval
+          Mpoles(ik,int) = brentq(det_poles,Xcsign(int-1),Xcsign(int))
+          Mweight(ik,int)= get_weight(hk_bare(:,:,ik)-nn2so(Sigmamats(ik,:,:,:,:,1)))
+       enddo
+       ipoles(ik) = brentq(det_poles,0.d0,wr(Lreal))
+       iweight(ik)= get_weight(hk_bare(:,:,ik)-nn2so(Sigmamats(ik,:,:,:,:,1)))
+       call delete_finter(finter_func)
+    enddo
+    call splot("BHZpoles.ed",ipoles,iweight)
+    do int=1,maxNinterval
+       unit=free_unit()
+       open(unit,file="BHZpoles_int"//reg(txtfy(int))//".ed")
+       if(any((Mpoles(:,int)/=0.d0)))then
+          do ik=1,Nktot
+             if(Mpoles(ik,int)/=0.d0)write(unit,*)ik-1,Mpoles(ik,int),Mweight(ik,int)
+          enddo
+       endif
+       close(unit)
+    enddo
+    !
+  end subroutine get_poles
+
+  function det_poles(w) result(det)
+    real(8),intent(in) :: w
+    real(8)            :: det
+    det = finter(finter_func,w)
+  end function det_poles
+
+  function get_weight(hk) result(wt)
+    complex(8),dimension(4,4) :: hk,foo
+    real(8),dimension(4)      :: eigv
+    real(8) :: wt
+    foo = hk
+    call eigh(foo,eigv)
+    wt = sum(foo(:,1))
+  end function Get_Weight
+
 end program cdn_bhz_2d
 
 

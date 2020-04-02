@@ -254,6 +254,69 @@ subroutine print_periodized(Nkpts,func1,func2,scheme)
 end subroutine print_periodized
 
 
+   !+------------------------------------------------------------------+
+   !PURPOSE  : Get A(k,w) along the Y-G-X direction
+   !+------------------------------------------------------------------+
+
+
+
+  subroutine get_Akw(Sreal)
+    integer                                       :: ik,ispin,iorb,ilat
+    integer                                       :: Npts,Nktot
+    !
+    complex(8),allocatable,dimension(:,:,:,:,:)   :: Sreal
+    complex(8),allocatable,dimension(:,:,:,:,:,:) :: Gkreal
+    real(8),allocatable,dimension(:,:)            :: Akreal
+    real(8),dimension(:),allocatable              :: wr
+    real(8),dimension(:),allocatable              :: kgrid
+    real(8),dimension(:,:),allocatable            :: kpath
+    !
+    Nspin = size(Sreal,1)
+    Norb  = size(Sreal,3)
+    Lreal = size(Sreal,5)
+    Nso=Nspin*Norb
+
+    allocate(wr(Lreal))
+    wr = linspace(wini,wfin,Lreal)
+    !
+    !path: G X M G
+    allocate(kpath(4,3))
+    kpath(1,:)=[0d0,0d0,0d0]
+    kpath(2,:)=[ pi,0d0,0d0]
+    kpath(3,:)=[ pi, pi,0d0]
+    kpath(4,:)=[0d0,0d0,0d0]
+    !
+    !get kpoints
+    Npts  = size(kpath,1)
+    Nktot = (Npts-1)*Nkpath
+    !
+    allocate(kgrid(Nktot))
+    !
+    !allocate Hamiltonian and build model along path
+    allocate(Hk(Nso,Nso,Nktot));Hk=zero
+    call TB_build_model(hk,hk_model,Nso,kpath,Nkpath)
+    !
+    !allocate and compute Gkw
+    allocate(Gkreal(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
+    do ik=1,Nktot
+       kgrid(ik)=ik
+       call dmft_gk_realaxis(Hk(:,:,ik),1d0,Gkreal(ik,:,:,:,:,:),Sreal) 
+    enddo
+    !
+    !get Akw
+    allocate(Akreal(Nktot,Lreal))
+    Akreal=zero
+    do ispin=1,Nspin
+       do iorb=1,Norb
+          Akreal = Akreal - dimag(Gkreal(:,ispin,ispin,iorb,iorb,:))/pi/Nspin/Norb
+       enddo
+    enddo
+    call splot3d("Akw.dat",kgrid,wr,Akreal(:,:))
+    ! 
+  end subroutine get_Akw
+
+
+
 !-------------------------------------------------------------------------------------------
 !PURPOSE: auxiliary
 !-------------------------------------------------------------------------------------------
