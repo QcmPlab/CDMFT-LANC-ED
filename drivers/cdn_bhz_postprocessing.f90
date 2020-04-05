@@ -264,14 +264,16 @@ contains
       real(8),dimension(:)                                         :: kpoint
       integer                                                      :: Nlat_,Nx_,Ny_,N,i
       complex(8),dimension(N,N)                                    :: Hk
-      complex(8),dimension(Nspin*Norb,Nspin*Norb)                  :: Zmats,Sigma_lso
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)            :: sigmamat
+      complex(8),dimension(Nspin*Norb,Nspin*Norb)                  :: Zmats,Sigma_lso, sigmareal_lso
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)            :: sigmamat,sigmareal
       !
       sigmamat=periodize_sigma_mats(kpoint)
+      sigmareal=periodize_sigma_real(kpoint)
       sigma_lso=nn2so(sigmamat(:,:,:,:,1))
+      sigmareal_lso=nn2so(sigmareal(:,:,:,:,Lreal/2+2)-sigmareal(:,:,:,:,Lreal/2+1))
       Hk=hk_periodized(kpoint,Nspin*Norb)+sigma_lso
       !
-      Zmats=abs( zeye(Nspin*Norb) + IMAG(sigma_lso)/(pi/beta))
+      Zmats=abs( zeye(Nspin*Norb) -REAL(sigmareal_lso)/(wr(Lreal/2+2)-wr(Lreal/2+1)))
       call inv(Zmats)
       Hk = matmul(Zmats,Hk)
       !print*,"Z11",Zmats(1,1)
