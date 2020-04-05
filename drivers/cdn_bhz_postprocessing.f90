@@ -20,7 +20,7 @@ program cdn_bhz_2d
    character(len=16)                                                      :: finput
    real(8),allocatable                                                    :: wt(:),wr(:)
    complex(8),allocatable                                                 :: wm(:)
-   complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   complex(8),allocatable                                                 :: Hk(:,:,:)
    complex(8),dimension(:,:,:,:,:,:),allocatable                          :: observable_matrix
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
@@ -30,7 +30,7 @@ program cdn_bhz_2d
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master
-  type(finter_type)      :: finter_func
+   type(finter_type)                                                      :: finter_func
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -49,7 +49,7 @@ program cdn_bhz_2d
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
-   call parse_input_variable(nkpath,"NKPATH",finput,default=500)
+   call parse_input_variable(nkpath,"NKPATH",finput,default=100)
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -79,7 +79,6 @@ program cdn_bhz_2d
    allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Weiss_old(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
-   allocate(Smats_lso(Nlso,Nlso,Lmats))
 
    !Build Hk and Hloc
    call generate_hk_hloc()
@@ -114,6 +113,7 @@ program cdn_bhz_2d
    !
    !RETRIEVE AND PERIODIZE
    !
+   call   print_hk_periodized_path()
    call   print_hk_topological_path()
    call   get_Akw()
    call   get_poles()
@@ -274,6 +274,11 @@ contains
       Zmats=abs( zeye(Nspin*Norb) - IMAG(sigma_lso)/(pi/beta))
       call inv(Zmats)
       Hk = matmul(Zmats,Hk)
+      !print*,"Z11",Zmats(1,1)
+      !print*,"Z22",Zmats(2,2)
+      !print*,"Z12",Zmats(1,2)
+      !print*,"Z21",Zmats(2,1)
+      !print*,""
       !
    end function hk_topological
    !
@@ -331,6 +336,36 @@ contains
    end function periodize_sigma_real
    !
    !
+   subroutine print_hk_periodized_path()
+      integer                                :: i,j,Lk
+      integer                                :: Npts
+      real(8),dimension(:,:),allocatable     :: kpath
+      character(len=64)                      :: file
+      !
+      if(master)write(LOGfile,*)"Build H(k) BHZ along path"
+      !
+      Npts = 7
+      Lk=(Npts-1)*Nkpath
+      allocate(kpath(Npts,2))
+      kpath(1,:)=-kpoint_X2(1:2)
+      kpath(2,:)=kpoint_Gamma(1:2)
+      kpath(3,:)=kpoint_X2(1:2)
+      kpath(4,:)=kpoint_M1(1:2)
+      kpath(5,:)=kpoint_X1(1:2)
+      kpath(6,:)=kpoint_Gamma(1:2)
+      kpath(7,:)=-kpoint_X1(1:2)
+      file="Eigenbands.nint"
+      !
+      if(allocated(Hk))deallocate(Hk)
+      allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
+      !
+      call TB_set_bk([pi2,0d0],[0d0,pi2])
+      if(master)  call TB_Solve_model(hk_periodized,Nspin*Norb,kpath,Nkpath,&
+         colors_name=[red1,blue1],&
+         points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
+         file=reg(file))
+      !
+   end subroutine print_hk_periodized_path
    !
    subroutine print_hk_topological_path()
       integer                                :: i,j,Lk
@@ -350,7 +385,7 @@ contains
       kpath(5,:)=kpoint_X1(1:2)
       kpath(6,:)=kpoint_Gamma(1:2)
       kpath(7,:)=-kpoint_X1(1:2)
-      file="Eigenbands.nint"
+      file="Eig_Htop.ed"
       !
       if(allocated(Hk))deallocate(Hk)
       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
