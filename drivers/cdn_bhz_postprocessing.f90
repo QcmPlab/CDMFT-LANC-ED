@@ -271,7 +271,7 @@ contains
       sigma_lso=nn2so(sigmamat(:,:,:,:,1))
       Hk=hk_periodized(kpoint,Nspin*Norb)+sigma_lso
       !
-      Zmats=abs( zeye(Nspin*Norb) - IMAG(sigma_lso)/(pi/beta))
+      Zmats=abs( zeye(Nspin*Norb) + IMAG(sigma_lso)/(pi/beta))
       call inv(Zmats)
       Hk = matmul(Zmats,Hk)
       !print*,"Z11",Zmats(1,1)
