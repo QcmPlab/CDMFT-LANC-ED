@@ -720,8 +720,8 @@ contains
     maxNinterval=-1
     do ik=1,Nktot
        do i=1,Lreal
-          zeta(:,:) = (wr(i)+xmu)*eye(Nso) - dreal(nn2so(Sigmareal(ik,:,:,:,:,i)))
-          Den(i) = dreal((zeta(1,1) - Hk_bare(1,1,ik))*(zeta(2,2) - Hk_bare(2,2,ik))) - Hk_bare(1,2,ik)*Hk_bare(2,1,ik)
+          zeta(:,:) = (wr(i)+xmu)*eye(Nso) - Hk_bare(:,:,ik) - nn2so(Sigmareal(ik,:,:,:,:,i))
+          Den(i) = dreal(zeta(1,1))*dreal(zeta(2,2)) - dreal(zeta(1,2)*zeta(2,1))
        enddo
        Xcsign(0)=0.d0
        count=0
