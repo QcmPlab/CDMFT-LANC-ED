@@ -32,6 +32,18 @@ program cdn_bhz_2d
    logical                                                                :: master
    type(finter_type)                                                      :: finter_func
 
+  !Some special points in the BZ:
+  !we do everything in 3d.
+  real(8),dimension(3),parameter         :: kpoint_gamma=[0,0,0]*pi
+  real(8),dimension(3),parameter         :: kpoint_x1=[1,0,0]*pi
+  real(8),dimension(3),parameter         :: kpoint_x2=[0,1,0]*pi
+  real(8),dimension(3),parameter         :: kpoint_x3=[0,0,1]*pi
+  real(8),dimension(3),parameter         :: kpoint_m1=[1,1,0]*pi
+  real(8),dimension(3),parameter         :: kpoint_m2=[0,1,1]*pi
+  real(8),dimension(3),parameter         :: kpoint_m3=[1,0,1]*pi
+  real(8),dimension(3),parameter         :: kpoint_r=[1,1,1]*pi
+
+
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
    rank   = get_Rank_MPI(comm)
@@ -115,6 +127,7 @@ program cdn_bhz_2d
    !
    call   print_hk_periodized_path()
    call   print_hk_topological_path()
+   call   print_zmats_path()
    call   get_Akw()
    call   get_poles()
    !
@@ -259,6 +272,39 @@ contains
      hk(2,1) = lambda*(sin(kx)+xi*sin(ky))
    end function hk_bhz2x2
    !
+   function zmats(kpoint,N) result(z)
+      integer                                                      :: N
+      real(8),dimension(:)                                         :: kpoint
+      complex(8),dimension(N,N)                                    :: z
+      complex(8),dimension(Nspin*Norb,Nspin*Norb)                  :: Sigma_lso
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)            :: sigmamat
+      !
+      sigmamat=periodize_sigma_mats(kpoint)
+      sigma_lso=nn2so(sigmamat(:,:,:,:,1))
+      !
+      Z=abs( zeye(Nspin*Norb) -IMAG(sigma_lso)/(pi/beta))
+      call inv(Z)
+      !
+   end function zmats
+   
+   function zmats_component(kpoint,N) result(z)
+      integer                                                      :: N
+      real(8),dimension(:)                                         :: kpoint
+      complex(8),dimension(N,N)                                    :: z
+      complex(8),dimension(Nspin*Norb,Nspin*Norb)                  :: Sigma_lso,ztmp
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)            :: sigmamat
+      !
+      sigmamat=periodize_sigma_mats(kpoint)
+      sigma_lso=nn2so(sigmamat(:,:,:,:,1))
+      !
+      Ztmp=abs( zeye(Nspin*Norb) -IMAG(sigma_lso)/(pi/beta))
+      call inv(Ztmp)
+      Z=zero
+      Z(1,1)=Ztmp(1,1)
+      Z(2,2)=Ztmp(1,2)
+   end function zmats_component
+   !
+   !
    !
    function hk_topological(kpoint,N) result(Hk)
       real(8),dimension(:)                                         :: kpoint
@@ -397,7 +443,43 @@ contains
          file=reg(file))
       !
    end subroutine print_hk_topological_path
-
+      !
+      !
+   subroutine print_zmats_path()
+      integer                                :: i,j,Lk
+      integer                                :: Npts
+      real(8),dimension(:,:),allocatable     :: kpath
+      character(len=64)                      :: file
+      !
+      if(master)write(LOGfile,*)"Build Z(k) along path"
+      !
+      Npts = 7
+      Lk=(Npts-1)*Nkpath
+      allocate(kpath(Npts,2))
+      kpath(1,:)=-kpoint_X2(1:2)
+      kpath(2,:)=kpoint_Gamma(1:2)
+      kpath(3,:)=kpoint_X2(1:2)
+      kpath(4,:)=kpoint_M1(1:2)
+      kpath(5,:)=kpoint_X1(1:2)
+      kpath(6,:)=kpoint_Gamma(1:2)
+      kpath(7,:)=-kpoint_X1(1:2)
+      file="Zmats.ed"
+      !
+      if(allocated(Hk))deallocate(Hk)
+      allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
+      !
+      call TB_set_bk([pi2,0d0],[0d0,pi2])
+      if(master)  call TB_Solve_model(zmats,Nspin*Norb,kpath,Nkpath,&
+         colors_name=[red1,blue1],&
+         points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
+         file=reg(file))
+      !
+      file="Zmats_component.ed"
+      if(master)  call TB_Solve_model(zmats_component,Nspin*Norb,kpath,Nkpath,&
+         colors_name=[red1,blue1],&
+         points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
+         file=reg(file))
+   end subroutine print_zmats_path
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
    !-------------------------------------------------------------------------------------------

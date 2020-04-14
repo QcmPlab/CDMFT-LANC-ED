@@ -87,7 +87,7 @@ contains
           enddo
        enddo
        !
-       if(MPIMASTER)call stop_timer(LOGfile)
+       if(MPIMASTER)call stop_timer(unit=LOGfile)
        !nondiagonal trick
        do isite=1,Nlat
           do jsite=1,Nlat
