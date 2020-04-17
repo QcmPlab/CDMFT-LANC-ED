@@ -32,18 +32,6 @@ program cdn_bhz_2d
    logical                                                                :: master
    type(finter_type)                                                      :: finter_func
 
-  !Some special points in the BZ:
-  !we do everything in 3d.
-  real(8),dimension(3),parameter         :: kpoint_gamma=[0,0,0]*pi
-  real(8),dimension(3),parameter         :: kpoint_x1=[1,0,0]*pi
-  real(8),dimension(3),parameter         :: kpoint_x2=[0,1,0]*pi
-  real(8),dimension(3),parameter         :: kpoint_x3=[0,0,1]*pi
-  real(8),dimension(3),parameter         :: kpoint_m1=[1,1,0]*pi
-  real(8),dimension(3),parameter         :: kpoint_m2=[0,1,1]*pi
-  real(8),dimension(3),parameter         :: kpoint_m3=[1,0,1]*pi
-  real(8),dimension(3),parameter         :: kpoint_r=[1,1,1]*pi
-
-
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
    rank   = get_Rank_MPI(comm)
@@ -128,6 +116,7 @@ program cdn_bhz_2d
    call   print_hk_periodized_path()
    call   print_hk_topological_path()
    call   print_zmats_path()
+   call   print_zmats_2d()
    call   get_Akw()
    call   get_poles()
    !
@@ -480,6 +469,35 @@ contains
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
    end subroutine print_zmats_path
+   !
+   !
+   subroutine print_zmats_2d()
+      integer                                      :: i,j,Lk
+      integer                                      :: Npts
+      real(8),dimension(Nkx)                       :: kpoint_x
+      real(8),dimension(Nky)                       :: kpoint_y
+      complex(8),dimension(:,:,:,:),allocatable    :: z_matrix
+      character(len=64)                            :: file
+      !
+      if(master)write(LOGfile,*)"Build Z(k) in the 2d BZ"
+      !
+      allocate(Z_matrix(Nspin*Norb,Nspin*Norb,Nkx,Nky))
+      Z_matrix=zero
+      !
+      kpoint_x = linspace(0d0,pi,Nkx)
+      kpoint_y = linspace(0d0,pi,Nky)
+      !
+      do i=1,Nkx
+         do j=1,Nky
+            Z_matrix(:,:,i,j)=zmats([kpoint_x(i),kpoint_y(j)],Nspin*Norb)
+         enddo
+      enddo
+      !
+      call splot3d("Zk.dat",kpoint_x,kpoint_y,Z_matrix(1,1,:,:))
+      !
+      if(allocated(z_matrix))deallocate(Z_matrix)
+      !
+   end subroutine print_zmats_2d
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
    !-------------------------------------------------------------------------------------------
