@@ -85,9 +85,11 @@ program cdn_bhz_2d
    call init_custom_observables(3,Hk)
    observable_matrix=zero
    observable_matrix(1,1,1,1,1,1)=one
+   observable_matrix(1,1,Nspin,Nspin,1,1)=one
    call add_custom_observable("n1",nnn2lso(observable_matrix))
    observable_matrix=zero
    observable_matrix(1,1,1,1,2,2)=one
+   observable_matrix(1,1,Nspin,Nspin,2,2)=one
    call add_custom_observable("n2",nnn2lso(observable_matrix))
    call add_custom_observable("Ekin",Hk)
    
