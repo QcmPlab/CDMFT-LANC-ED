@@ -30,6 +30,7 @@ program cdn_bhz_2d
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master
+   character(len=6)                                                       :: scheme
    type(finter_type)                                                      :: finter_func
 
    !Init MPI: use of MPI overloaded functions in SciFor
@@ -49,6 +50,7 @@ program cdn_bhz_2d
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
+   call parse_input_variable(scheme,"SCHEME",finput,default="sigma")
    call parse_input_variable(nkpath,"NKPATH",finput,default=100)
    !
    call ed_read_input(trim(finput),comm)
@@ -371,6 +373,45 @@ contains
       !   
    end function periodize_sigma_real
    !
+   function periodize_sigma_gscheme(kpoint) result(sreal_periodized)
+      integer                                                     :: ilat,jlat,ispin,iorb,ii
+      real(8),dimension(:)                                        :: kpoint
+      integer,dimension(:),allocatable                            :: ind1,ind2
+      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat
+      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: sreal_periodized,greal_periodized
+      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lreal)           :: g_lso
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal) :: greal_unperiodized
+      !
+      !
+      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
+      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
+      !
+      sreal_periodized=zero
+      greal_periodized=zero
+      !
+      do ii=1,Lreal
+         tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Sreal(:,:,:,:,:,:,ii))
+         call inv(tmpmat)
+         greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
+      enddo
+      !
+      do ii=1,Lreal
+         do ilat=1,Nlat
+            ind1=N2indices(ilat)        
+            do jlat=1,Nlat
+               ind2=N2indices(jlat)
+               greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
+            enddo
+         enddo
+      enddo
+      !
+      do ii=1,Lreal
+         g_lso(:,:,ii)=nn2so(greal_periodized(:,:,:,:,ii))
+         call inv(g_lso(:,:,ii))
+         sreal_periodized(:,:,:,:,ii)=so2nn((dcmplx(wr(ii),eps)+xmu)*eye(Nspin*Norb)-Hk_periodized(kpoint,Nspin*Norb)-g_lso(:,:,ii))
+      enddo
+      !   
+   end function periodize_sigma_gscheme
    !
    subroutine print_hk_periodized_path()
       integer                                :: i,j,Lk
@@ -564,7 +605,13 @@ contains
       !Generate Sigma(k,w) along path
       allocate(Sigma(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
       do ik=1,Nktot
-         Sigma(ik,:,:,:,:,:)=periodize_sigma_real(kpoints(ik,:))
+         if(scheme=="sigma")then
+            Sigma(ik,:,:,:,:,:)=periodize_sigma_real(kpoints(ik,:))
+         elseif(scheme=="g")then
+            Sigma(ik,:,:,:,:,:)=periodize_sigma_gscheme(kpoints(ik,:))
+         else
+            STOP "Wrong periodization scheme"
+         endif
       enddo
       !
       !allocate Hamiltonian and build model along path

@@ -84,12 +84,16 @@ program cdn_bhz_2d
    allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
    call init_custom_observables(3,Hk)
    observable_matrix=zero
-   observable_matrix(1,1,1,1,1,1)=one
-   observable_matrix(1,1,Nspin,Nspin,1,1)=one
+   do iii=1,Nlat
+      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
+      observable_matrix(iii,iii,Nspin,Nspin,1,1)=one/Nlat
+   enddo
    call add_custom_observable("n1",nnn2lso(observable_matrix))
    observable_matrix=zero
-   observable_matrix(1,1,1,1,2,2)=one
-   observable_matrix(1,1,Nspin,Nspin,2,2)=one
+   do iii=1,Nlat
+      observable_matrix(iii,iii,1,1,2,2)=one/Nlat
+      observable_matrix(iii,iii,Nspin,Nspin,2,2)=one/Nlat
+   enddo
    call add_custom_observable("n2",nnn2lso(observable_matrix))
    call add_custom_observable("Ekin",Hk)
    
