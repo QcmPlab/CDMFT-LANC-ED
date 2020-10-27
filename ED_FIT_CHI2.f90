@@ -632,10 +632,8 @@ contains
        G0and_lso=nnn2lso_reshape(g0and(:,:,:,:,:,:,l),Nlat,Nspin,Norb)
        do ik=1,size(a)
           dDelta_lso=nnn2lso_reshape(dDelta(:,:,:,:,:,:,l,ik),Nlat,Nspin,Norb)
-          ! dG0and_lso=matmul(-G0and_lso,dDelta_lso)
-          ! dG0and_lso=matmul(dG0and_lso,G0and_lso)
           dG0and_lso = (G0and_lso .x. dDelta_lso) .x. G0and_lso
-          dG0and(:,:,:,:,:,:,l,ik)=-lso2nnn_reshape(dG0and_lso,Nlat,Nspin,Norb)
+          dG0and(:,:,:,:,:,:,l,ik)=lso2nnn_reshape(dG0and_lso,Nlat,Nspin,Norb)
        enddo
     enddo
     !

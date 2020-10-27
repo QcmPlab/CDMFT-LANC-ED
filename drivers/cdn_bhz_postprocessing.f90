@@ -4,7 +4,7 @@ program cdn_bhz_2d
    USE SCIFOR
    USE DMFT_TOOLS
    !
-   USE MPI
+   !USE MPI
    !
    implicit none
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,Nkpath
@@ -26,17 +26,17 @@ program cdn_bhz_2d
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
-   integer                                                                :: comm
-   integer                                                                :: rank
-   integer                                                                :: mpi_size
-   logical                                                                :: master
+   !integer                                                                :: comm
+   !integer                                                                :: rank
+   !integer                                                                :: mpi_size
+   !logical                                                                :: master
    character(len=6)                                                       :: scheme
    type(finter_type)                                                      :: finter_func
 
    !Init MPI: use of MPI overloaded functions in SciFor
-   call init_MPI(comm,.true.)
-   rank   = get_Rank_MPI(comm)
-   master = get_Master_MPI(comm)
+   !call init_MPI(comm,.true.)
+   !rank   = get_Rank_MPI(comm)
+   !master = get_Master_MPI(comm)
 
    !
 
@@ -53,7 +53,7 @@ program cdn_bhz_2d
    call parse_input_variable(scheme,"SCHEME",finput,default="sigma")
    call parse_input_variable(nkpath,"NKPATH",finput,default=100)
    !
-   call ed_read_input(trim(finput),comm)
+   call ed_read_input(trim(finput))
    !
    !Add dmft control variables
    !
@@ -102,7 +102,7 @@ program cdn_bhz_2d
    Nb=get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_fitted(Nb))
-   call ed_init_solver(comm,bath)
+   call ed_init_solver(bath)
    !
    call ed_read_impG
    call ed_read_impSigma
@@ -115,15 +115,16 @@ program cdn_bhz_2d
    !
    !RETRIEVE AND PERIODIZE
    !
-   call   print_hk_periodized_path()
-   call   print_hk_topological_path()
-   call   print_zmats_path()
-   call   print_zmats_2d()
-   call   get_Akw()
-   call   get_poles()
-   call   get_zeros()
+   call   print_zmats()
+   !call   print_hk_periodized_path()
+   !call   print_hk_topological_path()
+   !call   print_zmats_path()
+   !call   print_zmats_2d()
+   !call   get_Akw()
+   !call   get_poles()
+   !call   get_zeros()
    !
-   call finalize_MPI()
+   !call finalize_MPI()
 
 
 contains
@@ -419,7 +420,7 @@ contains
       real(8),dimension(:,:),allocatable     :: kpath
       character(len=64)                      :: file
       !
-      if(master)write(LOGfile,*)"Build H(k) BHZ along path"
+      write(LOGfile,*)"Build H(k) BHZ along path"
       !
       Npts = 7
       Lk=(Npts-1)*Nkpath
@@ -437,7 +438,7 @@ contains
       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
       !
       call TB_set_bk([pi2,0d0],[0d0,pi2])
-      if(master)  call TB_Solve_model(hk_periodized,Nspin*Norb,kpath,Nkpath,&
+        call TB_Solve_model(hk_periodized,Nspin*Norb,kpath,Nkpath,&
          colors_name=[red1,blue1],&
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
@@ -450,7 +451,7 @@ contains
       real(8),dimension(:,:),allocatable     :: kpath
       character(len=64)                      :: file
       !
-      if(master)write(LOGfile,*)"Build H(k) BHZ along path"
+      write(LOGfile,*)"Build H(k) BHZ along path"
       !
       Npts = 7
       Lk=(Npts-1)*Nkpath
@@ -468,13 +469,37 @@ contains
       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
       !
       call TB_set_bk([pi2,0d0],[0d0,pi2])
-      if(master)  call TB_Solve_model(hk_topological,Nspin*Norb,kpath,Nkpath,&
+        call TB_Solve_model(hk_topological,Nspin*Norb,kpath,Nkpath,&
          colors_name=[red1,blue1],&
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
       !
    end subroutine print_hk_topological_path
       !
+   subroutine print_zmats()
+      integer                                      :: i,j,Lk
+      integer                                      :: Npts
+      complex(8),dimension(:,:,:),allocatable      :: z_matrix
+      character(len=64)                            :: file
+      !
+      write(LOGfile,*)"Print Z(k)"
+      !
+      allocate(Z_matrix(Nspin*Norb,Nspin*Norb,4))
+      Z_matrix=zero
+      !
+      Z_matrix(:,:,1)=zmats([0.d0,0.d0],Nspin*Norb)
+      Z_matrix(:,:,2)=zmats([pi,0.d0],Nspin*Norb)
+      Z_matrix(:,:,3)=zmats([0.d0,pi],Nspin*Norb)
+      Z_matrix(:,:,4)=zmats([pi,pi],Nspin*Norb)
+      !
+      call splot("Zk11.dat",[1.d0,2.d0,3.d0,4.d0],Z_matrix(1,1,:))
+      call splot("Zk12.dat",[1.d0,2.d0,3.d0,4.d0],Z_matrix(1,2,:))
+      call splot("Zk21.dat",[1.d0,2.d0,3.d0,4.d0],Z_matrix(2,1,:))
+      call splot("Zk22.dat",[1.d0,2.d0,3.d0,4.d0],Z_matrix(2,2,:))
+      !
+      if(allocated(z_matrix))deallocate(Z_matrix)
+      !
+   end subroutine print_zmats
       !
    subroutine print_zmats_path()
       integer                                :: i,j,Lk
@@ -482,7 +507,7 @@ contains
       real(8),dimension(:,:),allocatable     :: kpath
       character(len=64)                      :: file
       !
-      if(master)write(LOGfile,*)"Build Z(k) along path"
+      write(LOGfile,*)"Build Z(k) along path"
       !
       Npts = 7
       Lk=(Npts-1)*Nkpath
@@ -500,13 +525,13 @@ contains
       allocate(Hk(Nspin*Norb,Nspin*Norb,Lk))
       !
       call TB_set_bk([pi2,0d0],[0d0,pi2])
-      if(master)  call TB_Solve_model(zmats,Nspin*Norb,kpath,Nkpath,&
+        call TB_Solve_model(zmats,Nspin*Norb,kpath,Nkpath,&
          colors_name=[red1,blue1],&
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
       !
       file="Zmats_component.ed"
-      if(master)  call TB_Solve_model(zmats_component,Nspin*Norb,kpath,Nkpath,&
+        call TB_Solve_model(zmats_component,Nspin*Norb,kpath,Nkpath,&
          colors_name=[red1,blue1],&
          points_name=[character(len=20) :: '-Y', 'G', 'Y', 'M', 'X', 'G', '-X'],&
          file=reg(file))
@@ -521,7 +546,7 @@ contains
       complex(8),dimension(:,:,:,:),allocatable    :: z_matrix
       character(len=64)                            :: file
       !
-      if(master)write(LOGfile,*)"Build Z(k) in the 2d BZ"
+      write(LOGfile,*)"Build Z(k) in the 2d BZ"
       !
       allocate(Z_matrix(Nspin*Norb,Nspin*Norb,Nkx,Nky))
       Z_matrix=zero
@@ -585,7 +610,7 @@ contains
       real(8),dimension(:),allocatable              :: knumber
       real(8),dimension(:,:),allocatable            :: kpath,kpoints
       !
-      if(master)write(LOGfile,*)"Build A(k,w) BHZ along path"
+      write(LOGfile,*)"Build A(k,w) BHZ along path"
       !
       !path: Y G X
       allocate(kpath(3,2))
