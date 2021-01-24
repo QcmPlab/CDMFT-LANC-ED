@@ -196,19 +196,19 @@ contains
                hopping_matrix(ind1,ind1,ispin,ispin,:,:)= t_m(mh_)
                if(ilat<Nx)then
                   ind2=indices2N([ilat+1,jlat])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_x(ts_,lambda_,ispin)
+                  hopping_matrix(ind2,ind1,ispin,ispin,:,:)= t_x(ts_,lambda_,ispin)
                endif
                if(ilat>1)then
                   ind2=indices2N([ilat-1,jlat])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= dconjg(transpose(t_x(ts_,lambda_,ispin)))
+                  hopping_matrix(ind2,ind1,ispin,ispin,:,:)= dconjg(transpose(t_x(ts_,lambda_,ispin)))
                endif
                if(jlat<Ny)then
                   ind2=indices2N([ilat,jlat+1])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= t_y(ts_,lambda_)
+                  hopping_matrix(ind2,ind1,ispin,ispin,:,:)= t_y(ts_,lambda_)
                endif
                if(jlat>1)then
                   ind2=indices2N([ilat,jlat-1])
-                  hopping_matrix(ind1,ind2,ispin,ispin,:,:)= transpose(t_y(ts_,lambda_))
+                  hopping_matrix(ind2,ind1,ispin,ispin,:,:)= transpose(t_y(ts_,lambda_))
                endif
             enddo
          enddo
@@ -231,14 +231,14 @@ contains
          do ilat=1,Ny
             ind1=indices2N([1,ilat])
             ind2=indices2N([Nx,ilat])
-            hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*kpoint(1)*Nx)
-            hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + t_x(ts,lambda,ispin)*exp(-xi*kpoint(1)*Nx)
+            hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*kpoint(1)*Nx)
+            hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + t_x(ts,lambda,ispin)*exp(-xi*kpoint(1)*Nx)
          enddo
          do ilat =1,Nx
             ind1=indices2N([ilat,1])
             ind2=indices2N([ilat,Ny])
-            hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + transpose(t_y(ts,lambda))*exp(xi*kpoint(2)*Ny)
-            hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + t_y(ts,lambda)*exp(-xi*kpoint(2)*Ny)
+            hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + transpose(t_y(ts,lambda))*exp(xi*kpoint(2)*Ny)
+            hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + t_y(ts,lambda)*exp(-xi*kpoint(2)*Ny)
          enddo
       enddo
       !
@@ -304,8 +304,7 @@ contains
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
-      where(abs(dreal(Hloc))<1.d-9)Hloc=0d0
-         !
+      !
    end subroutine generate_hk_hloc
 
 
