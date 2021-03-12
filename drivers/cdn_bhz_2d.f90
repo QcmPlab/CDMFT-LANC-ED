@@ -1,6 +1,5 @@
 program cdn_bhz_2d
-   USE CDMFT_ED
-   !
+   USE CDMFT_ED !
    USE SCIFOR
    USE DMFT_TOOLS
    !
@@ -103,8 +102,7 @@ program cdn_bhz_2d
    !
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
-   !
-   lambdasym_vector(2)=ts
+   !  lambdasym_vector(2)=ts
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
    !
    lambdasym_vector(3)=lambda
@@ -129,11 +127,11 @@ program cdn_bhz_2d
       call ed_get_sigma_realaxis(Sreal)
       
       !Compute the local gfs:
-      call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
+      call dmft_gloc_matsubara(Hk,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
       !
       !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(comm,Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+      call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
       call Bcast_MPI(comm,Weiss)
       !
       !MIXING:
@@ -161,14 +159,14 @@ program cdn_bhz_2d
    enddo
 
    !Compute the local gfs:
-   call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
+   call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
       Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
    enddo
-   call dmft_kinetic_energy(comm,Hk(:,:,:),Wt,Smats_lso)
+   call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
 
 
    call finalize_MPI()
