@@ -78,7 +78,7 @@ program cdn_bhz_2d
 
    !Build Hk and Hloc
    call generate_hk_hloc()
-   
+
    !CUSTOM OBSERVABLES: n1, n2, Ekin
    allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
    call init_custom_observables(3,Hk)
@@ -95,20 +95,21 @@ program cdn_bhz_2d
    enddo
    call add_custom_observable("n2",nnn2lso(observable_matrix))
    call add_custom_observable("Ekin",Hk)
-   
-   !SETUP SYMMETRIES (EXPERIMENTAL)
+
+   !SETUP BATH STEP 1
    allocate(lambdasym_vector(3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
    !
    lambdasym_vector(1)=Mh
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
-   !  lambdasym_vector(2)=ts
+   !
+   lambdasym_vector(2)=ts
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
    !
    lambdasym_vector(3)=lambda
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
    !
-   !setup solver
+   !SETUP BATH STEP 2 and SETUP SOLVER
    call set_Hloc(Hsym_basis,lambdasym_vector)
    Nb=get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
@@ -122,10 +123,10 @@ program cdn_bhz_2d
       if(master)call start_loop(iloop,nloop,"DMFT-loop")
 
       !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath) 
+      call ed_solve(comm,bath)
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
-      
+
       !Compute the local gfs:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
@@ -241,7 +242,7 @@ contains
       enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
-      ! 
+      !
    end function hk_model
 
 
@@ -285,6 +286,16 @@ contains
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
+      real(8),dimension(2)                        :: e1,e2,bk1,bk2
+      real(8)                                     :: bklen
+      !
+      e1 = [1d0, 0d0]
+      e2 = [0d0, 1d0]
+      call TB_set_ei(eix=e1,eiy=e2)
+      bklen=2d0*pi
+      bk1=bklen*[1d0, 0d0]
+      bk2=bklen*[0d0, 1d0]
+      call TB_set_bk(bkx=bk1,bky=bk2)
       !
       call TB_build_kgrid([Nkx,Nky],kgrid)
       kgrid(:,1)=kgrid(:,1)/Nx
@@ -299,6 +310,7 @@ contains
       wt=zero
       hloc=zero
       !
+      ! SEVER !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
@@ -372,7 +384,7 @@ contains
       N=Nx*(indices(2)-1)+indices(1)
    end function indices2N
 
-   function N2indices(N) result(indices) 
+   function N2indices(N) result(indices)
       integer,dimension(2)         :: indices
       integer                      :: N,i
       !

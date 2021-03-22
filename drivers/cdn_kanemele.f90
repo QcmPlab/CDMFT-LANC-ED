@@ -28,6 +28,7 @@ program cdn_kanemele
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master,hermiticize
+   complex(8)                                                             :: dummy
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
@@ -44,7 +45,6 @@ program cdn_kanemele
    call parse_input_variable(lambda,"lambda",finput,default=0.3d0,comment="spin-orbit coupling")
    call parse_input_variable(Nkx,"Nkx",finput,default=30,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=30,comment="Number of ku point for BZ integration")
-   call parse_input_variable(hermiticize,"HERMITICIZE",finput,default=.true.,comment="are bath replicas hermitian")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -75,6 +75,15 @@ program cdn_kanemele
 
    !Build Hk and Hloc
    call generate_hk_hloc()
+   ! Check whether k average gives local hamiltonian
+   !do iii=1,12
+   !    do jjj=1,12
+   !        dummy = 1d0/(Nkx*Nky)*sum(hk(iii,jjj,:))
+   !        dummy = dummy - hloc(iii,jjj)
+   !        write(LOGFile,"(F0.0,A,F0.0,A)",advance='no') real(dummy), '+i' , aimag(dummy), ' '
+   !    enddo
+   !    write(LOGFILE,*) "//"
+   !enddo
 
    !CUSTOM OBSERVABLES: n_tot, n_mag, Ekin
    allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
@@ -97,10 +106,10 @@ program cdn_kanemele
    allocate(lambdasym_vector(3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
    !
-   lambdasym_vector(1)=Mh
+   lambdasym_vector(1)=ts
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(1.d0,0.d0,0.d0))
    !
-   lambdasym_vector(2)=ts
+   lambdasym_vector(2)=Mh
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(0.d0,1.d0,0.d0))
    !
    lambdasym_vector(3)=lambda
@@ -121,6 +130,7 @@ program cdn_kanemele
 
       !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
       call ed_solve(comm,bath)
+      !!! GO ON HERE !!!
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
 
@@ -177,20 +187,20 @@ contains
    !+------------------------------------------------------------------+
 
 
-   function Hloc_model(Mh_,ts_,lambda_) result (H0)
+   function hloc_model(ts_,Mh_,lambda_) result (hloc_)
       ! Directly created in lso basis
       integer                                               :: ispin, spsign, lowerbound, upperbound, Nlo
-      real(8)                                               :: Mh_,ts_,lambda_
-      complex(8),dimension(Nlso,Nlso)                       :: H0
+      real(8),intent(in)                                    :: Mh_,ts_,lambda_
+      complex(8),dimension(Nlso,Nlso)                       :: hloc_
       !
       Nlo = Nlat*Norb
-      H0  = zero
+      hloc_  = zero
       !
       do ispin=1,Nspin
-         lowerbound = (ispin-1)*Nlo
+         lowerbound = (ispin-1)*Nlo+1
          upperbound = ispin*Nlo
          spsign = -2*ispin+3
-         H0(lowerbound:upperbound,lowerbound:upperbound) = hloc_matrix(ts_, Mh_, lambda_, spsign)
+         hloc_(lowerbound:upperbound,lowerbound:upperbound) = hloc_matrix(ts_, Mh_, lambda_, spsign)
       enddo
       !
    end function hloc_model
@@ -201,14 +211,14 @@ contains
       ! the N input is only needed or the TB_build_model routine....
       integer                         :: N, ispin, spsign, lowerbound, upperbound, Nlo
       real(8),dimension(:)            :: kpoint
-      complex(8),dimension(N,N)       :: hk, hloc_, h1_, h2_, h3_, h4_, h5_, h6_
+      complex(8),dimension(N,N)       :: Hk, hloc_, h1_, h2_, h3_, h4_, h5_, h6_
       !
       if (N/=Nlso) stop "dimensionality of hk wrong!"
       Nlo = Nlat*Norb
-      hk  = zero
+      Hk  = zero
       !
       do ispin=1,Nspin
-         lowerbound = (ispin-1)*Nlo
+         lowerbound = (ispin-1)*Nlo+1
          upperbound = ispin*Nlo
          spsign     = -2*ispin+3
          hloc_(lowerbound:upperbound,lowerbound:upperbound) = hloc_matrix(ts, Mh, lambda, spsign)
@@ -232,171 +242,147 @@ contains
    function hloc_matrix(t,M,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
       real(8),dimension(6,6)    :: tempmat
-      real(8)                   :: t,M,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,M,lSOC
+      integer(4),intent(in)     :: spinsign
       !
-      if (spinsign==1) then
-          continue
-      else if (spinsign==-1) then
-          lSOC = -1.*lSOC
-      else
-          stop "Invalid spinsign passed!"
-      end if
+      if (.not.(spinsign==1 .or. spinsign==-1)) stop "Invalid spinsign passed!"
       !
       hmat    = zero
       tempmat = zero
       !
-      tempmat(1,:) = (/ 1, 0, 0, 0, 0, 0 /)
-      tempmat(2,:) = (/ 0,-1, 0, 0, 0, 0 /)
-      tempmat(3,:) = (/ 0, 0, 1, 0, 0, 0 /)
-      tempmat(4,:) = (/ 0, 0, 0,-1, 0, 0 /)
-      tempmat(5,:) = (/ 0, 0, 0, 0, 1, 0 /)
-      tempmat(6,:) = (/ 0, 0, 0, 0, 0,-1 /)
+      tempmat(1,:) = [ 1, 0, 0, 0, 0, 0 ]
+      tempmat(2,:) = [ 0,-1, 0, 0, 0, 0 ]
+      tempmat(3,:) = [ 0, 0, 1, 0, 0, 0 ]
+      tempmat(4,:) = [ 0, 0, 0,-1, 0, 0 ]
+      tempmat(5,:) = [ 0, 0, 0, 0, 1, 0 ]
+      tempmat(6,:) = [ 0, 0, 0, 0, 0,-1 ]
       hmat         = hmat + M*tempmat
       !
-      tempmat(1,:) = (/ 0, 1, 0, 0, 0, 1 /)
-      tempmat(2,:) = (/ 1, 0, 1, 0, 0, 0 /)
-      tempmat(3,:) = (/ 0, 1, 0, 1, 0, 0 /)
-      tempmat(4,:) = (/ 0, 0, 1, 0, 1, 0 /)
-      tempmat(5,:) = (/ 0, 0, 0, 1, 0, 1 /)
-      tempmat(6,:) = (/ 1, 0, 0, 0, 1, 0 /)
+      tempmat(1,:) = [ 0, 1, 0, 0, 0, 1 ]
+      tempmat(2,:) = [ 1, 0, 1, 0, 0, 0 ]
+      tempmat(3,:) = [ 0, 1, 0, 1, 0, 0 ]
+      tempmat(4,:) = [ 0, 0, 1, 0, 1, 0 ]
+      tempmat(5,:) = [ 0, 0, 0, 1, 0, 1 ]
+      tempmat(6,:) = [ 1, 0, 0, 0, 1, 0 ]
       hmat         = hmat + t*tempmat
       !
-      tempmat(1,:) = (/ 0, 0, 1, 0,-1, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 1, 0,-1 /)
-      tempmat(3,:) = (/-1, 0, 0, 0, 1, 0 /)
-      tempmat(4,:) = (/ 0,-1, 0, 0, 0, 1 /)
-      tempmat(5,:) = (/ 1, 0,-1, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 1, 0,-1, 0, 0 /)
-      hmat         = hmat + lSOC*(0,1)*tempmat
+      tempmat(1,:) = [ 0, 0, 1, 0,-1, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 1, 0,-1 ]
+      tempmat(3,:) = [-1, 0, 0, 0, 1, 0 ]
+      tempmat(4,:) = [ 0,-1, 0, 0, 0, 1 ]
+      tempmat(5,:) = [ 1, 0,-1, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 1, 0,-1, 0, 0 ]
+      hmat         = hmat + spinsign*lSOC*(0,1)*tempmat
       !
    end function hloc_matrix
 
    function hhop1_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
       real(8),dimension(6,6)    :: tempmat
-      real(8)                   :: t,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
-      if (spinsign==1) then
-          continue
-      else if (spinsign==-1) then
-          lSOC = -1.*lSOC
-      else
-          stop "Invalid spinsign passed!"
-      end if
+      if (.not.(spinsign==1 .or. spinsign==-1)) stop "Invalid spinsign passed!"
       !
       hmat    = zero
       tempmat = zero
       !
-      tempmat(1,:) = (/ 0, 0, 0, 1, 0, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(3,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(4,:) = (/ 1, 0, 0, 0, 0, 0 /)
-      tempmat(5,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 0, 0, 0, 0, 0 /)
+      tempmat(1,:) = [ 0, 0, 0, 1, 0, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(3,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(4,:) = [ 1, 0, 0, 0, 0, 0 ]
+      tempmat(5,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 0, 0, 0, 0, 0 ]
       hmat         = hmat + t*tempmat
       !
-      tempmat(1,:) = (/ 0, 0, 1, 0,-1, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 1, 0, 0 /)
-      tempmat(3,:) = (/-1, 0, 0, 0, 0, 0 /)
-      tempmat(4,:) = (/ 0,-1, 0, 0, 0, 1 /)
-      tempmat(5,:) = (/ 1, 0, 0, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 0, 0,-1, 0, 0 /)
-      hmat         = hmat + lSOC*(0,1)*tempmat
+      tempmat(1,:) = [ 0, 0, 1, 0,-1, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 1, 0, 0 ]
+      tempmat(3,:) = [-1, 0, 0, 0, 0, 0 ]
+      tempmat(4,:) = [ 0,-1, 0, 0, 0, 1 ]
+      tempmat(5,:) = [ 1, 0, 0, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 0, 0,-1, 0, 0 ]
+      hmat         = hmat + spinsign*lSOC*(0,1)*tempmat
       !
    end function hhop1_matrix
 
    function hhop2_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
       real(8),dimension(6,6)    :: tempmat
-      real(8)                   :: t,M,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
-      if (spinsign==1) then
-          continue
-      else if (spinsign==-1) then
-          lSOC = -1.*lSOC
-      else
-          stop "Invalid spinsign passed!"
-      end if
+      if (.not.(spinsign==1 .or. spinsign==-1)) stop "Invalid spinsign passed!"
       !
       hmat    = zero
       tempmat = zero
       !
-      tempmat(1,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 0, 1, 0 /)
-      tempmat(3,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(4,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(5,:) = (/ 0, 1, 0, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 0, 0, 0, 0, 0 /)
+      tempmat(1,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 0, 1, 0 ]
+      tempmat(3,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(4,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(5,:) = [ 0, 1, 0, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 0, 0, 0, 0, 0 ]
       hmat         = hmat + t*tempmat
       !
-      tempmat(1,:) = (/ 0, 0, 0, 0,-1, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 1, 0,-1 /)
-      tempmat(3,:) = (/ 0, 0, 0, 0, 1, 0 /)
-      tempmat(4,:) = (/ 0,-1, 0, 0, 0, 1 /)
-      tempmat(5,:) = (/ 1, 0,-1, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 1, 0, 0, 0, 0 /)
-      hmat         = hmat + lSOC*(0,1)*tempmat
+      tempmat(1,:) = [ 0, 0, 0, 0,-1, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 1, 0,-1 ]
+      tempmat(3,:) = [ 0, 0, 0, 0, 1, 0 ]
+      tempmat(4,:) = [ 0,-1, 0, 0, 0, 1 ]
+      tempmat(5,:) = [ 1, 0,-1, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 1, 0, 0, 0, 0 ]
+      hmat         = hmat + spinsign*lSOC*(0,1)*tempmat
       !
    end function hhop2_matrix
 
    function hhop3_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
       real(8),dimension(6,6)    :: tempmat
-      real(8)                   :: t,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
-      if (spinsign==1) then
-          continue
-      else if (spinsign==-1) then
-          lSOC = -1.*lSOC
-      else
-          stop "Invalid spinsign passed!"
-      end if
+      if (.not.(spinsign==1 .or. spinsign==-1)) stop "Invalid spinsign passed!"
       !
       hmat    = zero
       tempmat = zero
       !
-      tempmat(1,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(3,:) = (/ 0, 0, 0, 0, 0, 1 /)
-      tempmat(4,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(5,:) = (/ 0, 0, 0, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 0, 1, 0, 0, 0 /)
+      tempmat(1,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(3,:) = [ 0, 0, 0, 0, 0, 1 ]
+      tempmat(4,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(5,:) = [ 0, 0, 0, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 0, 1, 0, 0, 0 ]
       hmat         = hmat + t*tempmat
       !
-      tempmat(1,:) = (/ 0, 0, 1, 0, 0, 0 /)
-      tempmat(2,:) = (/ 0, 0, 0, 0, 0,-1 /)
-      tempmat(3,:) = (/-1, 0, 0, 0, 1, 0 /)
-      tempmat(4,:) = (/ 0, 0, 0, 0, 0, 1 /)
-      tempmat(5,:) = (/ 0, 0,-1, 0, 0, 0 /)
-      tempmat(6,:) = (/ 0, 1, 0,-1, 0, 0 /)
-      hmat         = hmat + lSOC*(0,1)*tempmat
+      tempmat(1,:) = [ 0, 0, 1, 0, 0, 0 ]
+      tempmat(2,:) = [ 0, 0, 0, 0, 0,-1 ]
+      tempmat(3,:) = [-1, 0, 0, 0, 1, 0 ]
+      tempmat(4,:) = [ 0, 0, 0, 0, 0, 1 ]
+      tempmat(5,:) = [ 0, 0,-1, 0, 0, 0 ]
+      tempmat(6,:) = [ 0, 1, 0,-1, 0, 0 ]
+      hmat         = hmat + spinsign*lSOC*(0,1)*tempmat
       !
    end function hhop3_matrix
 
    function hhop4_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
-      real(8)                   :: t,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
       hmat(:,:) = hhop1_matrix(t,lSOC,spinsign)
    end function hhop4_matrix
 
    function hhop5_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
-      real(8)                   :: t,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
       hmat(:,:) = hhop2_matrix(t,lSOC,spinsign)
    end function hhop5_matrix
 
    function hhop6_matrix(t,lSOC,spinsign) result(hmat)
       complex(8),dimension(6,6) :: hmat
-      real(8)                   :: t,lSOC
-      integer(4)                :: spinsign
+      real(8),intent(in)        :: t,lSOC
+      integer(4),intent(in)     :: spinsign
       !
       hmat(:,:) = hhop3_matrix(t,lSOC,spinsign)
    end function hhop6_matrix
@@ -406,22 +392,21 @@ contains
    !-------------------------------------------------------------------------------------------
 
    subroutine generate_hk_hloc()
-      integer                          :: ik,i,j
-      real(8),dimension(Nkx*Nky,2)     :: kgrid
-      real(8),dimension(:),allocatable :: gridx,gridy
+      integer                      :: ik,i,j
+      real(8),dimension(Nkx*Nky,2) :: kgrid
+      real(8),dimension(Nkx)       :: gridx
+      real(8),dimension(Nky)       :: gridy
       !
       !kmesh in direct coordinates
       gridx = linspace(0d0,1d0,Nkx,iend=.false.)
       gridy = linspace(0d0,1d0,Nky,iend=.false.)
       do i=1,Nkx
           do j=1,Nky
-              ik=(i-1)*Nkx+j
+              ik=(i-1)*Nky+j
               kgrid(ik,1)=gridx(i)
               kgrid(ik,2)=gridy(j)
-              write(LOGFile,"(2F8.5,A,2F9.5)") gridx(i),gridy(j), " / ", kgrid(ik,:)
           enddo
       enddo
-
       !
       if(allocated(hk))deallocate(hk)
       if(allocated(Wt))deallocate(Wt)
@@ -434,7 +419,7 @@ contains
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/(Nkx*Nky)
-      Hloc=Hloc_model(Mh,ts,lambda)
+      hloc=hloc_model(ts,Mh,lambda)
       !
    end subroutine generate_hk_hloc
 
@@ -495,41 +480,5 @@ contains
          enddo
       enddo
    end function nnn2lso
-
-
-   function indices2N(indices) result(N)
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      !
-      N=Nx*(indices(2)-1)+indices(1)
-   end function indices2N
-
-   function N2indices(N) result(indices)
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      indices(1)=mod(N,Nx)
-      if(indices(1)==0)then
-         indices(1)=Nx
-         indices(2)=(N-Nx)/Nx+1
-      else
-         indices(2)=N/Nx+1
-      endif
-   end function N2indices
-
-   subroutine naming_convention()
-      integer                       :: i,j
-      integer,dimension(Nx,Ny)      :: matrix
-      !
-      stop " naming_convention() NOT IMPLEMENTED!"
-      !
-      write(LOGfile,"(A)")"The unique index of each site (on the cartesian plane) is as follows:"
-      write(LOGfile,"(A)")" "
-      do j=1,Ny
-         write(LOGfile,"(20(I2,2x))")(matrix(i,Ny+1-j),i =1,Nx)
-      enddo
-      write(LOGfile,"(A)")" "
-   end subroutine naming_convention
    !
 end program cdn_kanemele
