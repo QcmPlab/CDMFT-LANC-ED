@@ -170,7 +170,7 @@ contains
     select case(cg_method)     !0=NR-CG[default]; 1=CG-MINIMIZE
     case default
        if(cg_grad==0)then
-#if __GNUC__ >= 9 .or. __INTEL_COMPILER >= 1500
+#if __GNUC__ >= 9 || __INTEL_COMPILER >= 1500
           write(LOGfile,*)"  Using analytic gradient"
           select case (cg_scheme)
           case ("weiss")
@@ -350,7 +350,7 @@ contains
     !
   end function chi2_delta_replica
 
-#if __GNUC__ >= 8 .or. __INTEL_COMPILER >= 1500
+#if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
   !+-------------------------------------------------------------+
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
   ! \Delta_Anderson function.
@@ -427,7 +427,7 @@ contains
     !
   end function chi2_weiss_replica
 
-#if __GNUC__ >= 8 .or. __INTEL_COMPILER >= 1500
+#if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
   !+-------------------------------------------------------------+
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
   ! \Delta_Anderson function.
@@ -540,7 +540,7 @@ contains
     !
   end function g0and_replica
 
-#if __GNUC__ >= 8 .or. __INTEL_COMPILER >= 1500
+#if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
   !##################################################################
   ! THESE PROCEDURES EVALUATE GRADIENT OF THE 
   ! - \delta
