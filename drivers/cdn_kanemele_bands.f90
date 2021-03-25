@@ -6,45 +6,27 @@ program cdn_kanemele
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
-   integer,dimension(2):: recover
-   logical                                                                :: converged
-   real(8)                                                                :: ts,Mh,lambda,wmixing,observable
-   !Bath:
-   real(8),allocatable                                                    :: Bath(:),Bath_prev(:)
-   !The local hybridization function:
-   complex(8),allocatable                                                 :: Hloc(:,:)
-   complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
+   integer                                                                :: Nlso, Nkpath
+   real(8)                                                                :: ts,Mh,lambda
+   !
    character(len=16)                                                      :: finput
-   real(8),allocatable                                                    :: wt(:)
-   complex(8),allocatable                                                 :: wm(:),wr(:)
-   complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
-   complex(8),dimension(:,:,:,:,:,:),allocatable                          :: observable_matrix
-   !SYMMETRIES TEST
-   real(8),dimension(:),allocatable                                       :: lambdasym_vector
-   complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
    integer                                                                :: rank
    integer                                                                :: mpi_size
    logical                                                                :: master,hermiticize
-   complex(8)                                                             :: dummy
 
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
    rank   = get_Rank_MPI(comm)
    master = get_Master_MPI(comm)
-
    !
-
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputED.conf')
-   call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
    call parse_input_variable(ts,"TS",finput,default=10.d0,comment="hopping parameter")
    call parse_input_variable(Mh,"Mh",finput,default=0.d0,comment="crystal field splitting")
    call parse_input_variable(lambda,"lambda",finput,default=0.3d0,comment="spin-orbit coupling")
-   call parse_input_variable(Nkx,"Nkx",finput,default=30,comment="Number of kx point for BZ integration")
-   call parse_input_variable(Nky,"Nky",finput,default=30,comment="Number of ku point for BZ integration")
+   call parse_input_variable(Nkpath,"Nkpath",finput,default=30,comment="Number of k points along kpath")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -63,119 +45,8 @@ program cdn_kanemele
    if (Nspin/=2) stop "You are using too many spin-orbitals. Only 2 allowed"
    Nlat=6
    Nlso=Nlat*Nspin*Norb
-   if(.not.allocated(wm))allocate(wm(Lmats))
-   wm     = xi*pi/beta*real(2*arange(1,Lmats)-1,8)
 
-   !if(ED_VERBOSE > 0)call naming_convention()
-   !Allocate Weiss Field:
-   allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Weiss_old(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
-   allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
-   allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
-   allocate(Smats_lso(Nlso,Nlso,Lmats))
-
-   !Build Hk and Hloc
-   call generate_hk_hloc()
-   ! Check whether k average gives local hamiltonian
-   !do iii=1,12
-   !    do jjj=1,12
-   !        dummy = 1d0/(Nkx*Nky)*sum(hk(iii,jjj,:))
-   !        dummy = dummy - hloc(iii,jjj)
-   !        write(LOGFile,"(F0.0,A,F0.0,A)",advance='no') real(dummy), '+i' , aimag(dummy), ' '
-   !    enddo
-   !    write(LOGFILE,*) "//"
-   !enddo
-
-   !CUSTOM OBSERVABLES: n_tot, n_mag, Ekin
-   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-   call init_custom_observables(3,Hk)
-   observable_matrix=zero
-   do iii=1,Nlat
-      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
-      observable_matrix(iii,iii,Nspin,Nspin,1,1)=one/Nlat
-   enddo
-   call add_custom_observable("n_tot",nnn2lso(observable_matrix))
-   observable_matrix=zero
-   do iii=1,Nlat
-      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
-      observable_matrix(iii,iii,Nspin,Nspin,1,1)=-one/Nlat
-   enddo
-   call add_custom_observable("n_mag",nnn2lso(observable_matrix))
-   call add_custom_observable("Ekin",Hk)
-
-   !SETUP BATH STEP 1
-   allocate(lambdasym_vector(3))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
-   !
-   lambdasym_vector(1)=ts
-   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(1.d0,0.d0,0.d0))
-   !
-   lambdasym_vector(2)=Mh
-   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(0.d0,1.d0,0.d0))
-   !
-   lambdasym_vector(3)=lambda
-   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(0.d0,0.d0,1.d0))
-   !
-   !SETUP BATH STEP 2 and SETUP SOLVER
-   call set_Hloc(Hsym_basis,lambdasym_vector)
-   Nb=get_bath_dimension(Hsym_basis)
-   allocate(bath(Nb))
-   allocate(bath_prev(Nb))
-   call ed_init_solver(comm,bath)
-
-   !DMFT loop
-   iloop=0;converged=.false.
-   do while(.not.converged.AND.iloop<nloop)
-      iloop=iloop+1
-      if(master)call start_loop(iloop,nloop,"DMFT-loop")
-
-      !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath)
-      !!! GO ON HERE !!!
-      call ed_get_sigma_matsubara(Smats)
-      call ed_get_sigma_realaxis(Sreal)
-
-      !Compute the local gfs:
-      call dmft_gloc_matsubara(Hk,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
-      !
-      !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
-      call Bcast_MPI(comm,Weiss)
-      !
-      !MIXING:
-      !if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
-      !Weiss_old=Weiss
-      !
-      !Perform the SELF-CONSISTENCY by fitting the new bath
-      if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
-         !
-         !MIXING:
-         !call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
-         if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
-         Bath_Prev=Bath
-         !
-         !Check convergence (if required change chemical potential)
-         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
-      endif
-      !
-      call Bcast_MPI(comm,bath)
-      call Bcast_MPI(comm,converged)
-      call Bcast_MPI(comm,xmu)
-      !
-      if(master)call end_loop
-   enddo
-
-   !Compute the local gfs:
-   call dmft_gloc_realaxis(Hk,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-
-   !Compute the Kinetic Energy:
-   do iw=1,Lmats
-      Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
-   enddo
-   call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
-
+   call generate_bands()
 
    call finalize_MPI()
 
@@ -398,37 +269,31 @@ contains
    !PURPOSE: generate Hloc and Hk
    !-------------------------------------------------------------------------------------------
 
-   subroutine generate_hk_hloc()
+   subroutine generate_bands()
       integer                      :: ik,i,j
-      real(8),dimension(Nkx*Nky,2) :: kgrid
-      real(8),dimension(Nkx)       :: gridx
-      real(8),dimension(Nky)       :: gridy
+      real(8),dimension(4,2)       :: kpath
+      real(8),dimension(2)         :: pointK, pointKp, bk1, bk2
       !
-      !kmesh in direct coordinates
-      gridx = linspace(0d0,1d0,Nkx,iend=.false.)
-      gridy = linspace(0d0,1d0,Nky,iend=.false.)
-      do i=1,Nkx
-          do j=1,Nky
-              ik=(i-1)*Nky+j
-              kgrid(ik,1)=gridx(i)
-              kgrid(ik,2)=gridy(j)
-          enddo
-      enddo
+      ! These are only to make the TB_Solve_routine run
+      bk1 = 2*pi*[1,0]
+      bk2 = 2*pi*[0,1]
       !
-      if(allocated(hk))deallocate(hk)
-      if(allocated(Wt))deallocate(Wt)
-      if(allocated(hloc))deallocate(Hloc)
-      !
-      allocate(Hk(Nlso,Nlso,Nkx*Nky),Wt(Nkx*Nky),Hloc(Nlso,Nlso))
-      hk=zero
-      wt=zero
-      hloc=zero
-      !
-      call TB_build_model(Hk,hk_model,Nlso,kgrid)
-      Wt = 1d0/(Nkx*Nky)
-      hloc=hloc_model(ts,Mh,lambda)
-      !
-   end subroutine generate_hk_hloc
+      pointK  = [1d0/3d0, -1d0/3d0]
+      pointKp = [2d0/3d0, 1d0/3d0]
+      write(LOGFile,*) pointK
+      write(LOGFile,*) pointKp
+      KPath(1,:)=[0,0]
+      KPath(2,:)=pointK
+      Kpath(3,:)=pointKp
+      KPath(4,:)=[0d0,0d0]
+      write(LOGFile,*) KPath
+      call TB_set_bk(bkx=bk1,bky=bk2)
+      !call TB_set_ei(eix=[1d0,0d0],eiy=[0d0,1d0])
+      call TB_Solve_model(hk_model,Nlso,KPath,Nkpath,&
+           colors_name=[red1,blue1,red1,blue1,red1,blue1,red1,blue1,red1,blue1,red1,blue1],&
+           points_name=[character(len=10) :: "G","K","K`","G"],&
+           file="Eigenbands.nint",iproject=.false.)
+   end subroutine generate_bands
 
 
 
