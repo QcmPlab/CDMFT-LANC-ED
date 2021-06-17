@@ -21,7 +21,8 @@ MODULE CDMFT_ED
        ed_get_delta_matsubara                 , &
        ed_get_g0and_matsubara                 , &
        ed_get_delta_realaxis                  , &
-       ed_get_g0and_realaxis
+       ed_get_g0and_realaxis                  , &
+       ed_get_density_matrix
 
   USE ED_BATH, only:                            &
        get_bath_dimension                     , &

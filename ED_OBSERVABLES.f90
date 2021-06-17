@@ -199,6 +199,7 @@ contains
   subroutine lanc_observables()
     integer                             :: istate,Nud(2,Ns),iud(2),jud(2),is,js
     integer,dimension(2*Ns_Ud)          :: Indices,Jndices
+    integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
     integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
@@ -312,6 +313,102 @@ contains
        !
     enddo
     !
+    !IMPURITY DENSITY MATRIX
+    if(allocated(imp_density_matrix)) deallocate(imp_density_matrix)
+    allocate(imp_density_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb));imp_density_matrix=zero
+    do istate=1,state_list%size
+       isector = es_return_sector(state_list,istate)
+       Ei      = es_return_energy(state_list,istate)
+#ifdef _MPI
+       if(MpiStatus)then
+          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+       else
+          state_cvec => es_return_cvector(state_list,istate)
+       endif
+#else
+       state_cvec => es_return_cvector(state_list,istate)
+#endif
+       !
+       peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
+       peso = peso/zeta_function
+       !
+       idim  = getdim(isector)
+       call get_DimUp(isector,iDimUps)
+       call get_DimDw(isector,iDimDws)
+       iDimUp = product(iDimUps)
+       iDimDw = product(iDimDws)
+       !
+       if(MpiMaster)then
+          call build_sector(isector,HI)
+          do i=1,iDim
+             call state2indices(i,[iDimUps,iDimDws],Indices)
+             do ii=1,Ns_Ud
+                mup = HI(ii)%map(Indices(ii))
+                mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
+                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Norb,1+Nbath]
+                Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+             enddo
+             Nud(1,:) = Breorder(Nups)
+             Nud(2,:) = Breorder(Ndws)
+             !
+             !Diagonal densities
+             do ilat=1,Nlat
+               do ispin=1,Nspin
+                  do iorb=1,Norb
+                     is = imp_state_index(ilat,iorb)
+                     imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
+                          imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
+                          peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
+                  enddo
+               enddo
+             enddo
+             !
+             !Off-diagonal
+             !if(ed_total_ud)then !!!! this is true by default in the CDMFT cod
+                do ispin=1,Nspin
+                  do ilat=1,Nlat
+                    do jlat=1,Nlat
+                      do iorb=1,Norb
+                        do jorb=1,Norb
+                          is = imp_state_index(ilat,iorb)
+                          js = imp_state_index(jlat,jorb)
+                          if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
+                            iud(1) = HI(1)%map(Indices(1))
+                            iud(2) = HI(2)%map(Indices(2))
+                            call c(jorb,iud(ispin),r,sgn1)
+                            call cdg(is,r,k,sgn2)
+                            Jndices = Indices
+                            Jndices(1+(ispin-1)*Ns_Ud) = &
+                                 binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
+                            call indices2state(Jndices,[iDimUps,iDimDws],j)
+                            !
+                            imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
+                                 imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
+                                 peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
+                          endif
+                        enddo
+                      enddo
+                    enddo
+                  enddo
+                enddo
+             !endif
+             !
+             !
+          enddo
+          call delete_sector(isector,HI)         
+       endif
+       !
+#ifdef _MPI
+       if(MpiStatus)then
+          if(associated(state_cvec))deallocate(state_cvec)
+       else
+          if(associated(state_cvec))nullify(state_cvec)
+       endif
+#else
+       if(associated(state_cvec))nullify(state_cvec)
+#endif
+       !
+    enddo
     !
     !
     if(MPIMASTER)then

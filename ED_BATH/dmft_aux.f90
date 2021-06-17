@@ -177,7 +177,7 @@ subroutine write_dmft_bath(unit)
          enddo
          write(unit_,"(A1)")" "
       else
-         write(LOGfile,"(A)")"Bath matrix too large to print: printing the parameters (including eventual offset)."
+         write(LOGfile,"(A)")"Bath matrix too large to print: printing the parameters."
          write(unit_,"(A9,a5,90(A9,1X))")"V"," ","lambdas"        
          do ibath=1,Nbath
             write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|   ",&

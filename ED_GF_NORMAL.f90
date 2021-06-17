@@ -197,6 +197,8 @@ contains
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
              vvinit=vvinit/sqrt(norm2)
+          else
+             allocate(vvinit(1));vvinit=0.d0
           endif
           !
           nlanc=min(jdim,lanc_nGFiter)
@@ -262,6 +264,8 @@ contains
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Remove particle - Norm vvinit: ',norm2
              vvinit=vvinit/sqrt(norm2)
+          else
+             allocate(vvinit(1));vvinit=0.d0
           endif
           !
           nlanc=min(jdim,lanc_nGFiter)
@@ -408,6 +412,8 @@ contains
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
              vvinit=vvinit/sqrt(norm2)
+          else
+             allocate(vvinit(1));vvinit=0.d0
           endif
           !
           nlanc=min(jdim,lanc_nGFiter)
@@ -488,6 +494,8 @@ contains
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Del particle - Norm vvinit: ',norm2
              vvinit=vvinit/sqrt(norm2)
+          else
+             allocate(vvinit(1));vvinit=0.d0
           endif
           !
           nlanc=min(jdim,lanc_nGFiter)
@@ -628,6 +636,8 @@ contains
           norm2=dot_product(vvinit,vvinit)
           if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
           vvinit=vvinit/sqrt(norm2)
+        else
+           allocate(vvinit(1));vvinit=0.d0
         endif
         !
         nlanc=min(jdim,lanc_nGFiter)
@@ -708,6 +718,8 @@ contains
           norm2=dot_product(vvinit,vvinit)
           if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Del particle - Norm vvinit: ',norm2
           vvinit=vvinit/sqrt(norm2)
+        else
+           allocate(vvinit(1));vvinit=0.d0
         endif
         !
         nlanc=min(jdim,lanc_nGFiter)
@@ -787,6 +799,8 @@ contains
           !
           norm2=dot_product(cvinit,cvinit)
           cvinit=cvinit/sqrt(norm2)
+        else
+           allocate(cvinit(1));cvinit=0.d0
         endif
 
         nlanc=min(jdim,lanc_nGFiter)
@@ -866,6 +880,8 @@ contains
           !
           norm2=dot_product(cvinit,cvinit)
           cvinit=cvinit/sqrt(norm2)
+        else
+           allocate(cvinit(1));cvinit=0.d0
         endif
         !
         nlanc=min(jdim,lanc_nGFiter)
