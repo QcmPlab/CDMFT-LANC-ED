@@ -175,10 +175,10 @@ MODULE ED_VARS_GLOBAL
   type(GFmatrix),allocatable,dimension(:,:,:,:,:,:) :: impGmatrix
 
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
-  ! complex(8),dimension(:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii          ![Nlat][Nspin][Nspin][Norb][Norb][L]
-  ! complex(8),dimension(:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii          ![Nlat][Nspin][Nspin][Norb][Norb][L]
-  ! complex(8),dimension(:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii          ![Nlat][Nspin][Nspin][Norb][Norb][L]
-  ! complex(8),dimension(:,:,:,:,:)  ,allocatable,save :: imp_density_matrix_ii    ![Nlat][Nspin][Nspin][Norb][Norb]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii        ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: imp_density_matrix_ii    ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
 
 
 
@@ -219,9 +219,8 @@ MODULE ED_VARS_GLOBAL
   !=========================================================
   real(8),dimension(:,:),allocatable                   ::  ed_dens
   real(8),dimension(:,:),allocatable                   ::  ed_dens_up,ed_dens_dw
-  real(8),dimension(:,:),allocatable                   ::  ed_docc
+  real(8),dimension(:,:),allocatable                   ::  ed_docc,ed_mag
   !--------------- LATTICE WRAP VARIABLES -----------------!
-  ! real(8),dimension(:,:),allocatable,save            ::  nii,dii,mii
   type(custom_observables)                             ::  custom_o
 
 
@@ -233,7 +232,7 @@ MODULE ED_VARS_GLOBAL
   !real(8),dimension(:),allocatable                     :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
   real(8)                                               :: ed_Dust,ed_Dund,ed_Dse,ed_Dph
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
-  ! real(8),dimension(:,:),allocatable,save            :: ddii,eii
+   real(8),dimension(:,:),allocatable,save            :: ddii,eii
 
 
 
@@ -242,6 +241,26 @@ MODULE ED_VARS_GLOBAL
   ! !PRIVATE (now public but accessible thru routine)
   ! !=========================================================
    complex(8),allocatable,dimension(:,:,:,:,:,:)          :: imp_density_matrix
+
+
+
+  !--------------- LATTICE WRAP VARIABLES -----------------!
+  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq          ![Nlat][Nspin][Nspin][Norb][Norb][L]
+  !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: SAmats_ineq,SAreal_ineq
+  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmats_ineq,Greal_ineq
+  !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Fmats_ineq,Freal_ineq
+  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0mats_ineq,G0real_ineq
+  !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: F0mats_ineq,F0real_ineq
+  !complex(8),dimension(:,:),allocatable,save         :: Dmats_ph_ineq,Dreal_ph_ineq
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable,save   :: imp_density_matrix_ineq
+  real(8),dimension(:,:,:),allocatable,save          :: dens_ineq 
+  real(8),dimension(:,:,:),allocatable,save          :: docc_ineq
+  real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
+  !real(8),dimension(:,:,:,:),allocatable,save           :: phisc_ineq
+  real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
+  integer,allocatable,dimension(:,:)                 :: neigen_sector_ineq
+  integer,allocatable,dimension(:)                   :: neigen_total_ineq
+
 
 
 

@@ -17,6 +17,8 @@ MODULE ED_FIT_CHI2
 
   interface ed_chi2_fitgf
      module procedure chi2_fitgf_generic_normal
+     !RDMFT_WRAPPER
+     module procedure ed_fit_bath_sites_normal
   end interface ed_chi2_fitgf
 
 
@@ -85,6 +87,47 @@ contains
     trim_state_list=.true.
     deallocate(Nlambdas)
   end subroutine chi2_fitgf_generic_normal
+  
+  
+  
+  !+----------------------------------------------------------------------!
+  ! PURPOSE: given a number of independent baths, evaluate N independent
+  ! Delta/G0 functions and fit them to update the effective baths for ED.
+  !+----------------------------------------------------------------------!
+  !RDMFT WRAPPER:
+  subroutine ed_fit_bath_sites_normal(fg,bath)
+    real(8),intent(inout)    :: bath(:,:)
+    complex(8),intent(inout) :: fg(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats)
+    !MPI auxiliary vars
+    real(8)                  :: bath_tmp(size(bath,1),size(bath,2))
+    integer                  :: iineq,i,iorb,ispin_
+    integer                  :: Nineq
+    logical                  :: check_dim
+    character(len=5)         :: tmp_suffix
+    !
+    ! Check dimensions !
+    Nineq=size(bath,1)
+    !
+    do iineq=1,Nineq
+       check_dim = check_bath_dimension(bath(iineq,:))
+       if(.not.check_dim) stop "init_lattice_bath: wrong bath size dimension 1 or 2 "
+    end do
+    !
+    bath_tmp=0d0
+    do iineq = 1, Nineq
+       bath_tmp(iineq,:)=bath(iineq,:)
+       !
+       ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
+       !
+       call chi2_fitgf_replica(fg(iineq,:,:,:,:,:,:,:),bath_tmp(iineq,:))
+    end do
+    !
+    bath = bath_tmp
+    !
+    ed_file_suffix=""
+  end subroutine ed_fit_bath_sites_normal
+
+
 
 
 

@@ -36,71 +36,32 @@ end subroutine ed_get_gimp_real_3
 
 
 
-!subroutine ed_get_gimp_real_lattice_1(Greal,Nsites)
-  !integer                                                                :: Nsites
-  !complex(8),dimension(Nsites,Nspin,Nspin,Norb,Norb,Lreal),intent(inout) :: Greal
-  !Greal(1:Nsites,:,:,:,:,:) = Grealii(1:Nsites,:,:,:,:,:)
-!end subroutine ed_get_gimp_real_lattice_1
+subroutine ed_get_gimp_real_lattice_1(Greal,Nsites)
+  integer                                                                          :: Nsites
+  complex(8),dimension(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal),intent(inout) :: Greal
+  Greal(1:Nsites,:,:,:,:,:,:,:) = Grealii(1:Nsites,:,:,:,:,:,:,:)
+end subroutine ed_get_gimp_real_lattice_1
 
-!subroutine ed_get_gimp_real_lattice_2(Greal,Nsites)
-  !integer                                                                :: Nsites
-  !complex(8),dimension(Nsites,Nspin*Norb,Nspin*Norb,Lreal),intent(inout) :: Greal
-  !integer                                                                :: io,jo,iorb,jorb,ispin,jspin,ilat
-  !do ilat=1,Nsites
-     !do ispin=1,Nspin
-        !do jspin=1,Nspin
-           !do iorb=1,Norb
-              !do jorb=1,Norb
-                 !io = iorb + (ispin-1)*Norb
-                 !jo = jorb + (jspin-1)*Norb
-                 !Greal(ilat,io,jo,:) = Grealii(ilat,ispin,jspin,iorb,jorb,:)
-              !enddo
-           !enddo
-        !enddo
-     !enddo
-  !enddo
-!end subroutine ed_get_gimp_real_lattice_2
+subroutine ed_get_gimp_real_lattice_2(Greal,Nsites)
+  integer                                                                :: Nsites
+  complex(8),dimension(Nsites,Nspin*Norb,Nspin*Norb,Lreal),intent(inout) :: Greal
+  integer                                                                :: io,jo,iorb,jorb,ispin,jspin,ilat,jlat,isite
+  do isite=1,Nsites
+   do ilat=1,Nlat
+    do jlat=1,Nlat
+     do ispin=1,Nspin
+        do jspin=1,Nspin
+           do iorb=1,Norb
+              do jorb=1,Norb
+                 io = index_stride_lso(ilat,ispin,iorb)
+                 jo = index_stride_lso(jlat,jspin,jorb)
+                 Greal(isite,io,jo,:) = Grealii(isite,ilat,jlat,ispin,jspin,iorb,jorb,:)
+              enddo
+             enddo
+            enddo 
+          enddo
+        enddo
+     enddo
+  enddo
+end subroutine ed_get_gimp_real_lattice_2
 
-!subroutine ed_get_gimp_real_lattice_3(Greal,Nsites,ispin,jspin,iorb,jorb)
-  !integer                                          :: Nsites
-  !complex(8),dimension(Nsites,Lreal),intent(inout) :: Greal
-  !integer                                          :: iorb,jorb,ispin,jspin
-  !Greal(1:Nsites,:) = Grealii(1:Nsites,ispin,jspin,iorb,jorb,:)
-!end subroutine ed_get_gimp_real_lattice_3
-
-
-
-
-
-
-
-
-!subroutine ed_get_gimp_real_lattice_11(Greal,ilat)
-  !integer                                                         :: ilat
-  !complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal),intent(inout) :: Greal
-  !Greal(:,:,:,:,:) = Grealii(ilat,:,:,:,:,:)
-!end subroutine ed_get_gimp_real_lattice_11
-
-!subroutine ed_get_gimp_real_lattice_21(Greal,ilat)
-  !integer                                                         :: ilat
-  !complex(8),dimension(Nspin*Norb,Nspin*Norb,Lreal),intent(inout) :: Greal
-  !integer                                                         :: io,jo,iorb,jorb,ispin,jspin
-  !do ispin=1,Nspin
-     !do jspin=1,Nspin
-        !do iorb=1,Norb
-           !do jorb=1,Norb
-              !io = iorb + (ispin-1)*Norb
-              !jo = jorb + (jspin-1)*Norb
-              !Greal(io,jo,:) = Grealii(ilat,ispin,jspin,iorb,jorb,:)
-           !enddo
-        !enddo
-     !enddo
-  !enddo
-!end subroutine ed_get_gimp_real_lattice_21
-
-!subroutine ed_get_gimp_real_lattice_31(Greal,ilat,ispin,jspin,iorb,jorb)
-  !integer                                   :: ilat
-  !complex(8),dimension(Lreal),intent(inout) :: Greal
-  !integer                                   :: iorb,jorb,ispin,jspin
-  !Greal(:) = Grealii(ilat,ispin,jspin,iorb,jorb,:)
-!end subroutine ed_get_gimp_real_lattice_31
