@@ -36,11 +36,6 @@ MODULE ED_AUX_FUNX
      module procedure :: print_Hloc_lso
   end interface print_Hloc
 
-  !interface set_Hloc
-     !module procedure set_Hloc_lso
-     !module procedure set_Hloc_nnn
-  !end interface set_Hloc
-
 #if __GNUC__ > 6
   interface read(unformatted)
      module procedure :: read_unformatted
@@ -62,7 +57,6 @@ MODULE ED_AUX_FUNX
 
   public :: index_stride_lso
   !
-  !public :: set_Hloc
   public :: print_Hloc
   !
   public :: save_gfprime
@@ -74,7 +68,7 @@ MODULE ED_AUX_FUNX
   public :: nn2so_reshape
   !
   public :: ed_search_variable
-  !
+  !PRINT LOCAL HAMILTONIAN
 
 
 
@@ -100,7 +94,7 @@ contains
   !PURPOSE  : Print Hloc
   !+------------------------------------------------------------------+
   subroutine print_Hloc_nnn(hloc,file)![Nspin][Nspin][Norb][Norb]
-    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hloc
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hloc
     character(len=*),optional                          :: file
     integer                                            :: ilat,jlat,iorb,jorb,ispin,jspin
     integer                                            :: unit
@@ -113,8 +107,8 @@ contains
     do ispin=1,Nspin
        do ilat=1,Nlat
           do iorb=1,Norb
-             write(unit,"(20(F7.3,2x))")&
-                  (((Hloc(ilat,jlat,ispin,jspin,iorb,jorb),jorb =1,Norb),jlat=1,Nlat),jspin=1,Nspin)
+             write(unit,"(100(A1,F8.4,A1,F8.4,A1,2x))")&
+                  ((('(',dreal(Hloc(ilat,jlat,ispin,jspin,iorb,jorb)),',',dimag(Hloc(ilat,jlat,ispin,jspin,iorb,jorb)),')',jorb =1,Norb),jlat=1,Nlat),jspin=1,Nspin)
           enddo
        enddo
     enddo
@@ -123,9 +117,9 @@ contains
   end subroutine print_Hloc_nnn
 
   subroutine print_Hloc_lso(hloc,file) ![Nlso][Nlso]
-    real(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: hloc
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: hloc
     character(len=*),optional                          :: file
-    integer                                            :: ilat,iorb,jorb,unit
+    integer                                            :: ilat,is,js,unit
     unit=LOGfile
     !
     if(present(file))then
@@ -134,8 +128,8 @@ contains
     endif
     !
     Nlso = Nlat*Nspin*Norb
-    do iorb=1,Nlso
-       write(unit,"(20(F7.3,2x))")(Hloc(iorb,jorb),jorb =1,Nlso)
+    do is=1,Nlso
+       write(unit,"(20(A1,F8.4,A1,F8.4,A1,2x))")('(',dreal(Hloc(is,js)),',',dimag(Hloc(is,js)),')',js =1,Nlso)
     enddo
     write(unit,*)""
     if(present(file))close(unit)
@@ -664,9 +658,6 @@ contains
     close(unit)
     !
   end subroutine ed_search_variable
-
-
-
 
 
 

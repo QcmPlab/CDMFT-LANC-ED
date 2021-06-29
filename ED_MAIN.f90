@@ -3,7 +3,6 @@ module ED_MAIN
   USE ED_VARS_GLOBAL
   USE ED_EIGENSPACE, only: state_list,es_delete_espace,delete_eigenspace
   USE ED_AUX_FUNX
-  USE ED_HLOC_DECOMPOSITION
   USE ED_SETUP
   USE ED_BATH
   USE ED_HAMILTONIAN
@@ -12,6 +11,7 @@ module ED_MAIN
   USE ED_DIAG
   USE SF_IOTOOLS, only: str,reg
   USE SF_TIMER,only: start_timer,stop_timer
+  USE SF_MISC,    only: assert_shape
   implicit none
   private
 
@@ -97,20 +97,14 @@ contains
     !Init ED Structure & memory
     if(isetup)call init_ed_structure()
     !
-    !Init bath:
-    !call set_hloc(Hloc)
-    !
     check = check_bath_dimension(bath)
     if(.not.check)stop "init_ed_solver_single error: wrong bath dimensions"
     !
     bath = 0d0
     !
     call allocate_dmft_bath()
-    !if(MPIMASTER   .AND. &
-    !     (Nspin>1) .AND. &
-    !     any(Hloc(:,:,1,Nspin,:,:).ne.0d0) )stop "ED ERROR: impHloc.mask(s,s`) /= 0. Spin-Flip terms are not allowed"
     call init_dmft_bath()
-    call get_dmft_bath(bath)    !dmft_bath --> user_bath
+    call get_dmft_bath(bath)
     if(isetup)call setup_global
     call deallocate_dmft_bath()
     isetup=.false.
@@ -131,16 +125,7 @@ contains
     !
     !
     Nineq = size(bath,1)
-    !
-    do iineq=1,Nineq             !all nodes check the bath, u never know...
-      !
-      ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
-      !
-      !Init bath:
-      !
-      call ed_init_solver_single_mpi(MpiComm,bath(iineq,:)) !Here we init the solver using impHloc, whatever its origin.
-      !
-   end do
+    if(.not.allocated(Hreplica_lambda_ineq))stop "ERROR ed_init_solver: replica parameters lambda not defined for all sites"
     !
     if(allocated(dens_ineq))deallocate(dens_ineq)
     if(allocated(docc_ineq))deallocate(docc_ineq)
@@ -171,15 +156,21 @@ contains
     !
     allocate(neigen_sector_ineq(Nineq,Nsectors))
     allocate(neigen_total_ineq(Nineq))
+    !
     do iineq=1,Nineq             !all nodes check the bath, u never know...
-       neigen_sector_ineq(iineq,:) = neigen_sector(:)
-       neigen_total_ineq(iineq)    = lanc_nstates_total
-    end do
-    !
-    call MPI_Barrier(MpiComm,MPI_ERR)
-    !
-    ed_file_suffix=""
-    !
+      !
+      ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
+      call Hreplica_site(iineq)
+      call ed_init_solver_single_mpi(MpiComm,bath(iineq,:)) !Here we init the solver using impHloc, whatever its origin.
+      neigen_sector_ineq(iineq,:) = neigen_sector(:)
+      neigen_total_ineq(iineq)    = lanc_nstates_total
+      !
+   end do
+   !
+   call MPI_Barrier(MpiComm,MPI_ERR)
+   !
+   ed_file_suffix=""
+   !
   end subroutine ed_init_solver_lattice_mpi
 #endif
 
@@ -190,14 +181,15 @@ contains
   !+-----------------------------------------------------------------------------+!
   !                              SINGLE SITE                                      !
   !+-----------------------------------------------------------------------------+!
-  subroutine ed_solve_single(bath)
+  subroutine ed_solve_single(bath,Hloc)
     real(8),dimension(:),intent(in) :: bath
-    !complex(8),optional,intent(in)  :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
+    complex(8),intent(in)           :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical                         :: check
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    !if(present(Hloc))call set_Hloc(Hloc)
+    call assert_shape(impHloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_single","impHloc")
+    call set_Himpurity(Hloc)
     !
     check = check_bath_dimension(bath)
     if(.not.check)stop "ED_SOLVE error: wrong bath dimensions"
@@ -225,10 +217,10 @@ contains
   !+-----------------------------------------------------------------------------+!
   !                              SINGLE SITE                                      !
   !+-----------------------------------------------------------------------------+!
-  subroutine ed_solve_single_mpi(MpiComm,bath)
+  subroutine ed_solve_single_mpi(MpiComm,bath,Hloc)
     integer                         :: MpiComm
     real(8),dimension(:),intent(in) :: bath
-    !complex(8),optional,intent(in)  :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
+    complex(8),intent(in)           :: Hloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical                         :: check
     !
     !SET THE LOCAL MPI COMMUNICATOR :
@@ -236,7 +228,8 @@ contains
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    !if(present(Hloc))call set_Hloc(Hloc)
+    call assert_shape(impHloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_single","impHloc")
+    call set_Himpurity(Hloc)
     !
     check = check_bath_dimension(bath)
     if(.not.check)stop "ED_SOLVE error: wrong bath dimensions"
@@ -299,6 +292,7 @@ contains
     ! Check dimensions !
     Nineq=size(bath,1)
     !
+    call assert_shape(impHloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_lattice","impHloc")
     if(size(neigen_sector_ineq,1)<Nineq)stop "ed_solve_lattice error: size(neigen_sectorii,1)<Nineq"
     if(size(neigen_total_ineq)<Nineq)stop "ed_solve_lattice error: size(neigen_totalii,1)<Nineq"
     !
@@ -334,7 +328,7 @@ contains
        lanc_nstates_total = neigen_total_ineq(iineq)
        !
        !Call ed_solve in SERIAL MODE!! This is parallel on the ineq. sites
-       call ed_solve_single_mpi(MpiComm,bath(iineq,:))
+       call ed_solve_single_mpi(MpiComm,bath(iineq,:),Hloc(iineq,:,:,:,:,:,:))
        !
        neigen_sector_ineq(iineq,:)  = neigen_sector(:)
        neigen_total_ineq(iineq)     = lanc_nstates_total

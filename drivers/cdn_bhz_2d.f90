@@ -110,8 +110,8 @@ program cdn_bhz_2d
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
-   call set_Hloc(Hsym_basis,lambdasym_vector)
-   Nb=get_bath_dimension(Hsym_basis)
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))
    call ed_init_solver(comm,bath)
@@ -123,7 +123,7 @@ program cdn_bhz_2d
       if(master)call start_loop(iloop,nloop,"DMFT-loop")
 
       !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath)
+      call ed_solve(comm,bath,lso2nnn(Hloc))
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
 

@@ -21,20 +21,20 @@ end subroutine deallocate_dmft_bath
 subroutine allocate_dmft_bath()
    integer :: ibath,isym,Nsym
    !
-   if(.not.allocated(lambda_impHloc))stop "lambda_impHloc not allocated in allocate_dmft_bath" !FIXME
+   if(.not.allocated(Hreplica_lambda))stop "Hreplica_lambda not allocated in allocate_dmft_bath" !FIXME
 
    call deallocate_dmft_bath()
    !
    allocate(dmft_bath%item(Nbath))
    !
    !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   !Nsym=size(lambda_impHloc)+1
+   !Nsym=size(Hreplica_lambda)+1
    !
-   !do isym=1,size(lambda_impHloc)
-   !   if(is_identity(H_Basis(isym)%O)) Nsym=Nsym-1
+   !do isym=1,size(Hreplica_lambda)
+   !   if(is_identity(Hreplica_basis(isym)%O)) Nsym=Nsym-1
    !   exit
    !enddo
-   Nsym=size(lambda_impHloc)
+   Nsym=size(Hreplica_lambda)
    !
    !ALLOCATE coefficients vectors
    !
@@ -45,28 +45,6 @@ subroutine allocate_dmft_bath()
    !
    dmft_bath%status=.true.
 end subroutine allocate_dmft_bath
-
-
-
-!+-------------------------------------------------------------------+
-!PURPOSE  : Reconstruct bath matrix from lambda vector
-!+-------------------------------------------------------------------+
-
-function bath_from_sym(lambdavec) result (Hbath)
-   integer                                               :: Nsym,isym
-   real(8),dimension(:)                                  :: lambdavec
-   complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hbath
-   !
-   Nsym=size(lambda_impHloc)
-   !
-   Hbath=zero
-   !
-   do isym=1,Nsym
-      Hbath=Hbath+lambdavec(isym)*H_Basis(isym)%O
-   enddo
-   !
-   !
-end function bath_from_sym
 
 
 !+------------------------------------------------------------------+
@@ -100,10 +78,10 @@ subroutine init_dmft_bath()
    do ibath=1,Nbath
      Nsym = dmft_bath%item(ibath)%N_dec
      do isym=1,Nsym
-        if(is_diagonal(H_basis(isym)%O))then
-            dmft_bath%item(ibath)%lambda(isym)=rescale(ibath)*lambda_impHloc(isym)
+        if(is_diagonal(Hreplica_basis(isym)%O))then
+            dmft_bath%item(ibath)%lambda(isym)=rescale(ibath)*Hreplica_lambda(isym)
         else
-            dmft_bath%item(ibath)%lambda(isym) =  lambda_impHloc(isym)
+            dmft_bath%item(ibath)%lambda(isym) =  Hreplica_lambda(isym)
         endif
      enddo
    enddo
@@ -166,7 +144,7 @@ subroutine write_dmft_bath(unit)
          do ibath=1,Nbath
             write(unit_,"(A1)")" "
             hrep_aux=zero
-            hrep_aux_nnn=bath_from_sym(dmft_bath%item(ibath)%lambda)
+            hrep_aux_nnn=Hreplica_build(dmft_bath%item(ibath)%lambda)
             Hrep_aux=nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb)
             write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&        
                                                                  "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)

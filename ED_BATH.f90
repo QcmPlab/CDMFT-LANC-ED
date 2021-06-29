@@ -7,40 +7,11 @@ MODULE ED_BATH
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
   USE ED_AUX_FUNX
-  USE ED_HLOC_DECOMPOSITION
   implicit none
 
   private
 
-
-  !interface break_symmetry_bath
-     !module procedure :: break_symmetry_bath_site
-  !end interface break_symmetry_bath
-
-  !interface spin_symmetrize_bath
-     !module procedure ::  spin_symmetrize_bath_site
-  !end interface spin_symmetrize_bath
-
-  !interface hermiticize_bath
-     !module procedure ::  hermiticize_bath_main
-  !end interface hermiticize_bath
-
-  !interface orb_equality_bath
-     !module procedure ::  orb_equality_bath_site
-  !end interface orb_equality_bath
-
-  !interface ph_symmetrize_bath
-     !module procedure ::  ph_symmetrize_bath_site
-  !end interface ph_symmetrize_bath
   
-  interface impose_equal_lambda
-     module procedure ::  impose_equal_lambda
-  end interface impose_equal_lambda
-
-  interface get_bath_dimension
-     module procedure ::  get_bath_dimension_direct
-     module procedure ::  get_bath_dimension_symmetries
-  end interface get_bath_dimension
 
   interface is_identity
      module procedure ::  is_identity_lso
@@ -57,16 +28,31 @@ MODULE ED_BATH
   !     USER BATH ROUTINES:
   !
   !##################################################################
+  
+  interface impose_equal_lambda
+     module procedure ::  impose_equal_lambda
+  end interface impose_equal_lambda
+
+  interface get_bath_dimension
+     module procedure ::  get_bath_dimension_direct
+     module procedure ::  get_bath_dimension_symmetries
+  end interface get_bath_dimension
+  
+  interface set_Hreplica
+     module procedure init_Hreplica_direct_lso
+     module procedure init_Hreplica_direct_nnn
+     module procedure init_Hreplica_symmetries_site
+     module procedure init_Hreplica_symmetries_lattice
+  end interface set_Hreplica
+  
+  
   public :: get_bath_dimension
   public :: check_bath_dimension
   !explicit symmetries:
   public :: impose_equal_lambda
   public :: impose_bath_offset
-  !public :: hermiticize_bath
-  !public :: break_symmetry_bath
-  !public :: spin_symmetrize_bath
-  !public :: orb_equality_bath
-  !public :: ph_symmetrize_bath
+  !
+  public :: set_Hreplica
 
 
 
@@ -87,11 +73,11 @@ MODULE ED_BATH
   public :: save_dmft_bath                   !INTERNAL (for effective_bath)
   public :: set_dmft_bath                    !INTERNAL (for effective_bath)
   public :: get_dmft_bath                    !INTERNAL (for effective_bath)
-  public :: bath_from_sym                    !INTERNAL (for effective_bath)
-  public :: mask_hloc
   !
 
-
+  public :: hreplica_build                   !INTERNAL (for effective_bath)
+  public :: hreplica_mask                    !INTERNAL (for effective_bath)
+  public :: hreplica_site                    !INTERNAL (for effective_bath)
 
 
 
@@ -200,52 +186,6 @@ contains
      !
    end function is_identity_lso
 
-!+-------------------------------------------------------------------+
-!PURPOSE  : Create bath mask
-!+-------------------------------------------------------------------+
-
-function mask_hloc(hloc,wdiag,uplo) result(Hmask)
-    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
-    logical,optional                                      :: wdiag,uplo
-    logical                                               :: wdiag_,uplo_
-    logical,dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)    :: Hmask
-    integer                                               :: ilat,jlat,iorb,jorb,ispin,io,jo
-    !
-    wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
-    uplo_ =.false.;if(present(uplo))  uplo_=uplo
-    !
-    Hmask=.false.
-    where(abs(Hloc)>1d-6)Hmask=.true.
-    !
-    !
-    if(wdiag_)then
-       do ispin=1,Nspin
-          do ilat=1,Nlat
-             do iorb=1,Norb
-                Hmask(ilat,ilat,ispin,ispin,iorb,iorb)=.true.
-             enddo
-          enddo
-       enddo
-    endif
-    !
-    if(uplo_)then
-       do ispin=1,Nspin
-          do ilat=1,Nlat
-             do jlat=1,Nlat
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      io = index_stride_lso(ilat,ispin,iorb)
-                      jo = index_stride_lso(jlat,ispin,jorb)
-                      if(io>jo)Hmask(ilat,jlat,ispin,ispin,iorb,jorb)=.false.
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-    endif
-    !
-  end function mask_hloc
-
 
 
   !##################################################################
@@ -255,6 +195,13 @@ function mask_hloc(hloc,wdiag,uplo) result(Hmask)
   !##################################################################
   include 'ED_BATH/user_aux.f90'
 
+
+  !##################################################################
+  !
+  !     H_REPLICA ROUTINES:
+  !
+  !##################################################################
+  include 'ED_BATH/hreplica_setup.f90'
 
 
   !##################################################################

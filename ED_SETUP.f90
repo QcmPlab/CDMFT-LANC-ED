@@ -12,7 +12,8 @@ MODULE ED_SETUP
   USE ED_VARS_GLOBAL
   USE ED_AUX_FUNX
   USE SF_TIMER
-  USE SF_IOTOOLS, only:free_unit,reg,file_length
+  USE SF_IOTOOLS, only: free_unit,reg,file_length
+  USE SF_MISC,    only: assert_shape
 #ifdef _MPI
   USE MPI
   USE SF_MPI
@@ -20,9 +21,15 @@ MODULE ED_SETUP
   implicit none
   private
 
+  interface set_Himpurity
+     module procedure :: set_Himpurity_lso_c
+     module procedure :: set_Himpurity_nnn_c
+  end interface set_Himpurity
 
   public :: init_ed_structure
   public :: setup_global
+  !
+  public :: set_Himpurity
   !
   public :: build_sector
   public :: delete_sector
@@ -188,6 +195,14 @@ contains
        i=abs(floor(log10(abs(nerr)))) !modulus of the order of magnitude of nerror
        niter=nloop/3
     endif
+    
+    !ALLOCATE impHloc
+    if(.not.allocated(impHloc))then
+       allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+       impHloc=zero
+    else
+       call assert_shape(impHloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"init_ed_structure","impHloc")
+    endif
     !
     !
     !allocate functions
@@ -237,6 +252,25 @@ contains
     !
   end subroutine init_ed_structure
 
+
+  !+------------------------------------------------------------------+
+  !PURPOSE  : Setup Himpurity, the local part of the non-interacting Hamiltonian
+  !+------------------------------------------------------------------+
+  subroutine set_Himpurity_nnn_c(hloc)
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hloc
+    if(allocated(impHloc))deallocate(impHloc)
+    allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb));impHloc=zero
+    impHloc = Hloc
+    if(ed_verbose>2)call print_hloc(impHloc)
+  end subroutine set_Himpurity_nnn_c
+
+  subroutine set_Himpurity_lso_c(hloc)
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: hloc
+    if(allocated(impHloc))deallocate(impHloc)
+    allocate(impHloc(Nlat,Nlat,Nspin,Nspin,Norb,Norb));impHloc=zero
+    impHloc = lso2nnn_reshape(Hloc,Nlat,Nspin,Norb)
+    if(ed_verbose>2)call print_hloc(impHloc)
+  end subroutine set_Himpurity_lso_c
 
 
 

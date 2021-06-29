@@ -95,31 +95,35 @@ contains
   ! Delta/G0 functions and fit them to update the effective baths for ED.
   !+----------------------------------------------------------------------!
   !RDMFT WRAPPER:
-  subroutine ed_fit_bath_sites_normal(fg,bath)
+  subroutine ed_fit_bath_sites_normal(bath,Delta,Hloc,ispin)
     real(8),intent(inout)    :: bath(:,:)
-    complex(8),intent(inout) :: fg(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats)
+    complex(8),intent(inout) :: Delta(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats)
+    complex(8)               :: Hloc(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb)
+    integer,optional         :: ispin
     !MPI auxiliary vars
     real(8)                  :: bath_tmp(size(bath,1),size(bath,2))
-    integer                  :: iineq,i,iorb,ispin_
-    integer                  :: Nineq
+    integer                  :: isites,i,iorb,ispin_
+    integer                  :: Nsites
     logical                  :: check_dim
     character(len=5)         :: tmp_suffix
     !
     ! Check dimensions !
-    Nineq=size(bath,1)
+    Nsites=size(bath,1)
     !
-    do iineq=1,Nineq
-       check_dim = check_bath_dimension(bath(iineq,:))
+    do isites=1,Nsites
+       check_dim = check_bath_dimension(bath(isites,:))
        if(.not.check_dim) stop "init_lattice_bath: wrong bath size dimension 1 or 2 "
     end do
     !
     bath_tmp=0d0
-    do iineq = 1, Nineq
-       bath_tmp(iineq,:)=bath(iineq,:)
+    do isites = 1, Nsites
+       bath_tmp(isites,:)=bath(isites,:)
+       impHloc = Hloc(isites,:,:,:,:,:,:)
        !
-       ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
+       ed_file_suffix=reg(ineq_site_suffix)//str(isites,site_indx_padding)
        !
-       call chi2_fitgf_replica(fg(iineq,:,:,:,:,:,:,:),bath_tmp(iineq,:))
+       call chi2_fitgf_generic_normal(Delta(isites,:,:,:,:,:,:,:),bath_tmp(isites,:))
+       !
     end do
     !
     bath = bath_tmp
@@ -161,7 +165,7 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    Hmask=mask_hloc(impHloc,wdiag=.true.,uplo=.true.)
+    Hmask=Hreplica_mask(impHloc,wdiag=.true.,uplo=.true.)
     totNlso=count(Hmask)
     !
     allocate(getIlat(totNlso) ,getJlat(totNlso))
@@ -549,7 +553,7 @@ contains
     do i=1,Ldelta
        iw = xi*Xdelta(i)+xmu
        do ibath=1,Nbath
-          invH_knnn  = bath_from_sym(dummy_lambda(ibath)%element)
+          invH_knnn  = Hreplica_build(dummy_lambda(ibath)%element)
           Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
           call inv(Haux)
           invH_knnn = lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
@@ -622,7 +626,7 @@ contains
     counter=0
     !
     do ibath=1,Nbath
-       H_reconstructed = nnn2lso_reshape(bath_from_sym(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
+       H_reconstructed = nnn2lso_reshape(Hreplica_build(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
        do l=1,Ldelta
           Haux(:,:,l) = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(l)+xmu) - H_reconstructed
           call inv(Haux(:,:,l))
@@ -645,9 +649,9 @@ contains
        !Derivate_lambda_p
        do k=1,size(dummy_lambda(ibath)%element)
           counter = counter + 1
-          Hbasis_lso=nnn2lso_reshape(H_basis(k)%O,Nlat,Nspin,Norb)
+          Hbasis_lso=nnn2lso_reshape(Hreplica_basis(k)%O,Nlat,Nspin,Norb)
           do l=1,Ldelta
-             ! Hbasis_lso=nnn2lso_reshape(H_basis(k)%O,Nlat,Nspin,Norb)
+             ! Hbasis_lso=nnn2lso_reshape(Hreplica_basis(k)%O,Nlat,Nspin,Norb)
              ! Htmp=matmul(Haux(:,:,l),Hbasis_lso)
              ! Htmp=matmul(Htmp,Haux(:,:,l))
              Htmp = ((Haux(:,:,l) .x. Hbasis_lso)) .x. Haux(:,:,l)

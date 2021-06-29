@@ -56,7 +56,7 @@ contains
     diag_hybr=zero
     bath_diag=zero
     do ibath=1,Nbath
-      Hbath_reconstructed(:,:,:,:,:,:,ibath)=bath_from_sym(dmft_bath%item(ibath)%lambda)
+      Hbath_reconstructed(:,:,:,:,:,:,ibath)=Hreplica_build(dmft_bath%item(ibath)%lambda)
       do ilat=1,Nlat
         do ispin=1,Nspin
           do iorb=1,Norb
@@ -120,7 +120,7 @@ contains
     diag_hybr=zero
     bath_diag=zero
     do ibath=1,Nbath
-      Hbath_reconstructed(:,:,:,:,:,:,ibath)=bath_from_sym(dmft_bath%item(ibath)%lambda)
+      Hbath_reconstructed(:,:,:,:,:,:,ibath)=Hreplica_build(dmft_bath%item(ibath)%lambda)
       do ilat=1,Nlat
         do ispin=1,Nspin
           do iorb=1,Norb

@@ -12,8 +12,9 @@ MODULE ED_VARS_GLOBAL
      complex(8),dimension(:,:,:,:,:,:),allocatable   :: O          !Replica hamilt
   end type H_operator
 
-  type(H_operator),dimension(:),allocatable             :: H_basis
-  real(8),dimension(:),allocatable                      :: lambda_impHloc
+  type(H_operator),dimension(:),allocatable             :: Hreplica_basis
+  real(8),dimension(:),allocatable                      :: Hreplica_lambda
+  logical                                               :: Hreplica_status=.false.
   
 
   !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
@@ -261,7 +262,7 @@ MODULE ED_VARS_GLOBAL
   integer,allocatable,dimension(:,:)                 :: neigen_sector_ineq
   integer,allocatable,dimension(:)                   :: neigen_total_ineq
 
-
+  real(8),dimension(:,:),allocatable                 :: Hreplica_lambda_ineq
 
 
 
