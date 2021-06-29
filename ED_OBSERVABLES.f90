@@ -375,7 +375,7 @@ contains
                           if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
                             iud(1) = HI(1)%map(Indices(1))
                             iud(2) = HI(2)%map(Indices(2))
-                            call c(jorb,iud(ispin),r,sgn1)
+                            call c(js,iud(ispin),r,sgn1)
                             call cdg(is,r,k,sgn2)
                             Jndices = Indices
                             Jndices(1+(ispin-1)*Ns_Ud) = &

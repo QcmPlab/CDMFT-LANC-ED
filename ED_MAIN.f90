@@ -243,7 +243,7 @@ contains
     !SOLVE THE QUANTUM IMPURITY PROBLEM:
     call diagonalize_impurity()         !find target states by digonalization of Hamiltonian
     call buildgf_impurity()             !build the one-particle impurity Green's functions  & Self-energy
-    ! if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])    
+    ! if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])  
     call observables_impurity()         !obtain impurity observables as thermal averages.
     call get_custom_observables()       !obtain custom user-defined observables(if initialized)
     call local_energy_impurity()        !obtain the local energy of the effective impurity problem
