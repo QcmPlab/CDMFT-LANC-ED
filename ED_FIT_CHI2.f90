@@ -18,7 +18,7 @@ MODULE ED_FIT_CHI2
   interface ed_chi2_fitgf
      module procedure chi2_fitgf_generic_normal
      !RDMFT_WRAPPER
-     module procedure ed_fit_bath_sites_normal
+     module procedure chi2_fitgf_lattice_normal
   end interface ed_chi2_fitgf
 
 
@@ -95,11 +95,10 @@ contains
   ! Delta/G0 functions and fit them to update the effective baths for ED.
   !+----------------------------------------------------------------------!
   !RDMFT WRAPPER:
-  subroutine ed_fit_bath_sites_normal(bath,Delta,Hloc,ispin)
+  subroutine chi2_fitgf_lattice_normal(Delta,bath)
     real(8),intent(inout)    :: bath(:,:)
     complex(8),intent(inout) :: Delta(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats)
     complex(8)               :: Hloc(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb)
-    integer,optional         :: ispin
     !MPI auxiliary vars
     real(8)                  :: bath_tmp(size(bath,1),size(bath,2))
     integer                  :: isites,i,iorb,ispin_
@@ -129,7 +128,7 @@ contains
     bath = bath_tmp
     !
     ed_file_suffix=""
-  end subroutine ed_fit_bath_sites_normal
+  end subroutine chi2_fitgf_lattice_normal
 
 
 
