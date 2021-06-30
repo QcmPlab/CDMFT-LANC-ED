@@ -11,7 +11,6 @@ module ED_MAIN
   USE ED_DIAG
   USE SF_IOTOOLS, only: str,reg
   USE SF_TIMER,only: start_timer,stop_timer
-  USE SF_MISC,    only: assert_shape
   implicit none
   private
 
@@ -119,7 +118,7 @@ contains
   subroutine ed_init_solver_lattice_mpi(MpiComm,bath)
     integer                        :: MpiComm
     real(8),dimension(:,:)         :: bath ![Nlat][:]
-    integer                        :: iineq,Nineq,Nsect
+    integer                        :: iineq,Nineq
     logical                        :: check
     integer                        :: MPI_ERR
     !
@@ -154,22 +153,24 @@ contains
     !
     allocate(imp_density_matrix_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb))
     !
-    allocate(neigen_sector_ineq(Nineq,Nsectors))
-    allocate(neigen_total_ineq(Nineq))
-    !
     do iineq=1,Nineq             !all nodes check the bath, u never know...
       !
       ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
       call Hreplica_site(iineq)
-      call ed_init_solver_single_mpi(MpiComm,bath(iineq,:)) !Here we init the solver using impHloc, whatever its origin.
-      neigen_sector_ineq(iineq,:) = neigen_sector(:)
-      neigen_total_ineq(iineq)    = lanc_nstates_total
+      call ed_init_solver_single(bath(iineq,:)) !Here we init the solver using impHloc, whatever its origin.
       !
    end do
    !
    call MPI_Barrier(MpiComm,MPI_ERR)
    !
    ed_file_suffix=""
+   !
+   allocate(neigen_sector_ineq(Nineq,Nsectors))
+   allocate(neigen_total_ineq(Nineq))
+   do iineq=1,Nineq       
+     neigen_sector_ineq(iineq,:) = neigen_sector(:)
+     neigen_total_ineq(iineq)    = lanc_nstates_total
+   end do
    !
   end subroutine ed_init_solver_lattice_mpi
 #endif
@@ -188,7 +189,6 @@ contains
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    call assert_shape(impHloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_single","impHloc")
     call set_Himpurity(Hloc)
     !
     check = check_bath_dimension(bath)
@@ -228,7 +228,6 @@ contains
     !
     if(MpiMaster)call save_input_file(str(ed_input_file))
     !
-    call assert_shape(impHloc,[Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_single","impHloc")
     call set_Himpurity(Hloc)
     !
     check = check_bath_dimension(bath)
@@ -292,7 +291,6 @@ contains
     ! Check dimensions !
     Nineq=size(bath,1)
     !
-    call assert_shape(impHloc,[Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb],"ed_solve_lattice","impHloc")
     if(size(neigen_sector_ineq,1)<Nineq)stop "ed_solve_lattice error: size(neigen_sectorii,1)<Nineq"
     if(size(neigen_total_ineq)<Nineq)stop "ed_solve_lattice error: size(neigen_totalii,1)<Nineq"
     !
@@ -318,16 +316,15 @@ contains
        !
        !If required set the local value of U per each site
        if(present(Uloc_ii))Uloc(1:Norb) = Uloc_ii(iineq,1:Norb)
-       if(present(Ust_ii)) Ust = Ust_ii(iineq)
+        if(present(Ust_ii)) Ust = Ust_ii(iineq)
        if(present(Jh_ii))  Jh  = Jh_ii(iineq)
        if(present(Jp_ii))  Jp  = Jp_ii(iineq)
        if(present(Jx_ii))  Jx  = Jx_ii(iineq)
        !
-        !Solve the impurity problem for the iineq-th site
+       !Solve the impurity problem for the iineq-th site
        neigen_sector(:)   = neigen_sector_ineq(iineq,:)
        lanc_nstates_total = neigen_total_ineq(iineq)
        !
-       !Call ed_solve in SERIAL MODE!! This is parallel on the ineq. sites
        call ed_solve_single_mpi(MpiComm,bath(iineq,:),Hloc(iineq,:,:,:,:,:,:))
        !
        neigen_sector_ineq(iineq,:)  = neigen_sector(:)
@@ -338,14 +335,14 @@ contains
        Greal_ineq(iineq,:,:,:,:,:,:,:)  = impGreal(:,:,:,:,:,:,:)
        dens_ineq(iineq,1:Ilat,1:Norb)      = ed_dens(1:Ilat,1:Norb)
        docc_ineq(iineq,1:Ilat,1:Norb)      = ed_docc(1:Ilat,1:Norb)
-       mag_ineq(iineq,:,1:Norb)     = ed_mag(:,1:Norb)
+       !mag_ineq(iineq,:,1:Norb)     = ed_mag(:,1:Norb)
        e_ineq(iineq,:)              = [ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot]
        dd_ineq(iineq,:)             = [ed_Dust,ed_Dund,ed_Dse,ed_Dph]
        imp_density_matrix_ineq(iineq,:,:,:,:,:,:) = imp_density_matrix(:,:,:,:,:,:)
     enddo
     if(MPI_MASTER)call stop_timer(unit=LOGfile)
     ed_file_suffix=""
-     !
+    !
   end subroutine ed_solve_lattice_mpi
 #endif
 

@@ -181,7 +181,7 @@ end subroutine init_Hreplica_symmetries_site
 
 subroutine init_Hreplica_symmetries_lattice(Hvec,lambdavec)
   complex(8),dimension(:,:,:,:,:,:,:) :: Hvec
-  real(8),dimension(:,:)              :: lambdavec ![Nlat,Nsym]
+  real(8),dimension(:,:)              :: lambdavec ![Nsites,Nsym]
   integer                             :: isym,isites,N,Nsites
   !
   Nsites=size(lambdavec,1)

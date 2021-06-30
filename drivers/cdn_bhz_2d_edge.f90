@@ -23,7 +23,7 @@ program cdn_bhz_2d
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !SYMMETRIES TEST
-   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   real(8),dimension(:,:),allocatable                                     :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
@@ -63,9 +63,6 @@ program cdn_bhz_2d
 
    !set global variables
    !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
-   Nlat=Nx
-   Nlso=Nlat*Nspin*Norb
-   Nilso=Nsites*Nlat*Nspin*Norb
    
    Nsites = Ly
    Nineq= Ly
@@ -75,7 +72,9 @@ program cdn_bhz_2d
      print*,"Using L-R Symmetry. Solve",Nineq," of",Nsites," sites."
      call sleep(2)
    endif
-
+   Nlat=Nx
+   Nlso=Nlat*Nspin*Norb
+   Nilso=Nsites*Nlat*Nspin*Norb
    
    if(.not.allocated(wm))allocate(wm(Lmats))
    wm     = xi*pi/beta*real(2*arange(1,Lmats)-1,8)
@@ -90,7 +89,7 @@ program cdn_bhz_2d
    allocate(Smats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Smats_ineq=zero
    allocate(Sreal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Sreal_ineq=zero
    allocate(Gmats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gmats_ineq=zero
-   allocate(Hloc_nnnn(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_ineq=zero
+   allocate(Hloc_nnnn(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_nnnn=zero
    allocate(Hloc_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_ineq=zero
 
    allocate(converged_sites(Nineq))
@@ -105,16 +104,22 @@ program cdn_bhz_2d
 
 
    !SETUP BATH STEP 1
-   allocate(lambdasym_vector(3))
+   allocate(lambdasym_vector(Nineq,3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
    !
-   lambdasym_vector(1)=Mh
+   do icounter=1,Nineq
+    lambdasym_vector(icounter,1)=Mh
+   enddo
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
    !
-   lambdasym_vector(2)=ts
+   do icounter=1,Nineq
+    lambdasym_vector(icounter,2)=ts
+   enddo
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
    !
-   lambdasym_vector(3)=lambda
+   do icounter=1,Nineq
+    lambdasym_vector(icounter,3)=lambda
+   enddo
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
@@ -181,7 +186,7 @@ program cdn_bhz_2d
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
-      Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,:,iw))
+      Smats_lso(:,:,iw)=nnnn2ilso(Smats(:,:,:,:,:,:,:,iw))
    enddo
    call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
 
@@ -287,10 +292,12 @@ contains
       !
       hopping_matrix=zero
       !
-      ind1=1
-      ind2=Nx
-      hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*kpoint*Nx)
-      hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + t_x(ts,lambda,ispin)*exp(-xi*kpoint*Nx)
+      do ispin=1,Nspin
+        ind1=1
+        ind2=Nx
+        hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*kpoint*Nx)
+        hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + t_x(ts,lambda,ispin)*exp(-xi*kpoint*Nx)
+      enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
       !
@@ -336,19 +343,21 @@ contains
 
    subroutine generate_hk_hloc()
       integer                                     :: ik
-      real(8),dimension(Nkx,1)                    :: kgrid
-      real(8),dimension(2)                        :: e1,e2,bk1,bk2
+      real(8),dimension(Nkx,3)                    :: kgrid
+      real(8),dimension(3)                        :: e1,e2,e3,bk1,bk2,bk3
       real(8)                                     :: bklen
       !
-      e1 = [1d0, 0d0]
-      e2 = [0d0, 1d0]
-      call TB_set_ei(eix=e1,eiy=e2)
+      e1 = [1d0, 0d0, 0d0]
+      e2 = [0d0, 1d0, 0d0]
+      e3 = [0d0, 0d0, 1d0]
+      call TB_set_ei(eix=e1,eiy=e2,eiz=e3)
       bklen=2d0*pi
-      bk1=bklen*[1d0, 0d0]
-      bk2=bklen*[0d0, 1d0]
-      call TB_set_bk(bkx=bk1,bky=bk2)
+      bk1=bklen*[1d0, 0d0, 0d0]
+      bk2=bklen*[0d0, 1d0, 0d0]
+      bk3=bklen*[0d0, 0d0, 1d0]
+      call TB_set_bk(bkx=bk1,bky=bk2,bkz=bk3)
       !
-      call TB_build_kgrid([Nkx,1],kgrid)
+      call TB_build_kgrid([Nkx,1,1],kgrid)
       kgrid(:,1)=kgrid(:,1)/Nx
       !
       if(allocated(hk))deallocate(hk)
@@ -359,7 +368,10 @@ contains
       hloc=zero
       !
       ! SEVER !
-      call TB_build_model(Hk,bhz_edge_model,Ly,Nlso,[Nkx,1,1],pbc=.false.,wdos=.false.)
+      !do ik=1,size(kgrid,1)
+      !  hk(:,:,ik)=bhz_edge_model(kgrid(ik,:),Nsites,Nlso,.false.)
+      !enddo
+      call TB_build_model(Hk,bhz_edge_model,Ly,Nlso,kgrid,pbc=.false.,wdos=.false.)
       Hloc = sum(Hk,dim=3)/Nkx
       where(abs(Hloc)<1d-6)Hloc=zero
       !

@@ -34,7 +34,7 @@ end subroutine ed_get_g0imp_real_3
 subroutine ed_get_g0imp_real_lattice_1(Greal,Nsites)
   integer                                                                :: Nsites
   complex(8),dimension(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal),intent(inout) :: Greal
-  Greal(1:Nsites,:,:,:,:,:,:,:) = G0realii(1:Nsites,:,:,:,:,:,:,:)
+  Greal(1:Nsites,:,:,:,:,:,:,:) = G0real_ineq(1:Nsites,:,:,:,:,:,:,:)
 end subroutine ed_get_g0imp_real_lattice_1
 
 subroutine ed_get_g0imp_real_lattice_2(Greal,Nsites)
@@ -50,7 +50,7 @@ subroutine ed_get_g0imp_real_lattice_2(Greal,Nsites)
               do jorb=1,Norb
                  io = index_stride_lso(ilat,ispin,iorb)
                  jo = index_stride_lso(jlat,jspin,jorb)
-                 Greal(isite,io,jo,:) = G0realii(isite,ilat,jlat,ispin,jspin,iorb,jorb,:)
+                 Greal(isite,io,jo,:) = G0real_ineq(isite,ilat,jlat,ispin,jspin,iorb,jorb,:)
               enddo
            enddo
         enddo

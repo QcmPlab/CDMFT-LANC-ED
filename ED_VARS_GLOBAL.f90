@@ -148,8 +148,8 @@ MODULE ED_VARS_GLOBAL
   !=========================================================  
   integer,allocatable,dimension(:)                   :: neigen_sector
   !--------------- LATTICE WRAP VARIABLES -----------------!  
-  integer,allocatable,dimension(:,:)                 :: neigen_sectorii
-  integer,allocatable,dimension(:)                   :: neigen_totalii
+  integer,allocatable,dimension(:,:)                 :: neigen_sector_ineq
+  integer,allocatable,dimension(:)                   :: neigen_total_ineq
   logical                                            :: trim_state_list=.false.
 
   !Partition function
@@ -259,9 +259,6 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
   !real(8),dimension(:,:,:,:),allocatable,save           :: phisc_ineq
   real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
-  integer,allocatable,dimension(:,:)                 :: neigen_sector_ineq
-  integer,allocatable,dimension(:)                   :: neigen_total_ineq
-
   real(8),dimension(:,:),allocatable                 :: Hreplica_lambda_ineq
 
 

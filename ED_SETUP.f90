@@ -224,9 +224,10 @@ contains
     impG0real=zero
     !
     !allocate observables
-    allocate(ed_dens(Nlat,Norb),ed_docc(Nlat,Norb),ed_dens_up(Nlat,Norb),ed_dens_dw(Nlat,Norb))
+    allocate(ed_dens(Nlat,Norb),ed_docc(Nlat,Norb),ed_mag(Nlat,Norb),ed_dens_up(Nlat,Norb),ed_dens_dw(Nlat,Norb))
     ed_dens=0d0
     ed_docc=0d0
+    ed_mag=0d0
     ed_dens_up=0d0
     ed_dens_dw=0d0
     !

@@ -37,7 +37,7 @@ end subroutine ed_get_sigma_real_3
 subroutine ed_get_sigma_real_lattice_1(Sreal,Nsites)
   integer                                                                          :: Nsites
   complex(8),dimension(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal),intent(inout) :: Sreal
-  Sreal(1:Nsites,:,:,:,:,:,:,:) = Srealii(1:Nsites,:,:,:,:,:,:,:)
+  Sreal(1:Nsites,:,:,:,:,:,:,:) = Sreal_ineq(1:Nsites,:,:,:,:,:,:,:)
 end subroutine ed_get_sigma_real_lattice_1
 
 subroutine ed_get_sigma_real_lattice_2(Sreal,Nsites)
@@ -51,7 +51,7 @@ subroutine ed_get_sigma_real_lattice_2(Sreal,Nsites)
               do jorb=1,Norb
                  io = index_stride_lso(ilat,ispin,iorb)
                  jo = index_stride_lso(jlat,jspin,jorb)
-                 Sreal(isite,io,jo,:) = Srealii(isite,ilat,jlat,ispin,jspin,iorb,jorb,:)
+                 Sreal(isite,io,jo,:) = Sreal_ineq(isite,ilat,jlat,ispin,jspin,iorb,jorb,:)
               enddo
            enddo
         enddo
