@@ -165,11 +165,8 @@ program cdn_bhz_2d
          if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
          Bath_Prev=Bath
          !
-         !Check convergence
-         do icounter=1,Nineq
-          converged_sites(icounter) = check_convergence(Weiss_ineq(icounter,:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
-         enddo
-         converged=all(converged_sites)
+         converged = check_convergence(Weiss_ineq(:,:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+         !
       endif
       !
       call Bcast_MPI(comm,bath)
