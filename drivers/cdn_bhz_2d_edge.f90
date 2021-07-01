@@ -96,7 +96,8 @@ program cdn_bhz_2d
 
    !Build Hk and Hloc
    call generate_hk_hloc()
-   Hloc_nnnn = ilso2nnnn(Hloc)
+   if(ed_verbose>2)call print_hloc_ilso(Hloc)
+   Hloc_nnnn = ilso2nnnn_blocks(Hloc)
    do ineq=1,Nineq
      isites = ineq2isites(ineq)
      Hloc_ineq(ineq,:,:,:,:,:,:) = Hloc_nnnn(isites,:,:,:,:,:,:)
@@ -177,15 +178,8 @@ program cdn_bhz_2d
    enddo
 
    !Compute the local gfs:
-   
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-
-   !Compute the Kinetic Energy:
-   do iw=1,Lmats
-      Smats_lso(:,:,iw)=nnnn2ilso(Smats(:,:,:,:,:,:,:,iw))
-   enddo
-   call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
 
 
    call finalize_MPI()
@@ -241,10 +235,6 @@ contains
        H(Idmin:Idmax,Idmin:Idmax)=t_y(ts,lambda)
     enddo
   end function t0_rk_bhz
-
-
-
-
 
 
 
@@ -475,7 +465,7 @@ contains
       enddo
    end function nnn2lso
    
-   function ilso2nnnn(Hilso) result(Hnnnn)
+   function ilso2nnnn_blocks(Hilso) result(Hnnnn)
       complex(8),dimension(Nsites*Nlat*Nspin*Norb,Nsites*Nlat*Nspin*Norb) :: Hilso
       complex(8),dimension(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb)        :: Hnnnn
       integer                                                             :: ilat,jlat,isites
@@ -500,36 +490,34 @@ contains
            enddo
         enddo
       enddo
-   end function ilso2nnnn
-
-
-   function nnnn2ilso(Hnnnn) result(Hilso)
-      complex(8),dimension(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb)               :: Hnnnn
-      complex(8),dimension(Nsites*Nlat*Nspin*Norb,Nsites*Nlat*Nspin*Norb)        :: Hilso
-      integer                                                                    :: ilat,jlat,isites
-      integer                                                                    :: iorb,jorb
-      integer                                                                    :: ispin,jspin
-      integer                                                                    :: is,js
-      Hilso=zero
-      do isites=1,Nsites
-        do ilat=1,Nlat
-           do jlat=1,Nlat
-              do ispin=1,Nspin
-                 do jspin=1,Nspin
-                    do iorb=1,Norb
-                       do jorb=1,Norb
-                          is = iorb + (ilat-1)*Norb + (ispin-1)*Norb*Nlat + (isites-1)*Nlat*Nspin*Norb
-                          js = jorb + (jlat-1)*Norb + (jspin-1)*Norb*Nlat + (isites-1)*Nlat*Nspin*Norb
-                          Hilso(is,js) = Hnnnn(isites,ilat,jlat,ispin,jspin,iorb,jorb)
-                       enddo
-                    enddo
-                 enddo
-              enddo
-           enddo
-        enddo
-      enddo
-   end function nnnn2ilso
-
+   end function ilso2nnnn_blocks
+   
+   
+   
+   
+  subroutine print_Hloc_ilso(hloc,file) ![Nlso][Nlso]
+    complex(8),dimension(Nsites*Nlat*Nspin*Norb,Nsites*Nlat*Nspin*Norb) :: hloc
+    character(len=*),optional                                           :: file
+    integer                                                             :: ilat,is,js,unit
+    unit=LOGfile
+    !
+    if(present(file))then
+       open(free_unit(unit),file=reg(file))
+       write(LOGfile,"(A)")"print_Hloc on file :"//reg(file)
+    endif
+    !
+    write(unit,*)"Re(H)"
+    do is=1,Nilso
+       write(unit,"(20(F8.4,2x))")(real(Hloc(is,js)),js =1,Nilso)
+    enddo
+    write(unit,*)""
+    write(unit,*)"Im(H)"
+    do is=1,Nilso
+       write(unit,"(20(F8.4,2x))")(imag(Hloc(is,js)),js =1,Nilso)
+    enddo
+    write(unit,*)""
+    if(present(file))close(unit)
+  end subroutine print_Hloc_ilso
    !
 end program cdn_bhz_2d
 
