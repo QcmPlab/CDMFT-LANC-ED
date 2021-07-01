@@ -589,9 +589,6 @@ contains
       sreal_periodized=zero
       greal_periodized=zero
       !
-      ts=0.d0
-      lambda=0.d0
-      !
       do ii=1,Lreal
          tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Sreal(:,:,:,:,:,:,ii))
          call inv(tmpmat)
@@ -662,8 +659,6 @@ contains
       smats_periodized=zero
       gmats_periodized=zero
       !
-      ts=0.d0
-      lambda=0.d0
       !
       do ii=1,Lmats
          tmpmat=(wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Smats(:,:,:,:,:,:,ii))

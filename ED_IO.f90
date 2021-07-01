@@ -166,6 +166,17 @@ MODULE ED_IO
      module procedure :: ed_gf_cluster_array
   end interface ed_gf_cluster
 
+  interface ed_read_impsigma
+     module procedure :: ed_read_impsigma_single
+     module procedure :: ed_read_impsigma_lattice
+  end interface ed_read_impsigma
+
+  interface ed_read_impG
+     module procedure :: ed_read_impG_single
+     module procedure :: ed_read_impG_lattice
+  end interface ed_read_impG
+
+
 
   public :: ed_get_sigma_matsubara
   public :: ed_get_sigma_realaxis
@@ -445,7 +456,7 @@ contains
 
    ! PURPOSE: Read self-energy function(s) - also for inequivalent sites.
    !+-----------------------------------------------------------------------------+!
-   subroutine ed_read_impSigma
+   subroutine ed_read_impSigma_single
      integer                                           :: i,ispin,isign,unit(2),iorb,jorb,ilat,jlat
      character(len=30)                                 :: suffix
      integer,dimension(:),allocatable                  :: getIorb,getJorb
@@ -475,9 +486,33 @@ contains
      if(allocated(wm))deallocate(wm)
      if(allocated(wr))deallocate(wr)
      !
-   end subroutine ed_read_impSigma
+   end subroutine ed_read_impSigma_single
+   
+   subroutine ed_read_impSigma_lattice(Nineq)
+    integer :: Nineq
+    integer :: isites
+    !
+    if(allocated(Smats_ineq))deallocate(Smats_ineq)
+    if(allocated(Sreal_ineq))deallocate(Sreal_ineq)
+    !
+    allocate(Smats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+    allocate(Sreal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
+    !
+    Smats_ineq  = zero 
+    Sreal_ineq  = zero
+    !
+    do isites=1,Nineq
+       ed_file_suffix=reg(ineq_site_suffix)//str(isites,site_indx_padding)
+       call ed_read_impSigma_single
+       Smats_ineq(isites,:,:,:,:,:,:,:)  = impSmats
+       Sreal_ineq(isites,:,:,:,:,:,:,:)  = impSreal
+    enddo
+    ed_file_suffix=""
+  end subroutine ed_read_impSigma_lattice
+   
+   
 
-   subroutine ed_read_impG
+   subroutine ed_read_impG_single
      integer                                           :: i,ispin,isign,unit(2),iorb,jorb,ilat,jlat
      character(len=30)                                 :: suffix
      integer,dimension(:),allocatable                  :: getIorb,getJorb
@@ -506,7 +541,30 @@ contains
      if(allocated(wm))deallocate(wm)
      if(allocated(wr))deallocate(wr)
      !
-   end subroutine ed_read_impG
+   end subroutine ed_read_impG_single
+   
+   
+   subroutine ed_read_impG_lattice(Nineq)
+    integer :: Nineq
+    integer :: isites
+    !
+    if(allocated(Gmats_ineq))deallocate(Gmats_ineq)
+    if(allocated(Greal_ineq))deallocate(Greal_ineq)
+    !
+    allocate(Gmats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
+    allocate(Greal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
+    !
+    Gmats_ineq  = zero 
+    Greal_ineq  = zero
+    !
+    do isites=1,Nineq
+       ed_file_suffix=reg(ineq_site_suffix)//str(isites,site_indx_padding)
+       call ed_read_impG_single
+       Gmats_ineq(isites,:,:,:,:,:,:,:)  = impGmats
+       Greal_ineq(isites,:,:,:,:,:,:,:)  = impGreal
+    enddo
+    ed_file_suffix=""
+  end subroutine ed_read_impG_lattice
 
 END MODULE ED_IO
 

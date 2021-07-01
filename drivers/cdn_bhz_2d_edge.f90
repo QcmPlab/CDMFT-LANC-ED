@@ -9,7 +9,6 @@ program cdn_bhz_2d
    integer                                                                :: Nx,Nlso,Nilso,iloop,Nb,Nkx,iw,Ly
    integer                                                                :: Nineq,Nsites,ineq,isites,icounter,icounter2
    integer,dimension(2)                                                   :: recover
-   logical,allocatable,dimension(:)                                       :: converged_sites
    logical                                                                :: converged,lrsym
    real(8)                                                                :: ts,Mh,lambda,wmixing,observable
    !Bath:
@@ -91,8 +90,6 @@ program cdn_bhz_2d
    allocate(Gmats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gmats_ineq=zero
    allocate(Hloc_nnnn(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_nnnn=zero
    allocate(Hloc_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_ineq=zero
-
-   allocate(converged_sites(Nineq))
 
    !Build Hk and Hloc
    call generate_hk_hloc()
