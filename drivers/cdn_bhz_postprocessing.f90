@@ -102,8 +102,8 @@ program cdn_bhz_2d
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
    !
    !setup solver
-   call set_Hloc(Hsym_basis,lambdasym_vector)
-   Nb=get_bath_dimension(Hsym_basis)
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_fitted(Nb))
    call ed_init_solver(bath)
@@ -119,21 +119,21 @@ program cdn_bhz_2d
    !
    !RETRIEVE AND PERIODIZE
    !
-   dummy_real=periodize_sigma_gscheme_real([pi/2,0.d0])
-   dummy_mats=periodize_sigma_gscheme_mats([pi/2,0.d0])
+   !dummy_real=periodize_sigma_gscheme_real([pi/2,0.d0])
+   !dummy_mats=periodize_sigma_gscheme_mats([pi/2,0.d0])
    dummy_real=periodize_sigma_mscheme_real([pi/2,0.d0])
-   dummy_mats=periodize_sigma_mscheme_mats([pi/2,0.d0])
-   dummy_real=periodize_sigma_real([pi/2,0.d0])
-   dummy_mats=periodize_sigma_mats([pi/2,0.d0])
+   !dummy_mats=periodize_sigma_mscheme_mats([pi/2,0.d0])
+   !dummy_real=periodize_sigma_real([pi/2,0.d0])
+   !dummy_mats=periodize_sigma_mats([pi/2,0.d0])
    !call   print_zmats()
    !call   print_hk_periodized_path()
-   call   print_hk_topological_path()
+   !call   print_hk_topological_path()
    !call   print_hk_topological_unperiodized_path()
    !call   print_zmats_path()
    !call   print_zmats_2d()
    !call   get_Akw()
    !call   get_poles()
-   !call   get_zeros()
+   call   get_zeros()
    !
    !call finalize_MPI()
 
@@ -589,6 +589,9 @@ contains
       sreal_periodized=zero
       greal_periodized=zero
       !
+      ts=0d0
+      lambda=0d0
+      !
       do ii=1,Lreal
          tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Sreal(:,:,:,:,:,:,ii))
          call inv(tmpmat)
@@ -659,6 +662,8 @@ contains
       smats_periodized=zero
       gmats_periodized=zero
       !
+      ts=0d0
+      lambda=0d0
       !
       do ii=1,Lmats
          tmpmat=(wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_model(kpoint,Nlat*Nspin*Norb) - nnn2lso(Smats(:,:,:,:,:,:,ii))
@@ -901,6 +906,16 @@ contains
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
+      real(8),dimension(2)                        :: e1,e2,bk1,bk2
+      real(8)                                     :: bklen
+      !
+      e1 = [1d0, 0d0]
+      e2 = [0d0, 1d0]
+      call TB_set_ei(eix=e1,eiy=e2)
+      bklen=2d0*pi
+      bk1=bklen*[1d0, 0d0]
+      bk2=bklen*[0d0, 1d0]
+      call TB_set_bk(bkx=bk1,bky=bk2)
       !
       call TB_build_kgrid([Nkx,Nky],kgrid)
       kgrid(:,1)=kgrid(:,1)/Nx
@@ -915,10 +930,11 @@ contains
       wt=zero
       hloc=zero
       !
+      ! SEVER !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
       Wt = 1d0/(Nkx*Nky)
       Hloc=hloc_model(Nlso,Mh,ts,lambda)
-         !
+      !
    end subroutine generate_hk_hloc
 
    !+------------------------------------------------------------------+
@@ -980,7 +996,7 @@ contains
       do ik=1,Nktot
          knumber(ik)=ik
          call eigh(hk_topo(:,:,ik),eigval_topo(:,ik))
-         call dmft_gk_realaxis(Hk_bare(:,:,ik),1d0,Gkreal(ik,:,:,:,:,:),Sigma(ik,:,:,:,:,:)) 
+         call dmft_gk_realaxis(Hk_bare(:,:,ik),Gkreal(ik,:,:,:,:,:),Sigma(ik,:,:,:,:,:)) 
          call eigh(hk_bare(:,:,ik),eigval_bare(:,ik)) !THIS AFTER GK!!!!!
       enddo
       !
@@ -1179,9 +1195,9 @@ contains
     Nso=Nspin*Norb
     !
     allocate(kpath(3,2))
-    kpath(1,:)=[0.0,1.0]!G-e<-R
-    kpath(2,:)=[0.0,0.0]!G
-    kpath(3,:)=[1.0,0.0]!G+e->R
+    kpath(1,:)=[0.0,0.0]!G-e<-R
+    kpath(2,:)=[1.0,0.0]!G
+    kpath(3,:)=[2.0,0.0]!G+e->R
     !kpath(4,:)=[1.0-0.35,0.0]!G-e<-R
     !kpath(5,:)=[1.0,0.0]!G
     !kpath(6,:)=[1.0+0.35,0.0]!G+e->R
@@ -1193,6 +1209,7 @@ contains
     allocate(Hk_bare(Nspin*Norb,Nspin*Norb,Nktot));Hk_bare=zero
     call TB_build_model(hk_bare,hk_periodized,Nspin*Norb,kpath,Nkpath)
     !
+    !
     allocate(kpoints(Nktot,2))
     call TB_build_kgrid(kpath,Nkpath,kpoints)
     if(allocated(Sigmamats))deallocate(Sigmamats)
@@ -1200,8 +1217,8 @@ contains
     allocate(Sigmamats(Nktot,Nspin,Nspin,Norb,Norb,Lmats))
     allocate(Sigmareal(Nktot,Nspin,Nspin,Norb,Norb,Lreal))
     do ik=1,Nktot
-      Sigmamats(ik,:,:,:,:,:)=periodize_sigma_mats(kpoints(ik,:),wprint=.false.)
-      Sigmareal(ik,:,:,:,:,:)=periodize_sigma_real(kpoints(ik,:),wprint=.false.)
+      Sigmamats(ik,:,:,:,:,:)=periodize_sigma_mscheme_mats(kpoints(ik,:),wprint=.false.)
+      Sigmareal(ik,:,:,:,:,:)=periodize_sigma_mscheme_real(kpoints(ik,:),wprint=.false.)
     enddo
     !
     Linterval = 50000 !Maximum number of allowed intervals to look for zeros&poles
@@ -1295,9 +1312,9 @@ contains
     Nso=Nspin*Norb
     !
     allocate(kpath(3,2))
-    kpath(1,:)=[0.0,1.0]!G-e<-R
-    kpath(2,:)=[0.0,0.0]!G
-    kpath(3,:)=[1.0,0.0]!G+e->R
+    kpath(1,:)=[0.0,0.0]!G-e<-R
+    kpath(2,:)=[1.0,0.0]!G
+    kpath(3,:)=[2.0,0.0]!G+e->R
     !kpath(4,:)=[1.0-0.35,0.0]!G-e<-R
     !kpath(5,:)=[1.0,0.0]!G
     !kpath(6,:)=[1.0+0.35,0.0]!G+e->R

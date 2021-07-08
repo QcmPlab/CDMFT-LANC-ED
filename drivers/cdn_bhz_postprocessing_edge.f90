@@ -30,8 +30,8 @@ program cdn_bhz_postprocessing_edge
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    character(len=6)                                                       :: scheme
    type(finter_type)                                                      :: finter_func
-   complex(8),dimension(:,:,:,:,:),allocatable                            :: dummy_real
-   complex(8),dimension(:,:,:,:,:),allocatable                            :: dummy_mats
+   complex(8),dimension(:,:,:),allocatable                                :: dummy_real
+   complex(8),dimension(:,:,:),allocatable                                :: dummy_mats
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
    integer                                                                :: rank
@@ -90,10 +90,16 @@ program cdn_bhz_postprocessing_edge
    wr     = linspace(wini,wfin,Lreal)
    !
    !Allocate:
+   allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Smats=zero
+   allocate(Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Sreal=zero
+   allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gmats=zero
+   allocate(Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Greal=zero
+   !
    allocate(Smats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Smats_ineq=zero
    allocate(Sreal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Sreal_ineq=zero
    allocate(Gmats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gmats_ineq=zero
    allocate(Greal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Greal_ineq=zero
+   !
    allocate(Smats_all(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Smats_all=zero
    allocate(Sreal_all(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal));Sreal_all=zero
    allocate(Gmats_all(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats));Gmats_all=zero
@@ -101,7 +107,7 @@ program cdn_bhz_postprocessing_edge
    !
    allocate(Hloc_nnnn(Nsites,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_nnnn=zero
    allocate(Hloc_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb));Hloc_ineq=zero
-   allocate(dummy_mats(Nspin,Nspin,Norb,Norb,Lmats),dummy_real(Nspin,Nspin,Norb,Norb,Lreal))
+   allocate(dummy_mats(Nsites*Nso,Nsites*Nso,Lmats),dummy_real(Nsites*Nso,Nsites*Nso,Lreal))
 
    !Build Hk and Hloc
    call generate_hk_hloc()
@@ -118,17 +124,17 @@ program cdn_bhz_postprocessing_edge
    do icounter=1,Nineq
     lambdasym_vector(icounter,1)=Mh
    enddo
-   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0,0.d0,0.d0))
+   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(zeye(Nlso))
    !
    do icounter=1,Nineq
     lambdasym_vector(icounter,2)=ts
    enddo
-   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0,0.d0))
+   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(zeye(Nlso))
    !
    do icounter=1,Nineq
     lambdasym_vector(icounter,3)=lambda
    enddo
-   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
+   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(zeye(Nlso))
    !
    !setup solver
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
@@ -137,11 +143,11 @@ program cdn_bhz_postprocessing_edge
    allocate(bath_prev(Nineq,Nb))
    call ed_init_solver(comm,bath)
    !
-   call ed_read_impG(Nineq)
+   !call ed_read_impG(Nineq)
    call ed_read_impSigma(Nineq)
    !
-   call ed_get_gimp_matsubara(Gmats_ineq,Nineq)
-   call ed_get_gimp_realaxis(Greal_ineq,Nineq)
+   !call ed_get_gimp_matsubara(Gmats_ineq,Nineq)
+   !call ed_get_gimp_realaxis(Greal_ineq,Nineq)
    call ed_get_sigma_matsubara(Smats_ineq,Nineq)
    call ed_get_sigma_realaxis(Sreal_ineq,Nineq)
    !
@@ -149,12 +155,13 @@ program cdn_bhz_postprocessing_edge
      ineq = isites2ineq(isites)
      Smats_all(isites,:,:,:,:,:,:,:) = Smats_ineq(ineq,:,:,:,:,:,:,:)
      Sreal_all(isites,:,:,:,:,:,:,:) = Sreal_ineq(ineq,:,:,:,:,:,:,:)
-     Gmats_all(isites,:,:,:,:,:,:,:) = Gmats_ineq(ineq,:,:,:,:,:,:,:)
-     Greal_all(isites,:,:,:,:,:,:,:) = Greal_ineq(ineq,:,:,:,:,:,:,:)
+     !Gmats_all(isites,:,:,:,:,:,:,:) = Gmats_ineq(ineq,:,:,:,:,:,:,:)
+     !Greal_all(isites,:,:,:,:,:,:,:) = Greal_ineq(ineq,:,:,:,:,:,:,:)
    enddo
-   STOP
    !
    !RETRIEVE AND PERIODIZE
+   dummy_mats=periodize_sigma_block_real([pi/2,0.d0],1)
+   call get_zeros()
    !
 
 contains
@@ -182,14 +189,16 @@ contains
        Idmax=      i*N
        Hrk(Idmin:Idmax,Idmin:Idmax)=Hmat 
     enddo
-    do i=1,Nsites-1
-       Idmin=1 + (i-1)*N
-       Idmax=        i*N
-       Itmin=1 +     i*N
-       Itmax=    (i+1)*N
-       Hrk(Idmin:Idmax,Itmin:Itmax)=Tmat
-       Hrk(Itmin:Itmax,Idmin:Idmax)=TmatH
-    enddo
+    if(Nsites>1)then
+      do i=1,Nsites-1
+         Idmin=1 + (i-1)*N
+         Idmax=        i*N
+         Itmin=1 +     i*N
+         Itmax=    (i+1)*N
+         Hrk(Idmin:Idmax,Itmin:Itmax)=Tmat
+         Hrk(Itmin:Itmax,Idmin:Idmax)=TmatH
+      enddo
+    endif
     if(pbc)then
        Itmin=1+(Nsites-1)*N
        Itmax=0+Nsites*N
@@ -202,41 +211,12 @@ contains
   function t0_rk_bhz(N) result(H)
     integer                    :: N,i,Idmin,Idmax
     complex(8),dimension(N,N)  :: H
-    if (N/=Nlso) stop "t0_rk_bhz: wrong dimension, the block has to be Nlso"
     do i=1,N/2
        Idmin=2*i-1
        Idmax=2*i
-       H(Idmin:Idmax,Idmin:Idmax)=t_y(ts,lambda)
+       H(Idmin:Idmax,Idmin:Idmax)=t_y()
     enddo
   end function t0_rk_bhz
-
-
-   function Hloc_model(N,Mh_,ts_,lambda_) result (H0)
-      integer                                               :: N,ilat,jlat,ispin,iorb,jorb,ind1,ind2
-      real(8)                                               :: Mh_,ts_,lambda_
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
-      complex(8),dimension(N,N)                             :: H0
-      !
-      hopping_matrix=zero
-      !
-      do ispin=1,Nspin
-         do ilat=1,Nx
-           ind1=ilat
-           hopping_matrix(ind1,ind1,ispin,ispin,:,:)= t_m(mh_)
-           if(ilat<Nx)then
-              ind2=ilat+1
-              hopping_matrix(ind2,ind1,ispin,ispin,:,:)= t_x(ts_,lambda_,ispin)
-           endif
-           if(ilat>1)then
-              ind2=ilat-1
-              hopping_matrix(ind2,ind1,ispin,ispin,:,:)= dconjg(transpose(t_x(ts_,lambda_,ispin)))
-           endif
-         enddo
-      enddo
-      !
-      H0=nnn2lso(hopping_matrix)
-      !
-   end function hloc_model
 
 
    function hk_model(kpoint,N) result(Hk)
@@ -247,48 +227,54 @@ contains
       !
       hopping_matrix=zero
       !
+      !
       do ispin=1,Nspin
-        ind1=1
-        ind2=Nx
-        hopping_matrix(ind2,ind1,ispin,ispin,:,:)=hopping_matrix(ind2,ind1,ispin,ispin,:,:) + dconjg(transpose(t_x(ts,lambda,ispin)))*exp(xi*kpoint*Nx)
-        hopping_matrix(ind1,ind2,ispin,ispin,:,:)=hopping_matrix(ind1,ind2,ispin,ispin,:,:) + t_x(ts,lambda,ispin)*exp(-xi*kpoint*Nx)
+         do ilat=1,Nx
+           hopping_matrix(ilat,ilat,ispin,ispin,:,:)= t_m()
+           if(ilat<Nx)then
+              hopping_matrix(ilat+1,ilat,ispin,ispin,:,:)= t_x(ispin)
+           endif
+           if(ilat>1)then
+              hopping_matrix(ilat-1,ilat,ispin,ispin,:,:)= dconjg(transpose(t_x(ispin)))
+           endif
+         enddo 
+         hopping_matrix(Nx,1,ispin,ispin,:,:)=hopping_matrix(Nx,1,ispin,ispin,:,:) + dconjg(transpose(t_x(ispin)))*exp(xi*kpoint*Nx)
+         hopping_matrix(1,Nx,ispin,ispin,:,:)=hopping_matrix(1,Nx,ispin,ispin,:,:) + t_x(ispin)*exp(-xi*kpoint*Nx)
       enddo
       !
-      Hk=nnn2lso(hopping_matrix)+hloc_model(N,Mh,ts,lambda)
+      Hk=nnn2lso(hopping_matrix)
       !
    end function hk_model
 
 
    !AUXILLIARY HOPPING MATRIX CONSTRUCTORS
 
-   function t_m(mass) result(tmpmat)
+   function t_m() result(tmpmat)
       complex(8),dimension(Norb,Norb) :: tmpmat
-      real(8)                         :: mass
       !
       tmpmat=zero
-      tmpmat=mass*pauli_sigma_z
+      tmpmat=Mh*pauli_sigma_z
       !
    end function t_m
 
-   function t_x(hop1,hop2,spinsign) result(tmpmat)
+   function t_x(spinsign) result(tmpmat)
       complex(8),dimension(Norb,Norb) :: tmpmat
-      real(8)                         :: hop1,hop2,sz
+      real(8)                         :: sz
       integer                         :: spinsign
       !
       tmpmat=zero
       sz=(-1.d0)**(spinsign+1)
-      tmpmat=-hop1*pauli_sigma_z+0.5d0*sz*xi*hop2*pauli_sigma_x
+      tmpmat=-ts*pauli_sigma_z+0.5d0*sz*xi*lambda*pauli_sigma_x
       !
    end function t_x
 
-   function t_y(hop1,hop2) result(tmpmat)
+   function t_y() result(tmpmat)
       complex(8),dimension(Norb,Norb) :: tmpmat
-      real(8)                         :: hop1,hop2
       !
       tmpmat=zero
-      tmpmat=-hop1*pauli_sigma_z
-      tmpmat(1,2)=-hop2*0.5d0
-      tmpmat(2,1)=hop2*0.5d0
+      tmpmat=-ts*pauli_sigma_z
+      tmpmat(1,2)=-lambda*0.5d0
+      tmpmat(2,1)=lambda*0.5d0
       !
    end function t_y
 
@@ -331,6 +317,7 @@ contains
       where(abs(Hloc)<1d-6)Hloc=zero
       !
    end subroutine generate_hk_hloc
+
 
    !+------------------------------------------------------------------+
    !PURPOSE  : Auxilliary reshape functions
@@ -532,35 +519,37 @@ contains
    !PURPOSE: periodized Hamiltonian, for periodization schemes
    !-------------------------------------------------------------------------------------------
 
-   function hk_periodized(kpoint,Nsites,N) result(hk)
-    integer                                 :: N,Nsites,ii,Nlat_tmp,Nx_tmp
+   
+   function bhz_edge_model_periodized(kpoint,Nsites,N,pbc) result(hk)
+    integer                                 :: Nsites,N,ii,Nlat_tmp,Nx_tmp
     real(8),dimension(:)                    :: kpoint
     complex(8),dimension(Nsites*N,Nsites*N) :: hk
-    real(8)                                 :: kx
     logical                                 :: pbc
     !
-    pbc=.false.
+    !pbc=.false.
     !
     Nlat_tmp=Nlat
     Nx_tmp=Nx
     Nlat=1
     Nx=1
     !
-    Hk =  bhz_edge_model(kpoint,Nsites,N,pbc)
+    !
+    Hk = bhz_edge_model(kpoint,Nsites,N,pbc)
     !
     Nlat=Nlat_tmp
     Nx=Nx_tmp
     !
-   end function hk_periodized
+   end function bhz_edge_model_periodized
   
    
    !-------------------------------------------------------------------------------------------
    !PURPOSE: periodization M scheme
    !-------------------------------------------------------------------------------------------
    
-   function periodize_sigma_Mscheme_real(kpoint,wprint) result(s_lso)
-      integer                                                     :: ilat,jlat,ispin,iorb,jorb,ii
-      real(8),dimension(:)                                        :: kpoint
+   function periodize_sigma_block_real(kpoint_,isite,wprint) result(s_lso)
+      integer                                                     :: isite,ilat,jlat,ispin,iorb,jorb,ii
+      real(8),dimension(1)                                        :: kpoint
+      real(8),dimension(:)                                        :: kpoint_
       integer,dimension(:),allocatable                            :: ind1,ind2
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat
       complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: sreal_periodized,greal_periodized
@@ -573,6 +562,9 @@ contains
       !
       wprint_=.true.;if(present(wprint))wprint_=wprint
       pbc=.false.
+      !
+      kpoint(1)=kpoint_(1)
+      !
       Mh_tmp=Mh
       ts_tmp=ts
       lambda_tmp=lambda
@@ -583,11 +575,11 @@ contains
       sreal_periodized=zero
       greal_periodized=zero
       !
-      ts=0.d0
-      lambda=0.d0
+      ts=0d0
+      lambda=0d0
       !
       do ii=1,Lreal
-         tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nspin*Norb,pbc) - nnn2lso(Sreal(:,:,:,:,:,:,ii))
+         tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nlat*Nspin*Norb,pbc) - nnn2lso(Sreal_all(isite,:,:,:,:,:,:,ii))
          call inv(tmpmat)
          greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
       enddo
@@ -609,20 +601,28 @@ contains
          g_lso(:,:,ii)=nn2so(greal_periodized(:,:,:,:,ii))
          call inv(g_lso(:,:,ii))
          Mh=0
-         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model(kpoint,1,Nspin*Norb,pbc)
+         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)
          Mh=Mh_tmp
-         s_lso(:,:,ii)=(dcmplx(wr(ii),eps)+xmu)*eye(Nspin*Norb)-bhz_edge_model(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
+         s_lso(:,:,ii)=(dcmplx(wr(ii),eps)+xmu)*eye(Nspin*Norb)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
          call inv(g_lso(:,:,ii))
          greal_periodized(:,:,:,:,ii)=so2nn(g_lso(:,:,ii))
          sreal_periodized(:,:,:,:,ii)=so2nn(s_lso(:,:,ii))
       enddo
       !
+      if(wprint_)then
+        do iorb=1,Nso
+           do jorb=1,Nso
+              call splot("perSigma_block_l"//reg(txtfy(iorb))//"m"//reg(txtfy(jorb))//"_realw.ed",wr,s_lso(iorb,jorb,:))
+           enddo
+        enddo
+      endif
       !   
-   end function periodize_sigma_Mscheme_real
+   end function periodize_sigma_block_real
    !
-   function periodize_sigma_Mscheme_mats(kpoint,wprint) result(s_lso)
-      integer                                                     :: ilat,jlat,ispin,iorb,jorb,ii
-      real(8),dimension(:)                                        :: kpoint
+   function periodize_sigma_block_mats(kpoint_,isite,wprint) result(s_lso)
+      integer                                                     :: isite,ilat,jlat,ispin,iorb,jorb,ii
+      real(8),dimension(1)                                        :: kpoint
+      real(8),dimension(:)                                        :: kpoint_
       integer,dimension(:),allocatable                            :: ind1,ind2
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat
       complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized,gmats_periodized
@@ -635,6 +635,9 @@ contains
       !
       wprint_=.true.;if(present(wprint))wprint_=wprint
       pbc=.false.
+      !
+      kpoint(1)=kpoint_(1)
+      !
       Mh_tmp=Mh
       ts_tmp=ts
       lambda_tmp=lambda
@@ -645,14 +648,16 @@ contains
       smats_periodized=zero
       gmats_periodized=zero
       !
-      ts=0.d0
-      lambda=0.d0
+      !
+      ts=0d0
+      lambda=0d0
       !
       do ii=1,Lmats
-         tmpmat=(wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nspin*Norb,pbc) - nnn2lso(Smats(:,:,:,:,:,:,ii))
+         tmpmat=(wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nlat*Nspin*Norb,pbc) - nnn2lso(Smats_all(isite,:,:,:,:,:,:,ii))
          call inv(tmpmat)
          gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
       enddo
+      !
       !
       ts=ts_tmp
       lambda=lambda_tmp
@@ -671,43 +676,51 @@ contains
          g_lso(:,:,ii)=nn2so(gmats_periodized(:,:,:,:,ii))
          call inv(g_lso(:,:,ii))
          Mh=0
-         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model(kpoint,1,Nspin*Norb,pbc)
+         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)
          Mh=Mh_tmp
-         s_lso(:,:,ii)=(wm(ii)+xmu)*eye(Nspin*Norb)-bhz_edge_model(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
+         s_lso(:,:,ii)=(wm(ii)+xmu)*eye(Nspin*Norb)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
          call inv(g_lso(:,:,ii))
          gmats_periodized(:,:,:,:,ii)=so2nn(g_lso(:,:,ii))
          smats_periodized(:,:,:,:,ii)=so2nn(s_lso(:,:,ii))
       enddo
       !
+      if(wprint_)then
+        do iorb=1,Nso
+           do jorb=1,Nso
+              call splot("perSigma_block_l"//reg(txtfy(iorb))//"m"//reg(txtfy(jorb))//"_iw.ed",imag(wm),s_lso(iorb,jorb,:))
+           enddo
+        enddo
+      endif
       !   
-   end function periodize_sigma_Mscheme_mats
+   end function periodize_sigma_block_mats
   
+    
   !---------------------------------------------------------------------
   !PURPOSE: GET ZEROS ON THE REAL AXIS
   !---------------------------------------------------------------------
-  subroutine get_zeros()
-    integer                                       :: i,j,ik,ix,iy,Niso,Nktot,Npts,isites,idmin,idmax
-    integer                                       :: iorb,jorb
-    integer                                       :: isporb,jsporb
-    integer                                       :: ispin,jspin
-    integer                                       :: iso,unit
-    real(8),dimension(Nspin*Norb)                 :: dzeta
-    complex(8),allocatable,dimension(:,:,:)       :: Hk_bare,Hk_topo
-    complex(8),dimension(Nspin*Norb,Nspin*Norb)   :: zeta,z_adj,fg,gdelta,fgk
-    complex(8),dimension(:,:,:,:,:),allocatable   :: gloc
-    complex(8),dimension(:,:,:,:),allocatable :: Sigmareal,Sigmamats
-    complex(8),dimension(:,:,:,:),allocatable     :: gk,gfoo,ReSmat
-    complex(8)                                    :: iw
-    complex(8),dimension(:,:),allocatable         :: detGiw
-    real(8),dimension(Lreal)                      :: Den
-    real(8),dimension(:),allocatable              :: Ipoles,Xcsign,Iweight
-    real(8),dimension(:,:),allocatable            :: Ipoles3d,kpoints
-    real(8),dimension(:,:),allocatable            :: Mpoles,Mweight
-    real(8),dimension(:,:,:),allocatable          :: Mpoles3d
-    integer                                       :: Linterval
-    integer                                       :: count,Ninterval,maxNinterval,int
-    real(8)                                       :: sign,sign_old
-    real(8),dimension(:,:),allocatable :: kpath
+   subroutine get_zeros()
+    integer                                                     :: i,j,ik,ix,iy,Nso,Niso,Nktot,Npts
+    integer                                                     :: iorb,jorb, isites, idmin,idmax
+    integer                                                     :: isporb,jsporb
+    integer                                                     :: ispin,jspin
+    integer                                                     :: iso,unit
+    real(8),dimension(Nspin*Norb)                               :: dzeta
+    complex(8),allocatable,dimension(:,:,:)                     :: Hk_bare,Hk_topo
+    complex(8),dimension(Nsites*Nspin*Norb,Nsites*Nspin*Norb)   :: zeta,z_adj,fg,gdelta,fgk
+    complex(8),dimension(:,:,:,:,:),allocatable                 :: gloc
+    complex(8),dimension(:,:,:,:),allocatable                   :: Sigmareal,Sigmamats
+    complex(8),dimension(:,:,:,:),allocatable                   :: gk,gfoo,ReSmat
+    complex(8)                                                  :: iw
+    complex(8),dimension(:,:),allocatable                       :: detGiw
+    real(8),dimension(Lreal)                                    :: Den
+    real(8),dimension(:),allocatable                            :: Ipoles,Xcsign,Iweight
+    real(8),dimension(:,:),allocatable                          :: Ipoles3d,kpoints
+    real(8),dimension(:,:),allocatable                          :: Mpoles,Mweight
+    real(8),dimension(:,:,:),allocatable                        :: Mpoles3d
+    integer                                                     :: Linterval
+    integer                                                     :: count,Ninterval,maxNinterval,int
+    real(8)                                                     :: sign,sign_old
+    real(8),dimension(:,:),allocatable                          :: kpath
     !
     Nso=Nspin*Norb
     Niso=Nsites*Nspin*Norb
@@ -716,29 +729,30 @@ contains
     kpath(1,:)=[0.0,0.0]!G-e<-R
     kpath(2,:)=[1.0,0.0]!G
     kpath(3,:)=[2.0,0.0]!G+e->R
-    !kpath(4,:)=[1.0-0.35,0.0]!G-e<-R
-    !kpath(5,:)=[1.0,0.0]!G
-    !kpath(6,:)=[1.0+0.35,0.0]!G+e->R
     kpath=kpath*pi
     Npts  = size(kpath,1)
     Nktot = (Npts-1)*Nkpath
     !
     if(allocated(Hk_bare))deallocate(Hk_bare)
     allocate(Hk_bare(Niso,Niso,Nktot));Hk_bare=zero
-    call TB_build_model(hk_bare,bhz_edge_model,Ly,Nso,kpath,pbc=.false.,wdos=.false.)
+    call TB_build_model(hk_bare,bhz_edge_model_periodized,Nsites,Nso,kpath,Nkpath,pbc=.false.)
     !
     allocate(kpoints(Nktot,2))
     call TB_build_kgrid(kpath,Nkpath,kpoints)
+    !
     if(allocated(Sigmamats))deallocate(Sigmamats)
     if(allocated(Sigmareal))deallocate(Sigmareal)
     allocate(Sigmamats(Nktot,Niso,Niso,Lmats))
     allocate(Sigmareal(Nktot,Niso,Niso,Lreal))
+    Sigmamats=zero
+    Sigmareal=zero
+    !
     do ik=1,Nktot
       do isites=1,Nsites
         idmin=1+(isites-1)*Nso
         idmax=isites*Nso
-        Sigmamats(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_Mscheme_mats(kpoints(ik,:),wprint=.false.)
-        Sigmareal(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_Mscheme_real(kpoints(ik,:),wprint=.false.)
+        Sigmamats(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_mats(kpoints(ik,:),isites,wprint=.false.)
+        Sigmareal(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_real(kpoints(ik,:),isites,wprint=.false.)
       enddo
     enddo
     !

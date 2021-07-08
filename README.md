@@ -36,7 +36,7 @@ The code structure is as follow:
 
 ### MILESTONE 3
 
-- [ ] Add real-space CDMFT case for finite systems
+- [x] Add real-space CDMFT case for finite systems
 - [ ] Test Kane-Mele model with real-space CDMFT
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
