@@ -177,8 +177,7 @@ subroutine init_Hreplica_symmetries_site(Hvec,lambdavec)
   if(ed_verbose>2)call print_hloc(Hreplica_build(Hreplica_lambda))
 end subroutine init_Hreplica_symmetries_site
 
-
-
+ 
 subroutine init_Hreplica_symmetries_lattice(Hvec,lambdavec)
   complex(8),dimension(:,:,:,:,:,:,:) :: Hvec
   real(8),dimension(:,:)              :: lambdavec ![Nsites,Nsym]

@@ -85,7 +85,7 @@ contains
   end subroutine chi2_fitgf_generic_normal
   
   
-  
+#if __GFORTRAN__ &&  __GNUC__ > 8     
   !+----------------------------------------------------------------------!
   ! PURPOSE: given a number of independent baths, evaluate N independent
   ! Delta/G0 functions and fit them to update the effective baths for ED.
@@ -116,7 +116,7 @@ contains
     ed_file_suffix=""
   end subroutine chi2_fitgf_lattice_normal
 
-
+#endif
 
 
 

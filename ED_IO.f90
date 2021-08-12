@@ -14,14 +14,18 @@ MODULE ED_IO
   interface ed_get_sigma_matsubara
      module procedure ed_get_sigma_matsubara_1
      module procedure ed_get_sigma_matsubara_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_sigma_matsubara_lattice_1
+#endif
      !     module procedure ed_get_sigma_matsubara_lattice_2
   end interface ed_get_sigma_matsubara
 
   interface ed_get_sigma_realaxis
      module procedure ed_get_sigma_real_1
      module procedure ed_get_sigma_real_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_sigma_real_lattice_1
+#endif
      !     module procedure ed_get_sigma_real_lattice_2
   end interface ed_get_sigma_realaxis
 
@@ -29,7 +33,9 @@ MODULE ED_IO
   interface ed_get_gimp_matsubara
      module procedure ed_get_gimp_matsubara_1
      module procedure ed_get_gimp_matsubara_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_gimp_matsubara_lattice_1
+#endif
      !     module procedure ed_get_gimp_matsubara_lattice_2
   end interface ed_get_gimp_matsubara
 
@@ -37,7 +43,9 @@ MODULE ED_IO
   interface ed_get_gimp_realaxis
      module procedure ed_get_gimp_real_1
      module procedure ed_get_gimp_real_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      procedure ed_get_gimp_real_lattice_1
+#endif
      !module procedure ed_get_gimp_real_lattice_2
   end interface ed_get_gimp_realaxis
 
@@ -48,7 +56,9 @@ MODULE ED_IO
   interface ed_get_g0imp_matsubara
      module procedure ed_get_g0imp_matsubara_1
      module procedure ed_get_g0imp_matsubara_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_g0imp_matsubara_lattice_1
+#endif
      !     module procedure ed_get_g0imp_matsubara_lattice_2
   end interface ed_get_g0imp_matsubara
 
@@ -56,7 +66,9 @@ MODULE ED_IO
   interface ed_get_g0imp_realaxis
      module procedure ed_get_g0imp_real_1
      module procedure ed_get_g0imp_real_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_g0imp_real_lattice_1
+#endif
      !     module procedure ed_get_g0imp_real_lattice_2
   end interface ed_get_g0imp_realaxis
 
@@ -97,68 +109,92 @@ MODULE ED_IO
   interface ed_get_dens
      module procedure ed_get_dens_1
      module procedure ed_get_dens_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_dens_lattice_1
+#endif
      !     module procedure ed_get_dens_lattice_2
   end interface ed_get_dens
 
   interface ed_get_mag
      module procedure ed_get_mag_1
      module procedure ed_get_mag_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_mag_lattice_1
+#endif
      !     module procedure ed_get_mag_lattice_2
   end interface ed_get_mag
 
   interface ed_get_docc
      module procedure ed_get_docc_1
      module procedure ed_get_docc_2
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure ed_get_docc_lattice_1
+#endif
      !     module procedure ed_get_docc_lattice_2
   end interface ed_get_docc
 
   interface ed_get_epot
      module procedure :: ed_get_epot_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_epot_lattice
+#endif
   end interface ed_get_epot
 
   interface ed_get_eint
      module procedure :: ed_get_eint_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_eint_lattice
+#endif
   end interface ed_get_eint
 
   interface ed_get_ehartree
      module procedure :: ed_get_ehartree_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_ehartree_lattice
+#endif
   end interface ed_get_ehartree
 
   interface ed_get_eknot
      module procedure :: ed_get_eknot_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_eknot_lattice
+#endif
   end interface ed_get_eknot
 
 
   interface ed_get_dust
      module procedure :: ed_get_dust_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_dust_lattice
+#endif
   end interface ed_get_dust
 
   interface ed_get_dund
      module procedure :: ed_get_dund_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_dund_lattice
+#endif
   end interface ed_get_dund
 
   interface ed_get_dse
      module procedure :: ed_get_dse_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_dse_lattice
+#endif
   end interface ed_get_dse
 
   interface ed_get_dph
      module procedure :: ed_get_dph_
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_get_dph_lattice
+#endif
   end interface ed_get_dph
 
    interface ed_get_density_matrix
       module procedure :: ed_get_density_matrix_single
+#if __GFORTRAN__ &&  __GNUC__ > 8     
       module procedure :: ed_get_density_matrix_lattice
+#endif
    end interface ed_get_density_matrix
 
   interface ed_gf_cluster
@@ -168,12 +204,16 @@ MODULE ED_IO
 
   interface ed_read_impsigma
      module procedure :: ed_read_impsigma_single
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_read_impsigma_lattice
+#endif
   end interface ed_read_impsigma
 
   interface ed_read_impG
      module procedure :: ed_read_impG_single
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_read_impG_lattice
+#endif
   end interface ed_read_impG
 
 
@@ -487,6 +527,8 @@ contains
      if(allocated(wr))deallocate(wr)
      !
    end subroutine ed_read_impSigma_single
+ 
+#if __GFORTRAN__ &&  __GNUC__ > 8      
    
    subroutine ed_read_impSigma_lattice(Nineq)
     integer :: Nineq
@@ -510,7 +552,7 @@ contains
     ed_file_suffix=""
   end subroutine ed_read_impSigma_lattice
    
-   
+#endif   
 
    subroutine ed_read_impG_single
      integer                                           :: i,ispin,isign,unit(2),iorb,jorb,ilat,jlat
@@ -542,7 +584,8 @@ contains
      if(allocated(wr))deallocate(wr)
      !
    end subroutine ed_read_impG_single
-   
+
+#if __GFORTRAN__ &&  __GNUC__ > 8      
    
    subroutine ed_read_impG_lattice(Nineq)
     integer :: Nineq
@@ -565,6 +608,8 @@ contains
     enddo
     ed_file_suffix=""
   end subroutine ed_read_impG_lattice
+  
+#endif
 
 END MODULE ED_IO
 

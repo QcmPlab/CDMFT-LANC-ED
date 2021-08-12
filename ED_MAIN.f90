@@ -20,7 +20,9 @@ module ED_MAIN
      module procedure :: ed_init_solver_single
 #ifdef _MPI
      module procedure :: ed_init_solver_single_mpi
-     module procedure :: ed_init_solver_lattice_mpi     
+#if __GFORTRAN__ &&  __GNUC__ > 8     
+     module procedure :: ed_init_solver_lattice_mpi   
+#endif  
 #endif
   end interface ed_init_solver
 
@@ -28,7 +30,9 @@ module ED_MAIN
      module procedure :: ed_solve_single
 #ifdef _MPI
      module procedure :: ed_solve_single_mpi
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure :: ed_solve_lattice_mpi
+#endif
 #endif
   end interface ed_solve
 
@@ -115,6 +119,7 @@ contains
 
 
 #ifdef _MPI
+#if __GFORTRAN__ &&  __GNUC__ > 8     
   subroutine ed_init_solver_lattice_mpi(MpiComm,bath)
     integer                        :: MpiComm
     real(8),dimension(:,:)         :: bath ![Nlat][:]
@@ -173,6 +178,7 @@ contains
    end do
    !
   end subroutine ed_init_solver_lattice_mpi
+#endif
 #endif
 
   !+-----------------------------------------------------------------------------+!
@@ -259,6 +265,7 @@ contains
 
   !FALL BACK: DO A VERSION THAT DOES THE SITES IN PARALLEL USING SERIAL ED CODE
 #ifdef _MPI
+#if __GFORTRAN__ &&  __GNUC__ > 8     
   subroutine ed_solve_lattice_mpi(MpiComm,bath,Hloc,mpi_lanc,Uloc_ii,Ust_ii,Jh_ii,Jp_ii,Jx_ii)
     integer          :: MpiComm
     !inputs
@@ -344,6 +351,7 @@ contains
     ed_file_suffix=""
     !
   end subroutine ed_solve_lattice_mpi
+#endif
 #endif
 
 

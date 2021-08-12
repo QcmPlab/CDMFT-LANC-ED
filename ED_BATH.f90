@@ -42,7 +42,9 @@ MODULE ED_BATH
      module procedure init_Hreplica_direct_lso
      module procedure init_Hreplica_direct_nnn
      module procedure init_Hreplica_symmetries_site
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure init_Hreplica_symmetries_lattice
+#endif
   end interface set_Hreplica
   
   

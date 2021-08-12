@@ -147,9 +147,11 @@ MODULE ED_VARS_GLOBAL
   !PRIVATE
   !=========================================================  
   integer,allocatable,dimension(:)                   :: neigen_sector
-  !--------------- LATTICE WRAP VARIABLES -----------------!  
+  !--------------- LATTICE WRAP VARIABLES -----------------! 
+#if __GFORTRAN__ &&  __GNUC__ > 8      
   integer,allocatable,dimension(:,:)                 :: neigen_sector_ineq
   integer,allocatable,dimension(:)                   :: neigen_total_ineq
+#endif
   logical                                            :: trim_state_list=.false.
 
   !Partition function
@@ -176,11 +178,12 @@ MODULE ED_VARS_GLOBAL
   type(GFmatrix),allocatable,dimension(:,:,:,:,:,:) :: impGmatrix
 
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
+#if __GFORTRAN__ &&  __GNUC__ > 8     
    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
    complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii        ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
    complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: imp_density_matrix_ii    ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
-
+#endif
 
 
   ! !Spin Susceptibilities
@@ -244,7 +247,7 @@ MODULE ED_VARS_GLOBAL
    complex(8),allocatable,dimension(:,:,:,:,:,:)          :: imp_density_matrix
 
 
-
+#if __GFORTRAN__ &&  __GNUC__ > 8     
   !--------------- LATTICE WRAP VARIABLES -----------------!
   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq          ![Nlat][Nspin][Nspin][Norb][Norb][L]
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: SAmats_ineq,SAreal_ineq
@@ -257,10 +260,10 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:,:),allocatable,save          :: dens_ineq 
   real(8),dimension(:,:,:),allocatable,save          :: docc_ineq
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
-  !real(8),dimension(:,:,:,:),allocatable,save           :: phisc_ineq
+  !real(8),dimension(:,:,:,:),allocatable,save       :: phisc_ineq
   real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
   real(8),dimension(:,:),allocatable                 :: Hreplica_lambda_ineq
-
+#endif
 
 
   !File suffixes for printing fine tuning.
