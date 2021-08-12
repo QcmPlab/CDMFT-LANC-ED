@@ -18,7 +18,9 @@ MODULE ED_FIT_CHI2
   interface ed_chi2_fitgf
      module procedure chi2_fitgf_generic_normal
      !RDMFT_WRAPPER
+#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure chi2_fitgf_lattice_normal
+#endif
   end interface ed_chi2_fitgf
 
 
