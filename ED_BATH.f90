@@ -79,8 +79,9 @@ MODULE ED_BATH
 
   public :: hreplica_build                   !INTERNAL (for effective_bath)
   public :: hreplica_mask                    !INTERNAL (for effective_bath)
+#if __GFORTRAN__ &&  __GNUC__ > 8     
   public :: hreplica_site                    !INTERNAL (for effective_bath)
-
+#endif
 
 
 
