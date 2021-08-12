@@ -296,6 +296,15 @@ contains
   include "ED_IO/get_Gand_all.f90"
   include "ED_IO/gf_cluster.f90"
 
+#if __GFORTRAN__ &&  __GNUC__ > 8    
+  include "ED_IO/lattice/get_sigma_matsubara.f90"
+  include "ED_IO/lattice/get_sigma_realaxis.f90"
+  include "ED_IO/lattice/get_gimp_matsubara.f90"
+  include "ED_IO/lattice/get_gimp_realaxis.f90"
+  include "ED_IO/lattice/get_g0imp_matsubara.f90"
+  include "ED_IO/lattice/get_g0imp_realaxis.f90"
+#endif
+
 
   !+--------------------------------------------------------------------------+!
   ! PURPOSE: Retrieve measured values of the local observables
@@ -305,10 +314,16 @@ contains
   include "ED_IO/get_docc.f90"
   include "ED_IO/get_eimp.f90"
   include "ED_IO/get_doubles.f90"
-  !
-   include "ED_IO/get_imp_dm.f90"
+  include "ED_IO/get_imp_dm.f90"
 
-
+#if __GFORTRAN__ &&  __GNUC__ > 8    
+  include "ED_IO/lattice/get_dens.f90"
+  include "ED_IO/lattice/get_mag.f90"
+  include "ED_IO/lattice/get_docc.f90"
+  include "ED_IO/lattice/get_eimp.f90"
+  include "ED_IO/lattice/get_doubles.f90"
+  include "ED_IO/lattice/get_imp_dm.f90"
+#endif
 
   !+------------------------------------------------------------------+
   !                         PRINT SIGMA:

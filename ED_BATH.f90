@@ -204,6 +204,9 @@ contains
   !
   !##################################################################
   include 'ED_BATH/hreplica_setup.f90'
+#if __GFORTRAN__ &&  __GNUC__ > 8     
+  include 'ED_BATH/hreplica_setup_lattice.f90'
+#endif
 
 
   !##################################################################
