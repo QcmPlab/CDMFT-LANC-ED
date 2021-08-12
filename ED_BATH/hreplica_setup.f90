@@ -198,18 +198,6 @@ end subroutine init_Hreplica_symmetries_site
 
 
 !+-------------------------------------------------------------------+
-!PURPOSE  : take Hreplica for i-th site in the real-space case
-!+-------------------------------------------------------------------+
-
-  subroutine Hreplica_site(site)
-    integer :: site
-    if(site<1.OR.site>size(Hreplica_lambda_ineq,1))stop "ERROR Hreplica_site: site not in [1,Nlat]"
-    if(.not.allocated(Hreplica_lambda_ineq))stop "ERROR Hreplica_site: Hreplica_lambda_ineq not allocated"
-    Hreplica_lambda(:)  = Hreplica_lambda_ineq(site,:)
-  end subroutine Hreplica_site
-
-
-!+-------------------------------------------------------------------+
 !PURPOSE  : Create bath mask
 !+-------------------------------------------------------------------+
 
