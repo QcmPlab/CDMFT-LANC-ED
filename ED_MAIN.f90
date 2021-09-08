@@ -248,7 +248,7 @@ contains
     !SOLVE THE QUANTUM IMPURITY PROBLEM:
     call diagonalize_impurity()         !find target states by digonalization of Hamiltonian
     call buildgf_impurity()             !build the one-particle impurity Green's functions  & Self-energy
-    ! if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])  
+    !if(chiflag)call buildchi_impurity() !build the local susceptibilities (spin [todo charge])  
     call observables_impurity()         !obtain impurity observables as thermal averages.
     call get_custom_observables()       !obtain custom user-defined observables(if initialized)
     call local_energy_impurity()        !obtain the local energy of the effective impurity problem
@@ -318,12 +318,12 @@ contains
     !solve sites serial, Lanczos with MPI
     if(MPI_MASTER)call start_timer
     do iineq = 1, Nineq
-       write(LOGfile,*)" SOLVES INEQ SITE: "//str(iineq,Npad=4)
+       write(LOGfile,*)" SOLVING INEQ SITE: "//str(iineq,Npad=4)
        ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
        !
        !If required set the local value of U per each site
        if(present(Uloc_ii))Uloc(1:Norb) = Uloc_ii(iineq,1:Norb)
-        if(present(Ust_ii)) Ust = Ust_ii(iineq)
+       if(present(Ust_ii)) Ust = Ust_ii(iineq)
        if(present(Jh_ii))  Jh  = Jh_ii(iineq)
        if(present(Jp_ii))  Jp  = Jp_ii(iineq)
        if(present(Jx_ii))  Jx  = Jx_ii(iineq)

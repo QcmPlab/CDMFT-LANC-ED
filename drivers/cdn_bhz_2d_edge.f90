@@ -226,6 +226,7 @@ contains
     integer                    :: N,i,Idmin,Idmax
     complex(8),dimension(N,N)  :: H
     if (N/=Nlso) stop "t0_rk_bhz: wrong dimension, the block has to be Nlso"
+    H=zero
     do i=1,N/2
        Idmin=2*i-1
        Idmax=2*i
