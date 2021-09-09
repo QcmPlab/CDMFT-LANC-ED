@@ -145,7 +145,7 @@ program cdn_bhz_2d
       !
       !Compute the local gfs:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+      !if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
       do ineq=1,Nineq
         isites = ineq2isites(ineq)
         Gmats_ineq(ineq,:,:,:,:,:,:,:) = Gmats(isites,:,:,:,:,:,:,:)
@@ -176,7 +176,7 @@ program cdn_bhz_2d
 
    !Compute the local gfs:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+   !if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
 
 
    call finalize_MPI()

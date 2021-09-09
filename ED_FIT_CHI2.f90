@@ -146,7 +146,7 @@ contains
     counter=0
     do ibath=1,Nbath
        counter=counter+1
-       Nlambdas(ibath)=bath_(counter)
+       Nlambdas(ibath)=NINT(bath_(counter))
     enddo
     array_bath=bath_(Nbath+1:size(bath_))
     !

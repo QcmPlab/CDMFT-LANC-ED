@@ -211,6 +211,7 @@ contains
   function t0_rk_bhz(N) result(H)
     integer                    :: N,i,Idmin,Idmax
     complex(8),dimension(N,N)  :: H
+    H=zero
     do i=1,N/2
        Idmin=2*i-1
        Idmax=2*i
@@ -740,18 +741,19 @@ contains
     allocate(kpoints(Nktot,2))
     call TB_build_kgrid(kpath,Nkpath,kpoints)
     !
-    if(allocated(Sigmamats))deallocate(Sigmamats)
+    !if(allocated(Sigmamats))deallocate(Sigmamats)
     if(allocated(Sigmareal))deallocate(Sigmareal)
-    allocate(Sigmamats(Nktot,Niso,Niso,Lmats))
+    !allocate(Sigmamats(Nktot,Niso,Niso,Lmats))
     allocate(Sigmareal(Nktot,Niso,Niso,Lreal))
-    Sigmamats=zero
+    !Sigmamats=zero
     Sigmareal=zero
+    !
     !
     do ik=1,Nktot
       do isites=1,Nsites
         idmin=1+(isites-1)*Nso
         idmax=isites*Nso
-        Sigmamats(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_mats(kpoints(ik,:),isites,wprint=.false.)
+        !Sigmamats(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_mats(kpoints(ik,:),isites,wprint=.false.)
         Sigmareal(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_real(kpoints(ik,:),isites,wprint=.false.)
       enddo
     enddo
@@ -775,7 +777,7 @@ contains
        do i=1,Lreal
           zeta(:,:) = (wr(i)+xmu)*eye(Niso) - Hk_bare(:,:,ik) - Sigmareal(ik,:,:,i)
           call inv(zeta)
-          Den(i) = det(zeta)
+          Den(i) = 1.d12*det(zeta)
        enddo
        Xcsign(0)=0.d0
        count=0
@@ -791,14 +793,9 @@ contains
        enddo
        Ninterval=count
        if(count>maxNinterval)maxNinterval=count
-       call init_finter(finter_func,wr,Den,3)
        do int=1,Ninterval
-          Mpoles(ik,int) = brentq(det_poles,Xcsign(int-1),Xcsign(int))
-          Mweight(ik,int)= get_weight(hk_bare(:,:,ik)-Sigmamats(ik,:,:,1))
+          Mpoles(ik,int) = (Xcsign(int-1)+Xcsign(int))/2.d0
        enddo
-       ipoles(ik) = brentq(det_poles,0.d0,wr(Lreal))
-       iweight(ik)= get_weight(hk_bare(:,:,ik)-Sigmamats(ik,:,:,1))
-       call delete_finter(finter_func)
     enddo
     call splot("BHZzeros.ed",ipoles,iweight)
     do int=1,maxNinterval
@@ -806,7 +803,7 @@ contains
        open(unit,file="BHZzeros_int"//reg(txtfy(int))//".ed")
        if(any((Mpoles(:,int)/=0.d0)))then
           do ik=1,Nktot
-             if(Mpoles(ik,int)/=0.d0)write(unit,*)ik-1,Mpoles(ik,int),Mweight(ik,int)
+             if(Mpoles(ik,int)/=0.d0)write(unit,*)ik-1,Mpoles(ik,int)!,Mweight(ik,int)
           enddo
        endif
        close(unit)
@@ -814,20 +811,6 @@ contains
     !
   end subroutine get_zeros
   
-  function det_poles(w) result(det)
-    real(8),intent(in) :: w
-    real(8)            :: det
-    det = finter(finter_func,w)
-  end function det_poles
-
-  function get_weight(hk) result(wt)
-    complex(8),dimension(4,4) :: hk,foo
-    real(8),dimension(4)      :: eigv
-    real(8) :: wt
-    foo = hk
-    call eigh(foo,eigv)
-    wt = sum(foo(:,1))
-  end function Get_Weight
   
   
 
