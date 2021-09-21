@@ -6,7 +6,7 @@ program cdn_ssh
    USE MPI
    !
    implicit none
-   integer                                                                :: Nlso,iloop,Nb,Nk,Ndimer
+   integer                                                                :: Nlso,iloop,Nb,Nk,Ndimer,iw
    integer,dimension(2):: recover
    logical                                                                :: converged
    real(8)                                                                :: vhop,whop,energy_offset,wmixing
@@ -62,7 +62,7 @@ program cdn_ssh
    if(.not.allocated(wm))allocate(wm(Lmats))
    wm     = xi*pi/beta*real(2*arange(1,Lmats)-1,8)
 
-   if(ED_VERBOSE > 0)call naming_convention()
+
    !Allocate Weiss Field:
    allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Weiss_old(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
@@ -84,7 +84,7 @@ program cdn_ssh
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(hloc_model(Nlso,0.d0,1.d0))
    !
    lambdasym_vector(3)=energy_offset
-   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(eye(Nlso))
+   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(zeye(Nlso))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
@@ -157,8 +157,9 @@ contains
    !+------------------------------------------------------------------+
 
 
-   function Hloc_model(N) result (H0)
+   function Hloc_model(N,vhop_,whop_) result (H0)
       integer                                               :: N,ispin,idimer
+      real(8)                                               :: vhop_,whop_
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
       complex(8),dimension(N,N)                             :: H0
       !
@@ -166,9 +167,18 @@ contains
       !
       do ispin=1,Nspin
          do idimer=1,Ndimer
-          hopping_matrix(2*idimer-1:2*idimer,2*idimer-1:2*idimer)=hopping_matrix + vhop*pauli_sigma_x
-          if(idimer < Ndimer)hopping_matrix(2*idimer:2*idimer+1,2*idimer:2*idimer+1)=hopping_matrix + whop*pauli_sigma_x
-          if(idimer > 1     )hopping_matrix(2*idimer-1:2*idimer-2,2*idimer-1:2*idimer-2)=hopping_matrix + whop*pauli_sigma_x
+          hopping_matrix(2*idimer-1,2*idimer  ,ispin,ispin,:,:) = vhop_
+          hopping_matrix(2*idimer  ,2*idimer-1,ispin,ispin,:,:) = vhop_
+          !
+          if(idimer < Ndimer) then
+             hopping_matrix(2*idimer  ,2*idimer+1,ispin,ispin,:,:) = whop_
+             hopping_matrix(2*idimer+1,2*idimer  ,ispin,ispin,:,:) = whop_
+          endif
+          !
+          if(idimer > Ndimer) then
+             hopping_matrix(2*idimer-1,2*idimer-2,ispin,ispin,:,:) = whop_
+             hopping_matrix(2*idimer-2,2*idimer-1,ispin,ispin,:,:) = whop_
+          endif
          enddo
       enddo
       !
@@ -178,7 +188,7 @@ contains
 
 
    function hk_model(kpoint,N) result(Hk)
-      integer                                                      :: Nispin,ispin
+      integer                                                      :: Nispin,ispin,N
       real(8),dimension(:)                                         :: kpoint
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)        :: hopping_matrix
       complex(8),dimension(N,N)                                    :: hk
@@ -186,11 +196,11 @@ contains
       hopping_matrix=zero
       !
       do ispin=1,Nspin
-            hopping_matrix(1,Nlat,ispin,ispin,:,:) = hopping_matrix(1,Nlat,ispin,ispin,:,:) + 0.5*(pauli_sigma_x + xi*pauli_sigma_y)*whop*exp(-xi*kpoint*Ndimer)
-            hopping_matrix(Nlat,1,ispin,ispin,:,:) = hopping_matrix(Nlat,1,ispin,ispin,:,:) + 0.5*(pauli_sigma_x - xi*pauli_sigma_y)*whop*exp( xi*kpoint*Ndimer)
+            hopping_matrix(1,Nlat,ispin,ispin,:,:) = hopping_matrix(1,Nlat,ispin,ispin,:,:) + whop*exp(-xi*kpoint(1)*Ndimer)
+            hopping_matrix(Nlat,1,ispin,ispin,:,:) = hopping_matrix(Nlat,1,ispin,ispin,:,:) + whop*exp( xi*kpoint(1)*Ndimer)
       enddo
       !
-      Hk=nnn2lso(hopping_matrix)+hloc_model(N)
+      Hk=nnn2lso(hopping_matrix)+hloc_model(N,vhop,whop)
       !
    end function hk_model
 
@@ -213,7 +223,7 @@ contains
       call TB_set_bk(bkx=bk1)
       !
       call TB_build_kgrid([Nk],kgrid)
-      kgrid(:,1)=kgrid(:,1)/Nx
+      kgrid(:,1)=kgrid(:,1)/Ndimer
       !
       if(allocated(hk))deallocate(hk)
       if(allocated(hloc))deallocate(Hloc)
@@ -223,7 +233,7 @@ contains
       hloc=zero
       !
       call TB_build_model(Hk,hk_model,Nlso,kgrid)
-      Hloc=hloc_model(Nlso)
+      Hloc=hloc_model(Nlso,vhop,whop)
       !
    end subroutine generate_hk_hloc
 
