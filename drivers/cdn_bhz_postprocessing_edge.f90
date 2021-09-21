@@ -148,20 +148,21 @@ program cdn_bhz_postprocessing_edge
    !
    !call ed_get_gimp_matsubara(Gmats_ineq,Nineq)
    !call ed_get_gimp_realaxis(Greal_ineq,Nineq)
-   call ed_get_sigma_matsubara(Smats_ineq,Nineq)
+   !call ed_get_sigma_matsubara(Smats_ineq,Nineq)
    call ed_get_sigma_realaxis(Sreal_ineq,Nineq)
    !
    do isites=1,Nsites
      ineq = isites2ineq(isites)
-     Smats_all(isites,:,:,:,:,:,:,:) = Smats_ineq(ineq,:,:,:,:,:,:,:)
+     !Smats_all(isites,:,:,:,:,:,:,:) = Smats_ineq(ineq,:,:,:,:,:,:,:)
      Sreal_all(isites,:,:,:,:,:,:,:) = Sreal_ineq(ineq,:,:,:,:,:,:,:)
      !Gmats_all(isites,:,:,:,:,:,:,:) = Gmats_ineq(ineq,:,:,:,:,:,:,:)
      !Greal_all(isites,:,:,:,:,:,:,:) = Greal_ineq(ineq,:,:,:,:,:,:,:)
    enddo
    !
+   !
    !RETRIEVE AND PERIODIZE
-   dummy_mats=periodize_sigma_block_real([pi/2,0.d0],1)
-   call get_zeros()
+   !call get_zeros()
+   call get_akw()
    !
 
 contains
@@ -547,15 +548,15 @@ contains
    !PURPOSE: periodization M scheme
    !-------------------------------------------------------------------------------------------
    
-   function periodize_sigma_block_real(kpoint_,isite,wprint) result(s_lso)
-      integer                                                     :: isite,ilat,jlat,ispin,iorb,jorb,ii
+   function periodize_sigma_block_real(kpoint_,isite,ifreq,wprint) result(s_lso)
+      integer                                                     :: isite,ilat,jlat,ispin,iorb,jorb,ii,ifreq
       real(8),dimension(1)                                        :: kpoint
       real(8),dimension(:)                                        :: kpoint_
       integer,dimension(:),allocatable                            :: ind1,ind2
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: sreal_periodized,greal_periodized
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lreal)           :: g_lso,s_lso
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal) :: greal_unperiodized
+      complex(8),dimension(Nspin,Nspin,Norb,Norb)           :: sreal_periodized,greal_periodized
+      complex(8),dimension(Nspin*Norb,Nspin*Norb)           :: g_lso,s_lso
+      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: greal_unperiodized
       logical,optional                                            :: wprint
       logical                                                     :: wprint_,pbc
       !
@@ -579,247 +580,101 @@ contains
       ts=0d0
       lambda=0d0
       !
-      do ii=1,Lreal
-         tmpmat=(dcmplx(wr(ii),eps)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nlat*Nspin*Norb,pbc) - nnn2lso(Sreal_all(isite,:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      ts=ts_tmp
-      lambda=lambda_tmp
-      !
-      do ii=1,Lreal
-         do ilat=1,Nlat
-            ind1=ilat        
-            do jlat=1,Nlat
-               ind2=jlat
-               greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lreal
-         g_lso(:,:,ii)=nn2so(greal_periodized(:,:,:,:,ii))
-         call inv(g_lso(:,:,ii))
-         Mh=0
-         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)
-         Mh=Mh_tmp
-         s_lso(:,:,ii)=(dcmplx(wr(ii),eps)+xmu)*eye(Nspin*Norb)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
-         call inv(g_lso(:,:,ii))
-         greal_periodized(:,:,:,:,ii)=so2nn(g_lso(:,:,ii))
-         sreal_periodized(:,:,:,:,ii)=so2nn(s_lso(:,:,ii))
-      enddo
-      !
-      if(wprint_)then
-        do iorb=1,Nso
-           do jorb=1,Nso
-              call splot("perSigma_block_l"//reg(txtfy(iorb))//"m"//reg(txtfy(jorb))//"_realw.ed",wr,s_lso(iorb,jorb,:))
-           enddo
+     tmpmat=(dcmplx(wr(ifreq),eps)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nlat*Nspin*Norb,pbc) - nnn2lso(Sreal_all(isite,:,:,:,:,:,:,ifreq))
+     call inv(tmpmat)
+     greal_unperiodized(:,:,:,:,:,:)=lso2nnn(tmpmat)
+     !
+     ts=ts_tmp
+     lambda=lambda_tmp
+     !
+     do ilat=1,Nlat
+        ind1=ilat        
+        do jlat=1,Nlat
+           ind2=jlat
+           greal_periodized(:,:,:,:)=greal_periodized(:,:,:,:)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:)/Nlat
         enddo
-      endif
-      !   
+     enddo
+     !
+     g_lso(:,:)=nn2so(greal_periodized(:,:,:,:))
+     call inv(g_lso(:,:))
+     Mh=0
+     g_lso(:,:)=g_lso(:,:)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)
+     Mh=Mh_tmp
+     s_lso(:,:)=(dcmplx(wr(ifreq),eps)+xmu)*eye(Nspin*Norb)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:)
+     !   
    end function periodize_sigma_block_real
-   !
-   function periodize_sigma_block_mats(kpoint_,isite,wprint) result(s_lso)
-      integer                                                     :: isite,ilat,jlat,ispin,iorb,jorb,ii
-      real(8),dimension(1)                                        :: kpoint
-      real(8),dimension(:)                                        :: kpoint_
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized,gmats_periodized
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lmats)           :: g_lso,s_lso
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats) :: gmats_unperiodized
-      logical,optional                                            :: wprint
-      logical                                                     :: wprint_,pbc
-      !
-      real(8)                                                     :: Mh_tmp,ts_tmp,lambda_tmp
-      !
-      wprint_=.true.;if(present(wprint))wprint_=wprint
-      pbc=.false.
-      !
-      kpoint(1)=kpoint_(1)
-      !
-      Mh_tmp=Mh
-      ts_tmp=ts
-      lambda_tmp=lambda
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      smats_periodized=zero
-      gmats_periodized=zero
-      !
-      !
-      ts=0d0
-      lambda=0d0
-      !
-      do ii=1,Lmats
-         tmpmat=(wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - bhz_edge_model(kpoint,1,Nlat*Nspin*Norb,pbc) - nnn2lso(Smats_all(isite,:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      !
-      ts=ts_tmp
-      lambda=lambda_tmp
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=ilat     
-            do jlat=1,Nlat
-               ind2=jlat
-               gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lmats
-         g_lso(:,:,ii)=nn2so(gmats_periodized(:,:,:,:,ii))
-         call inv(g_lso(:,:,ii))
-         Mh=0
-         g_lso(:,:,ii)=g_lso(:,:,ii)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)
-         Mh=Mh_tmp
-         s_lso(:,:,ii)=(wm(ii)+xmu)*eye(Nspin*Norb)-bhz_edge_model_periodized(kpoint,1,Nspin*Norb,pbc)-g_lso(:,:,ii)
-         call inv(g_lso(:,:,ii))
-         gmats_periodized(:,:,:,:,ii)=so2nn(g_lso(:,:,ii))
-         smats_periodized(:,:,:,:,ii)=so2nn(s_lso(:,:,ii))
-      enddo
-      !
-      if(wprint_)then
-        do iorb=1,Nso
-           do jorb=1,Nso
-              call splot("perSigma_block_l"//reg(txtfy(iorb))//"m"//reg(txtfy(jorb))//"_iw.ed",imag(wm),s_lso(iorb,jorb,:))
-           enddo
-        enddo
-      endif
-      !   
-   end function periodize_sigma_block_mats
+   
+   !-------------------------------------------------------------------------------------------
+   ! PURPOSE:Get determinant of G(k,w)
+   !-------------------------------------------------------------------------------------------   
   
-    
-  !---------------------------------------------------------------------
-  !PURPOSE: GET ZEROS ON THE REAL AXIS
-  !---------------------------------------------------------------------
-   subroutine get_zeros()
-    integer                                                     :: i,j,ik,ix,iy,Nso,Niso,Nktot,Npts
-    integer                                                     :: iorb,jorb, isites, idmin,idmax
-    integer                                                     :: isporb,jsporb
-    integer                                                     :: ispin,jspin
-    integer                                                     :: iso,unit
-    real(8),dimension(Nspin*Norb)                               :: dzeta
-    complex(8),allocatable,dimension(:,:,:)                     :: Hk_bare,Hk_topo
-    complex(8),dimension(Nsites*Nspin*Norb,Nsites*Nspin*Norb)   :: zeta,z_adj,fg,gdelta,fgk
-    complex(8),dimension(:,:,:,:,:),allocatable                 :: gloc
-    complex(8),dimension(:,:,:,:),allocatable                   :: Sigmareal,Sigmamats
-    complex(8),dimension(:,:,:,:),allocatable                   :: gk,gfoo,ReSmat
-    complex(8)                                                  :: iw
-    complex(8),dimension(:,:),allocatable                       :: detGiw
-    real(8),dimension(Lreal)                                    :: Den
-    real(8),dimension(:),allocatable                            :: Ipoles,Xcsign,Iweight
-    real(8),dimension(:,:),allocatable                          :: Ipoles3d,kpoints
-    real(8),dimension(:,:),allocatable                          :: Mpoles,Mweight
-    real(8),dimension(:,:,:),allocatable                        :: Mpoles3d
-    integer                                                     :: Linterval
-    integer                                                     :: count,Ninterval,maxNinterval,int
-    real(8)                                                     :: sign,sign_old
-    real(8),dimension(:,:),allocatable                          :: kpath
+  subroutine get_Akw()
+    integer                                       :: Lk,Nso,Niso,Npts
+    integer                                       :: ik,iw
+    integer                                       :: iorb,jorb,idmax,idmin
+    integer                                       :: ispin,jspin
+    complex(8),dimension(:,:),allocatable         :: Sigmareal
+    real(8),dimension(:,:),allocatable            :: Akreal,kpoints
+    complex(8),dimension(:,:),allocatable         :: Gkreal
+    complex(8),allocatable,dimension(:,:,:)       :: Hk_bare
+    real(8),dimension(:,:),allocatable            :: Kpath
+    character(len=30)                             :: suffix
     !
-    Nso=Nspin*Norb
-    Niso=Nsites*Nspin*Norb
+    !
     !
     allocate(kpath(3,2))
+    !
     kpath(1,:)=[0.0,0.0]!G-e<-R
     kpath(2,:)=[1.0,0.0]!G
     kpath(3,:)=[2.0,0.0]!G+e->R
+    !
     kpath=kpath*pi
     Npts  = size(kpath,1)
-    Nktot = (Npts-1)*Nkpath
+    Lk = (Npts-1)*Nkpath
+    !   
+    Nso=Nspin*Norb
+    Niso=Nsites*Nspin*Norb
+    !
     !
     if(allocated(Hk_bare))deallocate(Hk_bare)
-    allocate(Hk_bare(Niso,Niso,Nktot));Hk_bare=zero
+    allocate(Hk_bare(Niso,Niso,Lk));Hk_bare=zero
+    !
+    !
     call TB_build_model(hk_bare,bhz_edge_model_periodized,Nsites,Nso,kpath,Nkpath,pbc=.false.)
     !
-    allocate(kpoints(Nktot,2))
+    !    
+    allocate(kpoints(Lk,2))
     call TB_build_kgrid(kpath,Nkpath,kpoints)
     !
-    !if(allocated(Sigmamats))deallocate(Sigmamats)
+    !
     if(allocated(Sigmareal))deallocate(Sigmareal)
-    !allocate(Sigmamats(Nktot,Niso,Niso,Lmats))
-    allocate(Sigmareal(Nktot,Niso,Niso,Lreal))
-    !Sigmamats=zero
+    if(allocated(Gkreal))deallocate(Gkreal)
+    allocate(Sigmareal(Niso,Niso))
+    allocate(Gkreal(Niso,Niso))
+    Gkreal=zero      
     Sigmareal=zero
+    allocate(Akreal(Lk,Lreal));Akreal=zero
     !
     !
-    do ik=1,Nktot
+    do ik=1,Lk
+     do iw=1,Lreal
       do isites=1,Nsites
         idmin=1+(isites-1)*Nso
         idmax=isites*Nso
-        !Sigmamats(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_mats(kpoints(ik,:),isites,wprint=.false.)
-        Sigmareal(ik,idmin:idmax,idmin:idmax,:)=periodize_sigma_block_real(kpoints(ik,:),isites,wprint=.false.)
+        Sigmareal(idmin:idmax,idmin:idmax)=periodize_sigma_block_real(kpoints(ik,:),isites,iw,wprint=.false.)
       enddo
+      !
+      Gkreal(:,:)=(dcmplx(wr(iw),0d0)+xmu)*eye(Niso) - Hk_bare(:,:,ik) - Sigmareal(:,:)
+      call inv(Gkreal(:,:))
+      Akreal(ik,iw) = log(abs(det(Gkreal(:,:)))/pi/Niso)
+     enddo
     enddo
-    !
-    Linterval = 50000 !Maximum number of allowed intervals to look for zeros&poles
-    !
-    allocate(Xcsign(0:Linterval))
-    allocate(Ipoles(Nktot),Iweight(Nktot))
-    allocate(Mpoles(Nktot,Linterval),Mweight(Nktot,Linterval))
-    !
-    !FINDING THE POLES:
-    !assume \eps=0.d0 ==> the ImSigma(poles)=0 this condition should be automatically
-    !verified at the pole from definition of the pole (the ImSigma at the pole is just
-    !an artificial broadening of an otherwise delta function, whose position should be 
-    !determined by ReSigma only.
-    Ipoles=0.d0   
-    Mpoles=0.d0
-    write(LOGfile,*)"Solving for the zeros..."
-    maxNinterval=-1
-    do ik=1,Nktot
-       do i=1,Lreal
-          zeta(:,:) = (wr(i)+xmu)*eye(Niso) - Hk_bare(:,:,ik) - Sigmareal(ik,:,:,i)
-          call inv(zeta)
-          Den(i) = 1.d12*det(zeta)
-       enddo
-       Xcsign(0)=0.d0
-       count=0
-       sign_old=sgn(Den(Lreal/2+1))
-       do i=Lreal/2+1,Lreal
-          sign=sgn(Den(i))
-          if(sign*sign_old<1)then
-             count=count+1
-             if(count>Linterval)stop "Allocate Xcsign to a larger array."
-             Xcsign(count)=wr(i)
-          endif
-          sign_old=sign
-       enddo
-       Ninterval=count
-       if(count>maxNinterval)maxNinterval=count
-       do int=1,Ninterval
-          Mpoles(ik,int) = (Xcsign(int-1)+Xcsign(int))/2.d0
-       enddo
-    enddo
-    call splot("BHZzeros.ed",ipoles,iweight)
-    do int=1,maxNinterval
-       unit=free_unit()
-       open(unit,file="BHZzeros_int"//reg(txtfy(int))//".ed")
-       if(any((Mpoles(:,int)/=0.d0)))then
-          do ik=1,Nktot
-             if(Mpoles(ik,int)/=0.d0)write(unit,*)ik-1,Mpoles(ik,int)!,Mweight(ik,int)
-          enddo
-       endif
-       close(unit)
-    enddo
-    !
-  end subroutine get_zeros
+
+    call splot3d("Akw_real_nso.dat",kpoints(:,1),wr,Akreal) 
+
+  end subroutine get_Akw
   
   
   
 
 end program cdn_bhz_postprocessing_edge
-
-
-
-
-
-
-
-
