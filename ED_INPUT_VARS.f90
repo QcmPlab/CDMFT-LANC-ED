@@ -59,6 +59,7 @@ MODULE ED_INPUT_VARS
   integer              :: cg_grad             !gradient evaluation: 0=analytic, 1=numeric
   integer              :: cg_Niter            !Max number of iteration in the fit
   real(8)              :: cg_Ftol             !Tolerance in the cg fit
+  real(8)              :: cg_local_weight     !local weight muliplier (weiss fit only)
   integer              :: cg_stop             !fit stop condition:0-3, 0=C1.AND.C2, 1=C1, 2=C2 with C1=|F_n-1 -F_n|<tol*(1+F_n), C2=||x_n-1 -x_n||<tol*(1+||x_n||).
   integer              :: cg_Weight           !CGfit mode 0=1, 1=1/n , 2=1/w_n weight
   integer              :: cg_pow              !fit power for the calculation of the Chi distance function as |G0 - G0and|**cg_pow
@@ -174,6 +175,7 @@ contains
     call parse_input_variable(cg_method,"CG_METHOD",INPUTunit,default=0,comment="Conjugate-Gradient method: 0=NR, 1=minimize.")
     call parse_input_variable(cg_grad,"CG_GRAD",INPUTunit,default=0,comment="Gradient evaluation method: 0=analytic (default), 1=numeric.")
     call parse_input_variable(cg_ftol,"CG_FTOL",INPUTunit,default=0.00001d0,comment="Conjugate-Gradient tolerance.")
+    call parse_input_variable(cg_local_weight,"CG_LOCAL_WEIGHT",INPUTunit,default=1d0,comment="Multiplier of weight of local components of the weiss field fit.")
     call parse_input_variable(cg_stop,"CG_STOP",INPUTunit,default=0,comment="Conjugate-Gradient stopping condition: 0-3, 0=C1.AND.C2, 1=C1, 2=C2 with C1=|F_n-1 -F_n|<tol*(1+F_n), C2=||x_n-1 -x_n||<tol*(1+||x_n||).")
     call parse_input_variable(cg_niter,"CG_NITER",INPUTunit,default=500,comment="Max. number of Conjugate-Gradient iterations.")
     call parse_input_variable(cg_weight,"CG_WEIGHT",INPUTunit,default=1,comment="Conjugate-Gradient weight form: 1=1.0, 2=1/n , 3=1/w_n.")

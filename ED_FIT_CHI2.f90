@@ -449,6 +449,7 @@ contains
        jspin = getJspin(l)
        !
        Ctmp = abs(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))
+       if(ilat==jlat) Ctmp = cg_local_weight*Ctmp
        chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
     enddo
     !
