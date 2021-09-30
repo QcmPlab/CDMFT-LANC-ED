@@ -101,29 +101,32 @@ program cdn_kagome
    call add_custom_observable("Ekin",Hk)
 
    !SETUP BATH STEP 1
-   allocate(lambdasym_vector(7))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,7))
+   allocate(lambdasym_vector(8))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,8))
    !
    lambdasym_vector(1)=ts
-   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(1.d0))
+   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(bath_model(1.d0, 0d0, 0d0, 0d0, 0d0, 0d0, 0d0, 0d0))
    !
    lambdasym_vector(2)=0d0
-   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(additional_bath_model(1.d0, 0d0, 0d0, 0d0, 0d0, 0d0))
+   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(bath_model(0.d0, 1d0, 0d0, 0d0, 0d0, 0d0, 0d0, 0d0))
    !
    lambdasym_vector(3)=0d0
-   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(additional_bath_model(0d0, 1.d0, 0d0, 0d0, 0d0, 0d0))
+   Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(bath_model(0d0,  0d0, 1d0, 0d0, 0d0, 0d0, 0d0, 0d0))
    !
    lambdasym_vector(4)=0d0
-   Hsym_basis(:,:,:,:,:,:,4)=lso2nnn(additional_bath_model(0d0, 0d0, 1.d0, 0d0, 0d0, 0d0))
+   Hsym_basis(:,:,:,:,:,:,4)=lso2nnn(bath_model(0d0,  0d0, 0d0, 1d0, 0d0, 0d0, 0d0, 0d0))
    !
    lambdasym_vector(5)=0d0
-   Hsym_basis(:,:,:,:,:,:,5)=lso2nnn(additional_bath_model(0d0, 0d0, 0d0, 1.d0, 0d0, 0d0))
+   Hsym_basis(:,:,:,:,:,:,5)=lso2nnn(bath_model(0d0,  0d0, 0d0, 0d0, 1d0, 0d0, 0d0, 0d0))
    !
    lambdasym_vector(6)=0d0
-   Hsym_basis(:,:,:,:,:,:,6)=lso2nnn(additional_bath_model(0d0, 0d0, 0d0, 0d0, 1d0, 0d0))
+   Hsym_basis(:,:,:,:,:,:,6)=lso2nnn(bath_model(0d0,  0d0, 0d0, 0d0, 0d0, 1d0, 0d0, 0d0))
    !
    lambdasym_vector(7)=0d0
-   Hsym_basis(:,:,:,:,:,:,7)=lso2nnn(additional_bath_model(0d0, 0d0, 0d0, 0d0, 0d0, 1d0))
+   Hsym_basis(:,:,:,:,:,:,7)=lso2nnn(bath_model(0d0,  0d0, 0d0, 0d0, 0d0, 0d0, 1d0, 0d0))
+   !
+   lambdasym_vector(8)=0d0
+   Hsym_basis(:,:,:,:,:,:,8)=lso2nnn(bath_model(0d0,  0d0, 0d0, 0d0, 0d0, 0d0, 0d0, 1d0))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
@@ -214,11 +217,11 @@ contains
       !
    end function hloc_model
 
-   function additional_bath_model(ti_, e1_, e2_, e3_, s1_, s2_) result (bath_)
+   function bath_model(tur_, tui_, tdr_, tdi_, e_, s1_, s2_, s3_) result (bath_)
       ! Directly created in lso basis
       integer                                               :: ispin, iorb, lowerbound, upperbound
       integer                                               :: Nlo
-      real(8),intent(in)                                    :: ti_, e1_, e2_, e3_, s1_, s2_
+      real(8),intent(in)                                    :: tur_, tui_, tdr_, tdi_, e_, s1_, s2_, s3_
       complex(8),dimension(Nlso,Nlso)                       :: bath_
       !
       Nlo = Nlat*Norb
@@ -227,17 +230,17 @@ contains
       do ispin=1,Nspin
          lowerbound = (ispin-1)*Nlo+1
          upperbound = ispin*Nlo
-         bath_(lowerbound:upperbound,lowerbound:upperbound) = additional_bath_matrix(ti_, e1_, e2_, e3_)
+         bath_(lowerbound:upperbound,lowerbound:upperbound) = bath_matrix(tur_, tui_, tdr_, tdi_, e_, ispin)
       enddo
       !
       do iorb=1,Norb
          lowerbound = iorb
          upperbound = iorb+Nlo
          bath_(lowerbound:upperbound:Nlo,lowerbound:upperbound:Nlo) = bath_(lowerbound:upperbound:Nlo,lowerbound:upperbound:Nlo)&
-                                                                      + additional_bath_matrix_spin(s1_, s2_)
+                                                                      + bath_matrix_spin(s1_, s2_, s3_)
       enddo
       !
-   end function additional_bath_model
+   end function bath_model
 
    function hk_model(kpoint,N) result(Hk_)
       ! Directly created in lso basis, kpoint MUST be in direct coordinates
@@ -383,40 +386,40 @@ contains
       !
    end function hhop6_matrix
 
-   function additional_bath_matrix(ti, e1, e2, e3) result(bmat)
+   function bath_matrix(tur, tui, tdr, tdi, e, spinflav) result(bmat)
       complex(8),dimension(3,3) :: bmat
       real(8),dimension(3,3)    :: tempmat
-      real(8),intent(in)        :: ti, e1, e2, e3
+      real(8),intent(in)        :: tur, tui, tdr, tdi, e
+      integer,intent(in)        :: spinflav
       !
       bmat    = zero
       tempmat = zero
       !
-      tempmat(1,:) = [ 0, 1, 1]
-      tempmat(2,:) = [ 1, 0, 1]
-      tempmat(3,:) = [ 1, 1, 0]
-      bmat         = bmat + ti*(0,1)*tempmat
+      if(spinflav==1)then
+          tempmat(1,:) = [ 0, 1, 1]
+          tempmat(2,:) = [ 1, 0, 1]
+          tempmat(3,:) = [ 1, 1, 0]
+          bmat         = bmat + tur*tempmat + tui*(0,1)*tempmat
+      elseif(spinflav==2)then
+          tempmat(1,:) = [ 0, 1, 1]
+          tempmat(2,:) = [ 1, 0, 1]
+          tempmat(3,:) = [ 1, 1, 0]
+          bmat         = bmat + tdr*tempmat + tdi*(0,1)*tempmat
+      else
+          stop "invalid spinflav intput in bath creation"
+      endif
       !
       tempmat(1,:) = [ 1, 0, 0]
-      tempmat(2,:) = [ 0, 0, 0]
-      tempmat(3,:) = [ 0, 0, 0]
-      bmat         = bmat + e1*tempmat
-      !
-      tempmat(1,:) = [ 0, 0, 0]
       tempmat(2,:) = [ 0, 1, 0]
-      tempmat(3,:) = [ 0, 0, 0]
-      bmat         = bmat + e2*tempmat
-      !
-      tempmat(1,:) = [ 0, 0, 0]
-      tempmat(2,:) = [ 0, 0, 0]
       tempmat(3,:) = [ 0, 0, 1]
-      bmat         = bmat + e3*tempmat
+      bmat         = bmat + e*tempmat
       !
-   end function additional_bath_matrix
+   end function bath_matrix
 
-   function additional_bath_matrix_spin(s1, s2) result(bmat)
+   function bath_matrix_spin(s1, s2, s3) result(bmat)
       complex(8),dimension(2,2) :: bmat
       real(8),dimension(2,2)    :: tempmat
-      real(8),intent(in)        :: s1, s2
+      real(8),intent(in)        :: s1, s2, s3
       !
       bmat    = zero
       tempmat = zero
@@ -429,7 +432,11 @@ contains
       tempmat(2,:) = [ 1,  0]
       bmat         = bmat + s2*(0,1)*tempmat
       !
-   end function additional_bath_matrix_spin
+      tempmat(1,:) = [ 1,  0]
+      tempmat(2,:) = [ 0, -1]
+      bmat         = bmat + s3*tempmat
+      !
+   end function bath_matrix_spin
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
