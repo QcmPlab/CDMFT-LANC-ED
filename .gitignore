@@ -3,4 +3,4 @@
 test
 Makefile
 *.inc
-build/
+build*/
