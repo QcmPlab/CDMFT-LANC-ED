@@ -128,6 +128,7 @@ contains
   subroutine chi2_fitgf_replica(fg,bath_)
     complex(8),dimension(:,:,:,:,:,:,:)                   :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
     logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: dummy
     real(8),dimension(:),intent(inout)                    :: bath_
     real(8),dimension(:),allocatable                      :: array_bath
     integer                                               :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,ibath,io,jo
@@ -152,7 +153,9 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    Hmask=Hreplica_mask(impHloc,wdiag=.true.,uplo=.true.)
+    dummy = 1
+    Hmask=Hreplica_mask(dummy,wdiag=.true.,uplo=.true.)
+    !Hmask=Hreplica_mask(impHloc,wdiag=.true.,uplo=.true.)
     totNlso=count(Hmask)
     !
     allocate(getIlat(totNlso) ,getJlat(totNlso))
