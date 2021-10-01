@@ -152,7 +152,7 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    Hmask=Hreplica_mask(impHloc,wdiag=.true.,uplo=.true.)
+    Hmask=Hreplica_mask(wdiag=.true.,uplo=.true.)
     totNlso=count(Hmask)
     !
     allocate(getIlat(totNlso) ,getJlat(totNlso))

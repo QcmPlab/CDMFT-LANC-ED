@@ -201,7 +201,7 @@ end subroutine init_Hreplica_symmetries_site
 !PURPOSE  : Create bath mask
 !+-------------------------------------------------------------------+
 
-function Hreplica_mask(hloc,wdiag,uplo) result(Hmask)
+function Hreplica_mask(wdiag,uplo) result(Hmask)
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hloc
     logical,optional                                      :: wdiag,uplo
     logical                                               :: wdiag_,uplo_
@@ -211,6 +211,7 @@ function Hreplica_mask(hloc,wdiag,uplo) result(Hmask)
     wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
     uplo_ =.false.;if(present(uplo))  uplo_=uplo
     !
+    Hloc = Hreplica_build(Hreplica_lambda)
     Hmask=.false.
     where(abs(Hloc)>1d-6)Hmask=.true.
     !

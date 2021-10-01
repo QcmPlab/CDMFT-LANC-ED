@@ -50,7 +50,7 @@ contains
     !
     if(allocated(impGmatrix))deallocate(impGmatrix)
     allocate(impGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-    Hmask=Hreplica_mask(impHloc,wdiag=.true.,uplo=.false.)
+    Hmask=Hreplica_mask(wdiag=.true.,uplo=.false.)
     !
     ! 
     Nstates = state_list%size
