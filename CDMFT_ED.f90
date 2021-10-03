@@ -2,7 +2,8 @@ MODULE CDMFT_ED
   USE ED_INPUT_VARS
 
   USE ED_AUX_FUNX, only:                        &
-       ed_search_variable                            
+       ed_search_variable                     , &
+       search_chemical_potential
 
   USE ED_IO,      only:                         &
        ed_print_impSigma                      , &
@@ -20,7 +21,8 @@ MODULE CDMFT_ED
        ed_get_g0and_matsubara                 , &
        ed_get_delta_realaxis                  , &
        ed_get_g0and_realaxis                  , &
-       ed_get_density_matrix
+       ed_get_density_matrix                  , &
+       ed_get_dens
 
   USE ED_BATH, only:                            &
        ed_set_Hreplica                 => set_Hreplica            ,&

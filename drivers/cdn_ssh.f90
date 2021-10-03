@@ -3,7 +3,7 @@ program cdn_ssh
    USE SCIFOR
    USE DMFT_TOOLS
    !
-   USE MPI
+   USE MPI 
    !
    implicit none
    integer                                                                :: Nlso,iloop,Nb,Nk,Ndimer,iw
@@ -296,11 +296,3 @@ contains
    end function nnn2lso
    !
 end program cdn_ssh
-
-
-
-
-
-
-
-

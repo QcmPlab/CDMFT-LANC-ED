@@ -9,7 +9,7 @@ program cdn_kagome
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing,observable
+   real(8)                                                                :: ts,wmixing,observable,dens
    !Bath:
    real(8),allocatable                                                    :: Bath(:),Bath_prev(:)
    !The local hybridization function:
@@ -149,6 +149,10 @@ program cdn_kagome
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+         if(nread/=0.d0)then
+            call ed_get_dens(dens,1,1)
+            call search_chemical_potential(xmu,dens,converged)
+         endif
       endif
       !
       call Bcast_MPI(comm,bath)
