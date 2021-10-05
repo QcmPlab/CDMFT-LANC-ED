@@ -153,7 +153,10 @@ contains
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
     Hmask=Hreplica_mask(wdiag=.true.,uplo=.true.)
-    Hmask=.true. !!!!!!!!!!!!!!!!!!!!!!!!!TESTING
+    !Hmask=.true. !!!!!!!!!!!!!!!!!!!!!!!!!TESTING
+    !Hmask=.false.
+    !Hmask(1,1,1,1,1,1)=.true.
+    !Hmask(1,2,1,1,1,1)=.true.
     totNlso=count(Hmask)
     !
     allocate(getIlat(totNlso) ,getJlat(totNlso))
@@ -380,7 +383,10 @@ contains
        chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
     enddo
     !
-    chi2=sum(chi2_lso)
+    !chi2=sum(chi2_lso)
+    !chi2=chi2/Ldelta
+    chi2=maxval(chi2_lso)
+    maxchi_loc=maxloc(chi2_lso,1)
     chi2=chi2/Ldelta
     !
   end function chi2_delta_replica
@@ -420,8 +426,9 @@ contains
        enddo
     enddo
     !
-    dchi2 = -cg_pow*sum(df,1)/Ldelta     !sum over all orbital indices
-    print*,dchi2
+    !dchi2 = -cg_pow*sum(df,1)/Ldelta     !sum over all orbital indices
+    dchi2 = -cg_pow*df(maxchi_loc,:)
+    dchi2 = dchi2/Ldelta
     !
   end function grad_chi2_delta_replica
 #endif
