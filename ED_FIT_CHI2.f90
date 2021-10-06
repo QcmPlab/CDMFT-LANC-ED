@@ -1,7 +1,7 @@
 MODULE ED_FIT_CHI2
   USE SF_CONSTANTS
   USE SF_OPTIMIZE, only:fmin_cg,fmin_cgminimize
-  USE SF_LINALG,   only:eye,zeye,inv,inv_her,operator(.x.)
+  USE SF_LINALG,   only:eye,zeye,inv,inv_her,trace,operator(.x.)
   USE SF_IOTOOLS,  only:reg,free_unit,txtfy
   USE SF_ARRAYS,   only:arange
   USE SF_MISC,     only:assert_shape 
@@ -27,19 +27,19 @@ MODULE ED_FIT_CHI2
   public :: ed_chi2_fitgf
 
 
-  integer                               :: Ldelta
-  complex(8),dimension(:,:),allocatable :: Gdelta
-  complex(8),dimension(:,:),allocatable :: Fdelta
-  real(8),dimension(:),allocatable      :: Xdelta,Wdelta
-  integer                               :: totNorb,totNspin,totNlso
-  integer,dimension(:),allocatable      :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
-  integer                               :: Orb_indx,Spin_indx,Spin_mask
-  integer,dimension(:),allocatable      :: Nlambdas
+  integer                                        :: Ldelta
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable:: FGmatrix
+  complex(8),dimension(:,:),allocatable          :: Fdelta
+  real(8),dimension(:),allocatable               :: Xdelta,Wdelta
+  integer                                        :: totNorb,totNspin
+  integer,dimension(:),allocatable               :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
+  integer                                        :: Orb_indx,Spin_indx,Spin_mask
+  integer,dimension(:),allocatable               :: Nlambdas
   !location of the maximum of the chisquare over Nlso.
-  integer                               :: maxchi_loc
+  integer                                        :: maxchi_loc
   !
   type nsymm_vector
-     real(8),dimension(:),allocatable   :: element          
+     real(8),dimension(:),allocatable    :: element          
   end type nsymm_vector
   !
 
@@ -152,40 +152,9 @@ contains
     !
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
-    Hmask=Hreplica_mask(wdiag=.true.,uplo=.true.)
-    !Hmask=.true. !!!!!!!!!!!!!!!!!!!!!!!!!TESTING
-    !Hmask=.false.
-    !Hmask(1,1,1,1,1,1)=.true.
-    !Hmask(1,2,1,1,1,1)=.true.
-    totNlso=count(Hmask)
     !
-    allocate(getIlat(totNlso) ,getJlat(totNlso))
-    allocate(getIspin(totNlso),getJspin(totNlso))
-    allocate(getIorb(totNlso) ,getJorb(totNlso))
-    counter=0
-    do ilat=1,Nlat
-       do jlat=1,Nlat
-          do ispin=1,Nspin
-             do jspin=1,Nspin
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      if (Hmask(ilat,jlat,ispin,jspin,iorb,jorb))then
-                         counter=counter+1
-                         getIlat(counter)  = ilat
-                         getIspin(counter) = ispin
-                         getIorb(counter)  = iorb
-                         getJlat(counter)  = jlat
-                         getJspin(counter) = jspin
-                         getJorb(counter)  = jorb
-                      endif
-                   enddo
-                enddo
-             enddo
-          enddo
-       enddo
-    enddo
     !
-    allocate(Gdelta(totNlso,Ldelta))
+    allocate(FGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta))
     allocate(Xdelta(Ldelta))
     allocate(Wdelta(Ldelta))
     !
@@ -200,10 +169,8 @@ contains
        Wdelta=Xdelta
     end select
     !
-    write(LOGfile,*)"  fitted functions",totNlso
-    do i=1,totNlso
-       Gdelta(i,1:Ldelta) = fg(getIlat(i),getJlat(i),getIspin(i),getJspin(i),getIorb(i),getJorb(i),1:Ldelta)
-    enddo
+    FGmatrix = fg
+
     !
     select case(cg_method)     !0=NR-CG[default]; 1=CG-MINIMIZE
     case default
@@ -304,10 +271,7 @@ contains
     !
     call get_dmft_bath(bath_)                ! ***  dmft_bath --> bath_ ***    (bath in output)
     call deallocate_dmft_bath()
-    deallocate(Gdelta,Xdelta,Wdelta)
-    deallocate(getIlat,getJlat)
-    deallocate(getIspin,getJspin)
-    deallocate(getIorb,getJorb)
+    deallocate(FGmatrix,Xdelta,Wdelta)
     deallocate(array_bath)
     !
   contains
@@ -322,32 +286,36 @@ contains
          fgand(:,:,:,:,:,:,:) = delta_bath(xi*Xdelta(:))
       endif
       !
-      do l=1,totNlso
-         ilat = getIlat(l)
-         jlat = getJlat(l)
-         iorb = getIorb(l)
-         jorb = getJorb(l)
-         ispin = getIspin(l)
-         jspin = getJspin(l)
-         suffix="_i"//reg(txtfy(ilat))//&
-              "_j"//reg(txtfy(jlat))//&
-              "_l"//reg(txtfy(iorb))//&
-              "_m"//reg(txtfy(jorb))//&
-              "_s"//reg(txtfy(ispin))//&
-              "_r"//reg(txtfy(jspin))//reg(ed_file_suffix)
-         unit=free_unit()
-         if(cg_scheme=='weiss')then
-            open(unit,file="fit_weiss"//reg(suffix)//".ed")
-         else
-            open(unit,file="fit_delta"//reg(suffix)//".ed")
-         endif
-         do i=1,Ldelta
-            w = Xdelta(i)
-            write(unit,"(5F24.15)")Xdelta(i),&
-                 dimag(fg(ilat,jlat,ispin,jspin,iorb,jorb,i)),dimag(fgand(ilat,jlat,ispin,jspin,iorb,jorb,i)),&
-                 dreal(fg(ilat,jlat,ispin,jspin,iorb,jorb,i)),dreal(fgand(ilat,jlat,ispin,jspin,iorb,jorb,i))
-         enddo
-         close(unit)
+      do ilat=1,Nlat
+        do jlat=1,Nlat
+          do ispin=1,Nspin
+            do jspin=1,Nspin
+              do iorb=1,Norb
+                do jorb=1,Norb
+                  suffix="_i"//reg(txtfy(ilat))//&
+                       "_j"//reg(txtfy(jlat))//&
+                       "_l"//reg(txtfy(iorb))//&
+                       "_m"//reg(txtfy(jorb))//&
+                       "_s"//reg(txtfy(ispin))//&
+                       "_r"//reg(txtfy(jspin))//reg(ed_file_suffix)
+                  unit=free_unit()
+                  if(cg_scheme=='weiss')then
+                     open(unit,file="fit_weiss"//reg(suffix)//".ed")
+                  else
+                     open(unit,file="fit_delta"//reg(suffix)//".ed")
+                  endif
+                  do i=1,Ldelta
+                     w = Xdelta(i)
+                     write(unit,"(5F24.15)")Xdelta(i),&
+                          dimag(fg(ilat,jlat,ispin,jspin,iorb,jorb,i)),dimag(fgand(ilat,jlat,ispin,jspin,iorb,jorb,i)),&
+                          dreal(fg(ilat,jlat,ispin,jspin,iorb,jorb,i)),dreal(fgand(ilat,jlat,ispin,jspin,iorb,jorb,i))
+                  enddo
+                  close(unit)
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
       enddo
     end subroutine write_fit_result
     !
@@ -364,30 +332,20 @@ contains
   function chi2_delta_replica(a) result(chi2)
     real(8),dimension(:)                                         :: a
     real(8)                                                      :: chi2
-    real(8),dimension(totNlso)                                   :: chi2_lso
+    real(8),dimension(Ldelta)                                    :: chi2_freq
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: Delta
-    real(8),dimension(Ldelta)                                    :: Ctmp
-    integer                                                      :: i,l,ilat,jlat,iorb,jorb,ispin,jspin
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)        :: Delta_lso
+    integer                                                      :: l
     !
     Delta = delta_replica(a)
     !
-    do l=1,totNlso
-       ilat = getIlat(l)
-       jlat = getJlat(l)
-       iorb = getIorb(l)
-       jorb = getJorb(l)
-       ispin = getIspin(l)
-       jspin = getJspin(l)
-       !
-       Ctmp =  abs(Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:))
-       chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
+    do l=1,Ldelta
+       Delta_lso    =  nnn2lso_reshape(delta(:,:,:,:,:,:,l) - FGmatrix(:,:,:,:,:,:,l),Nlat,Nspin,Norb)
+       chi2_freq(l) =  sqrt(trace(matmul(Delta_lso,conjg(transpose(Delta_lso)))))
     enddo
     !
-    !chi2=sum(chi2_lso)
-    !chi2=chi2/Ldelta
-    chi2=maxval(chi2_lso)
-    maxchi_loc=maxloc(chi2_lso,1)
-    chi2=chi2/Ldelta
+    chi2 =  sum( Chi2_freq**cg_pow/Wdelta )
+    chi2 =  chi2/Ldelta
     !
   end function chi2_delta_replica
 
@@ -399,36 +357,43 @@ contains
   function grad_chi2_delta_replica(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
-    real(8),dimension(totNlso,size(a))                                   :: df
+    real(8),dimension(Ldelta,size(a))                                    :: df
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)         :: Delta
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dDelta
     complex(8),dimension(Ldelta)                                         :: Ftmp
-    real(8),dimension(Ldelta)                                            :: Ctmp
-    integer                                                              :: i,j,l,ilat,jlat,iorb,jorb,ispin,jspin
+    real(8),dimension(Ldelta,size(a))                                    :: dChi_freq
+    integer                                                              :: i,j,idelta,ilat,jlat,iorb,jorb,ispin,jspin
     !
     Delta  = delta_replica(a)
     dDelta = grad_delta_replica(a)
+    Ftmp=zero
+    df=zero
     !
-    do l=1,totNlso
-       ilat = getIlat(l)
-       jlat = getJlat(l)
-       iorb = getIorb(l)
-       jorb = getJorb(l)
-       ispin = getIspin(l)
-       jspin = getJspin(l)
-       !
-       Ftmp = Gdelta(l,:)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,:)
-       Ctmp = abs(Ftmp)**(cg_pow-2)
-       do j=1,size(a)
-          df(l,j)=&
-               sum( dreal(Ftmp)*dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta ) + &
-               sum( dimag(Ftmp)*dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta )
-       enddo
+    do idelta=1,Ldelta
+      do ilat=1,Nlat
+        do jlat=1,Nlat
+          do ispin=1,Nspin
+            do jspin=1,Nspin
+              do iorb=1,Norb
+                do jorb=1,Norb
+                  !
+                  Ftmp(idelta) = Ftmp(idelta) + abs(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
+                  do j=1,size(a)
+                     df(idelta,j) = df(idelta,j) + &
+                                    dreal(Ftmp(idelta))*dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
+                                    dimag(Ftmp(idelta))*dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
+                  enddo
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+      Ftmp(idelta)=cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
+      dchi_freq(idelta,:)=Ftmp(idelta)*df(idelta,:)
     enddo
     !
-    !dchi2 = -cg_pow*sum(df,1)/Ldelta     !sum over all orbital indices
-    dchi2 = -cg_pow*df(maxchi_loc,:)
-    dchi2 = dchi2/Ldelta
+    dchi2 = sum(dchi_freq,1)/Ldelta
     !
   end function grad_chi2_delta_replica
 #endif
@@ -441,33 +406,23 @@ contains
   function chi2_weiss_replica(a) result(chi2)
     real(8),dimension(:)                                         :: a
     real(8)                                                      :: chi2
-    real(8),dimension(totNlso)                                   :: chi2_lso
+    real(8),dimension(Ldelta)                                    :: chi2_freq
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: g0and
-    real(8),dimension(Ldelta)                                    :: Ctmp
-    integer                                                      :: i,l,ilat,jlat,iorb,jorb,ispin,jspin
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)        :: Delta_lso
+    integer                                                      :: l
     !
     g0and = g0and_replica(a)
     !
-    do l=1,totNlso
-       ilat = getIlat(l)
-       jlat = getJlat(l)
-       iorb = getIorb(l)
-       jorb = getJorb(l)
-       ispin = getIspin(l)
-       jspin = getJspin(l)
-       !
-       Ctmp = abs(Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:))
-       chi2_lso(l) = sum( Ctmp**cg_pow/Wdelta )
+    do l=1,Ldelta
+       Delta_lso    =  nnn2lso_reshape(g0and(:,:,:,:,:,:,l) - FGmatrix(:,:,:,:,:,:,l),Nlat,Nspin,Norb)
+       chi2_freq(l) =  sqrt(trace(matmul(Delta_lso,conjg(transpose(Delta_lso)))))
     enddo
     !
-    !FIXME:THIS NEEDS A THOROUGH DISCUSSION
-    !
-    !chi2=sum(chi2_lso)
-    chi2=maxval(chi2_lso)
-    maxchi_loc=maxloc(chi2_lso,1)
-    chi2=chi2/Ldelta
+    chi2 =  sum( Chi2_freq**cg_pow/Wdelta )
+    chi2 =  chi2/Ldelta
     !
   end function chi2_weiss_replica
+  
 
 #if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
   !+-------------------------------------------------------------+
@@ -477,36 +432,43 @@ contains
   function grad_chi2_weiss_replica(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
-    real(8),dimension(totNlso,size(a))                                   :: df
+    real(8),dimension(Ldelta,size(a))                                    :: df
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)         :: g0and
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dg0and
     complex(8),dimension(Ldelta)                                         :: Ftmp
-    real(8),dimension(Ldelta)                                            :: Ctmp
-    integer                                                              :: i,j,l,ilat,jlat,iorb,jorb,ispin,jspin
+    real(8),dimension(Ldelta,size(a))                                    :: dChi_freq
+    integer                                                              :: i,j,idelta,ilat,jlat,iorb,jorb,ispin,jspin
     !
     g0and  = g0and_replica(a)
     dg0and = grad_g0and_replica(a)
+    Ftmp=zero
+    df=zero
     !
-    do l=1,totNlso
-       ilat = getIlat(l)
-       jlat = getJlat(l)
-       iorb = getIorb(l)
-       jorb = getJorb(l)
-       ispin = getIspin(l)
-       jspin = getJspin(l)
-       !
-       Ftmp = Gdelta(l,:)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,:)
-       Ctmp = abs(Ftmp)**(cg_pow-2)
-       do j=1,size(a)
-          df(l,j)=&
-               sum( dreal(Ftmp)*dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta ) + &
-               sum( dimag(Ftmp)*dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,j))*Ctmp/Wdelta )
-       enddo
+    do idelta=1,Ldelta
+      do ilat=1,Nlat
+        do jlat=1,Nlat
+          do ispin=1,Nspin
+            do jspin=1,Nspin
+              do iorb=1,Norb
+                do jorb=1,Norb
+                  !
+                  Ftmp(idelta) = Ftmp(idelta) + abs(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
+                  do j=1,size(a)
+                     df(idelta,j) = df(idelta,j) + &
+                                    dreal(Ftmp(idelta))*dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
+                                    dimag(Ftmp(idelta))*dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
+                  enddo
+                enddo
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+      Ftmp(idelta)=cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
+      dchi_freq(idelta,:)=Ftmp(idelta)*df(idelta,:)
     enddo
     !
-    !dchi2 = -cg_pow*sum(df,1)     !sum over all orbital indices
-    dchi2 = -cg_pow*df(maxchi_loc,:)
-    dchi2 = dchi2/Ldelta
+    dchi2 = sum(dchi_freq,1)/Ldelta
     !
   end function grad_chi2_weiss_replica
 #endif
