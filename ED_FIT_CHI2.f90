@@ -377,11 +377,13 @@ contains
               do iorb=1,Norb
                 do jorb=1,Norb
                   !
-                  Ftmp(idelta) = Ftmp(idelta) + abs(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-Delta(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
+                  Ftmp(idelta) = Ftmp(idelta) + abs(Delta(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
                   do j=1,size(a)
                      df(idelta,j) = df(idelta,j) + &
-                                    dreal(Ftmp(idelta))*dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
-                                    dimag(Ftmp(idelta))*dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
+                                    real(Delta(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    real(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
+                                    imag(Delta(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    imag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
                   enddo
                 enddo
               enddo
@@ -389,8 +391,8 @@ contains
           enddo
         enddo
       enddo
-      Ftmp(idelta)=cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
-      dchi_freq(idelta,:)=Ftmp(idelta)*df(idelta,:)
+      Ftmp(idelta) = cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
+      dchi_freq(idelta,:) = Ftmp(idelta)*df(idelta,:)
     enddo
     !
     dchi2 = sum(dchi_freq,1)/Ldelta
@@ -452,11 +454,13 @@ contains
               do iorb=1,Norb
                 do jorb=1,Norb
                   !
-                  Ftmp(idelta) = Ftmp(idelta) + abs(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
+                  Ftmp(idelta) = Ftmp(idelta) + abs(g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
                   do j=1,size(a)
                      df(idelta,j) = df(idelta,j) + &
-                                    dreal(Ftmp(idelta))*dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
-                                    dimag(Ftmp(idelta))*dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
+                                    real(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    real(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
+                                    imag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    imag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
                   enddo
                 enddo
               enddo
@@ -567,9 +571,10 @@ contains
     !Get Hs
     counter = 0
     do ibath=1,Nbath
+       if(allocated(dummy_lambda(ibath)%element))deallocate(dummy_lambda(ibath)%element)
        allocate(dummy_lambda(ibath)%element(Nlambdas(ibath)))
        !
-       !FIXME: to extend uncomment Nspin and 1->NSPIN
+       ! TODO: to extend to Vup != Vdw uncomment Nspin and 1->NSPIN
        !do ispin=1,Nspin
        counter = counter + 1
        dummy_vbath(1,ibath) = a(counter)
@@ -590,13 +595,14 @@ contains
           invH_knn(:,:,:,:,:,:,l) = lso2nnn_reshape(Haux(:,:,l),Nlat,Nspin,Norb)
        enddo
        !Derivate_Vp
+       counter=counter+1 !  TODO: to extend to Vup != Vdw, remove this and uncomment the one below 
        do ispin=1,Nspin
-          counter = counter + 1
+          !counter = counter + 1  TODO: to extend to Vup != Vdw, uncomment this
           do ilat=1,Nlat
              do jlat=1,Nlat
                 do iorb=1,Norb
                    do jorb=1,Norb
-                      !FIXME: to extend, 1->ISPIN
+                      ! TODO: to extend to Vup != Vdw, 1->ISPIN
                       dDelta(ilat,jlat,ispin,ispin,iorb,jorb,:,counter)=2d0*dummy_Vbath(1,ibath)*invH_knn(ilat,jlat,ispin,ispin,iorb,jorb,:)
                    enddo
                 enddo
@@ -608,13 +614,13 @@ contains
           counter = counter + 1
           Hbasis_lso=nnn2lso_reshape(Hreplica_basis(k)%O,Nlat,Nspin,Norb)
           do l=1,Ldelta
-             ! Hbasis_lso=nnn2lso_reshape(Hreplica_basis(k)%O,Nlat,Nspin,Norb)
-             ! Htmp=matmul(Haux(:,:,l),Hbasis_lso)
-             ! Htmp=matmul(Htmp,Haux(:,:,l))
              Htmp = ((Haux(:,:,l) .x. Hbasis_lso)) .x. Haux(:,:,l)
              dDelta(:,:,:,:,:,:,l,counter)=lso2nnn_reshape((dummy_Vbath(1,ibath)**2)*Htmp,Nlat,Nspin,Norb)
           enddo
        enddo
+    enddo
+    do ibath=1,Nbath
+      if(allocated(dummy_lambda(ibath)%element))deallocate(dummy_lambda(ibath)%element)
     enddo
   end function grad_delta_replica
 
