@@ -628,8 +628,8 @@ contains
           invH_knn(:,:,:,:,:,:,l) = lso2nnn_reshape(Haux(:,:,l),Nlat,Nspin,Norb)
        enddo
        !Derivate_Vp
+       counter = counter + 1
        do ispin=1,Nspin
-          counter = counter + 1
           do ilat=1,Nlat
              do jlat=1,Nlat
                 do iorb=1,Norb
