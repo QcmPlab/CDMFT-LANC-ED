@@ -9,9 +9,9 @@ program cdn_kagome
    integer                                                                :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing,observable,dens
+   real(8)                                                                :: ts,wmixing,observable,dens,dens_1,dens_2,dens_3
    !Bath:
-   real(8),allocatable                                                    :: Bath(:),Bath_prev(:)
+   real(8),allocatable                                                    :: Bath(:),Bath_prev(:),Bath_fitted(:)
    !The local hybridization function:
    complex(8),allocatable                                                 :: Hloc(:,:)
    complex(8),allocatable,dimension(:,:,:,:,:,:,:)                        :: Gmats,Greal,Smats,Sreal,Weiss,Weiss_old
@@ -83,35 +83,21 @@ program cdn_kagome
    !    write(LOGFILE,*) "//"
    !enddo
 
-   !CUSTOM OBSERVABLES: n_tot, n_mag, Ekin
-   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-   call init_custom_observables(3,Hk)
-   observable_matrix=zero
-   do iii=1,Nlat
-      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
-      observable_matrix(iii,iii,Nspin,Nspin,1,1)=one/Nlat
-   enddo
-   call add_custom_observable("n_tot",nnn2lso(observable_matrix))
-   observable_matrix=zero
-   do iii=1,Nlat
-      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
-      observable_matrix(iii,iii,Nspin,Nspin,1,1)=-one/Nlat
-   enddo
-   call add_custom_observable("n_mag",nnn2lso(observable_matrix))
-   call add_custom_observable("Ekin",Hk)
-
    !SETUP BATH STEP 1
-   allocate(lambdasym_vector(1))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
+   allocate(lambdasym_vector(2))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
    !
    lambdasym_vector(1)=ts
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(1.d0))
+   lambdasym_vector(2)=2.d0
+   Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(zeye(NLSO))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))
+   allocate(bath_fitted(Nb))
    call ed_init_solver(comm,bath)
 
    !DMFT loop
@@ -140,17 +126,21 @@ program cdn_kagome
       !
       !Perform the SELF-CONSISTENCY by fitting the new bath
       if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
          !
-         !MIXING:
-         !call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
-         if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
-         Bath_Prev=Bath
+         bath_fitted=bath
+         call ed_chi2_fitgf(Weiss,bath_fitted)
+         call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
          !
-         !Check convergence (if required change chemical potential)
+         !call ed_chi2_fitgf(Weiss,bath)
+         !if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
+         !Bath_Prev=Bath
+         !
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
          if(nread/=0.d0)then
-            call ed_get_dens(dens,1,1)
+            call ed_get_dens(dens_1,1,1)
+            call ed_get_dens(dens_2,2,1)
+            call ed_get_dens(dens_3,3,1)
+            dens=(dens_1+dens_2+dens_3)/3.d0
             call search_chemical_potential(xmu,dens,converged)
          endif
       endif

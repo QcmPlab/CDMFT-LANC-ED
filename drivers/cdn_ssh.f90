@@ -167,17 +167,17 @@ contains
       !
       do ispin=1,Nspin
          do idimer=1,Ndimer
-          hopping_matrix(2*idimer-1,2*idimer  ,ispin,ispin,:,:) = vhop_
-          hopping_matrix(2*idimer  ,2*idimer-1,ispin,ispin,:,:) = vhop_
+          hopping_matrix(2*idimer-1,2*idimer  ,ispin,ispin,:,:) = -vhop_
+          hopping_matrix(2*idimer  ,2*idimer-1,ispin,ispin,:,:) = -vhop_
           !
           if(idimer < Ndimer) then
-             hopping_matrix(2*idimer  ,2*idimer+1,ispin,ispin,:,:) = whop_
-             hopping_matrix(2*idimer+1,2*idimer  ,ispin,ispin,:,:) = whop_
+             hopping_matrix(2*idimer  ,2*idimer+1,ispin,ispin,:,:) = -whop_
+             hopping_matrix(2*idimer+1,2*idimer  ,ispin,ispin,:,:) = -whop_
           endif
           !
           if(idimer > Ndimer) then
-             hopping_matrix(2*idimer-1,2*idimer-2,ispin,ispin,:,:) = whop_
-             hopping_matrix(2*idimer-2,2*idimer-1,ispin,ispin,:,:) = whop_
+             hopping_matrix(2*idimer-1,2*idimer-2,ispin,ispin,:,:) = -whop_
+             hopping_matrix(2*idimer-2,2*idimer-1,ispin,ispin,:,:) = -whop_
           endif
          enddo
       enddo
@@ -196,8 +196,8 @@ contains
       hopping_matrix=zero
       !
       do ispin=1,Nspin
-            hopping_matrix(1,Nlat,ispin,ispin,:,:) = hopping_matrix(1,Nlat,ispin,ispin,:,:) + whop*exp(-xi*kpoint(1)*Ndimer)
-            hopping_matrix(Nlat,1,ispin,ispin,:,:) = hopping_matrix(Nlat,1,ispin,ispin,:,:) + whop*exp( xi*kpoint(1)*Ndimer)
+            hopping_matrix(1,Nlat,ispin,ispin,:,:) = hopping_matrix(1,Nlat,ispin,ispin,:,:) - whop*exp(-xi*kpoint(1)*Ndimer)
+            hopping_matrix(Nlat,1,ispin,ispin,:,:) = hopping_matrix(Nlat,1,ispin,ispin,:,:) - whop*exp( xi*kpoint(1)*Ndimer)
       enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N,vhop,whop)
