@@ -800,12 +800,14 @@ contains
        var_old  = var
        !
     endif
-#ifdef _MPI
-    if(check_MPI())then
-       call Bcast_MPI(MPI_COMM_WORLD,converged)
-       call Bcast_MPI(MPI_COMM_WORLD,var)
-    endif
-#endif
+!#ifdef _MPI
+    !if(check_MPI())then
+       !write(*,*) "broadcasting converged"
+       !call Bcast_MPI(MPI_COMM_WORLD,converged)
+       !write(*,*) "broadcasting var"
+       !call Bcast_MPI(MPI_COMM_WORLD,var)
+    !endif
+!#endif
   end subroutine search_chemical_potential
 
 
