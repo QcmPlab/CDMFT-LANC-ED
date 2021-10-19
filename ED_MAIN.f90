@@ -122,7 +122,7 @@ contains
 #if __GFORTRAN__ &&  __GNUC__ > 8     
   subroutine ed_init_solver_lattice_mpi(MpiComm,bath)
     integer                        :: MpiComm
-    real(8),dimension(:,:)         :: bath ![Nlat][:]
+    real(8),dimension(:,:)         :: bath ![Nineq][:]
     integer                        :: iineq,Nineq
     logical                        :: check
     integer                        :: MPI_ERR
@@ -140,7 +140,9 @@ contains
     if(allocated(Sreal_ineq))deallocate(Sreal_ineq)
     if(allocated(Gmats_ineq))deallocate(Gmats_ineq)
     if(allocated(Greal_ineq))deallocate(Greal_ineq)
-    if(allocated(imp_density_matrix_ineq))deallocate(imp_density_matrix_ineq)
+    if(allocated(single_particle_density_matrix_ineq))deallocate(single_particle_density_matrix_ineq)
+    if(allocated(cluster_density_matrix_ineq))deallocate(cluster_density_matrix_ineq)
+
     if(allocated(neigen_sector_ineq))deallocate(neigen_sector_ineq)
     if(allocated(neigen_total_ineq))deallocate(neigen_total_ineq)
     !
@@ -156,7 +158,9 @@ contains
     allocate(Gmats_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
     allocate(Greal_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
     !
-    allocate(imp_density_matrix_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+    allocate(single_particle_density_matrix_ineq(Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+    allocate(cluster_density_matrix_ineq(Nineq,4**(Nlat*Norb),4**(Nlat*Norb)))
+
     !
     do iineq=1,Nineq             !all nodes check the bath, u never know...
       !
@@ -269,7 +273,7 @@ contains
   subroutine ed_solve_lattice_mpi(MpiComm,bath,Hloc,mpi_lanc,Uloc_ii,Ust_ii,Jh_ii,Jp_ii,Jx_ii)
     integer          :: MpiComm
     !inputs
-    real(8)          :: bath(:,:) ![Nlat][Nb]
+    real(8)          :: bath(:,:) ![Nineq][Nb]
     complex(8)       :: Hloc(size(bath,1),Nlat,Nlat,Nspin,Nspin,Norb,Norb)
     logical,optional :: mpi_lanc
     real(8),optional :: Uloc_ii(size(bath,1),Norb)
@@ -313,7 +317,8 @@ contains
     dens_ineq     = 0d0  ; docc_ineq     = 0d0
     mag_ineq      = 0d0
     e_ineq        = 0d0  ; dd_ineq       = 0d0 
-    imp_density_matrix_ineq = zero
+    single_particle_density_matrix_ineq = zero
+    cluster_density_matrix_ineq = zero
     !
     !solve sites serial, Lanczos with MPI
     if(MPI_MASTER)call start_timer
@@ -345,7 +350,9 @@ contains
        !mag_ineq(iineq,:,1:Norb)     = ed_mag(:,1:Norb)
        e_ineq(iineq,:)              = [ed_Epot,ed_Eint,ed_Ehartree,ed_Eknot]
        dd_ineq(iineq,:)             = [ed_Dust,ed_Dund,ed_Dse,ed_Dph]
-       imp_density_matrix_ineq(iineq,:,:,:,:,:,:) = imp_density_matrix(:,:,:,:,:,:)
+       single_particle_density_matrix_ineq(iineq,:,:,:,:,:,:) = single_particle_density_matrix(:,:,:,:,:,:)
+       cluster_density_matrix_ineq(iineq,:,:) = cluster_density_matrix(:,:)
+
     enddo
     if(MPI_MASTER)call stop_timer(unit=LOGfile)
     ed_file_suffix=""

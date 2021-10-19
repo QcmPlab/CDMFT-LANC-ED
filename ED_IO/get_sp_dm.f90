@@ -1,4 +1,4 @@
-  subroutine ed_get_density_matrix_single(dm_,custom_rot,dm_eig_,dm_rot_)
+  subroutine ed_get_single_particle_density_matrix_single(dm_,custom_rot,dm_eig_,dm_rot_)
     implicit none
     !passed
     complex(8),allocatable,intent(out)           :: dm_(:,:)
@@ -12,8 +12,8 @@
     complex(8),allocatable                       :: dm_custom_rot(:,:)
     real(8)                                      :: soc
     !
-    if (.not.allocated(imp_density_matrix)) then
-       write(LOGfile,"(A)") "imp_density_matrix is not allocated"
+    if (.not.allocated(single_particle_density_matrix)) then
+       write(LOGfile,"(A)") "single_particle_density_matrix is not allocated"
        stop
     endif
     !
@@ -23,7 +23,7 @@
     if(present(dm_rot_).and.allocated(dm_rot_))deallocate(dm_rot_)      ;allocate(dm_rot_(Nlat*Nspin*Norb,Nlat*Nspin*Norb))      ;dm_rot_ = zero
     !
     ! dm in the impurity problem basis
-    dm_ = nnn2lso_reshape(imp_density_matrix,Nlat,Nspin,Norb)
+    dm_ = nnn2lso_reshape(single_particle_density_matrix,Nlat,Nspin,Norb)
     !
     !
     ! dm in her diagonal basis
@@ -38,7 +38,7 @@
     !
     call print_dm(dm_,dm_rot_,dm_eig_,dm_custom_rot,1)
     !
-  end subroutine ed_get_density_matrix_single
+  end subroutine ed_get_single_particle_density_matrix_single
 
 
   subroutine print_dm(dm_,dm_rot_,dm_eig_,dm_custom_rot,ndx)
@@ -53,7 +53,7 @@
     character(len=24)                            :: suffix
     integer                                      :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo
     !
-    suffix="imp_density_matrix_"//reg(str(ndx))//".dat"
+    suffix="single_particle_density_matrix_"//reg(str(ndx))//".dat"
     !
     unit = free_unit()
     open(unit,file=suffix,action="write",position="rewind",status='unknown')

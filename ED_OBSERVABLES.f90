@@ -45,7 +45,7 @@ MODULE ED_OBSERVABLES
   integer                                         :: iorb,jorb,iorb1,jorb1
   integer                                         :: ispin,jspin
   integer                                         :: ilat,jlat
-  integer                                         :: ibath
+  integer                                         :: ibath,jbath
   integer                                         :: r,m,k,k1,k2
   integer                                         :: iup,idw
   integer                                         :: jup,jdw
@@ -198,10 +198,12 @@ contains
   !+-------------------------------------------------------------------+
   subroutine lanc_observables()
     integer                             :: istate,Nud(2,Ns),iud(2),jud(2),is,js
+    integer                             :: Nclust,Iclust,Jclust
     integer,dimension(2*Ns_Ud)          :: Indices,Jndices
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
     integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
+    integer,dimension(Ns)               :: JbUp,JbDw  ![Ns]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
     type(sector_map),dimension(2*Ns_Ud) :: HI
     !
@@ -252,7 +254,7 @@ contains
              do ii=1,Ns_Ud
                 mup = HI(ii)%map(Indices(ii))
                 mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-                IbUp = Bdecomp(mup,Ns_Orb) ![Norb,1+Nbath]
+                IbUp = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
                 IbDw = Bdecomp(mdw,Ns_Orb)
              enddo
              !
@@ -313,9 +315,11 @@ contains
        !
     enddo
     !
-    !IMPURITY DENSITY MATRIX
-    if(allocated(imp_density_matrix)) deallocate(imp_density_matrix)
-    allocate(imp_density_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb));imp_density_matrix=zero
+    !
+    !
+    !
+    !
+    !SINGLE PARTICLE DENSITY MATRIX [<C^+_a C_b>]
     do istate=1,state_list%size
        isector = es_return_sector(state_list,istate)
        Ei      = es_return_energy(state_list,istate)
@@ -345,26 +349,26 @@ contains
              do ii=1,Ns_Ud
                 mup = HI(ii)%map(Indices(ii))
                 mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Norb,1+Nbath]
+                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
                 Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
              enddo
-             Nud(1,:) = Breorder(Nups)
-             Nud(2,:) = Breorder(Ndws)
+             Nud(1,:) = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
+             Nud(2,:) = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
              !
              !Diagonal densities
              do ilat=1,Nlat
                do ispin=1,Nspin
                   do iorb=1,Norb
                      is = imp_state_index(ilat,iorb)
-                     imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
-                          imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
+                     single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
+                          single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
                           peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
                   enddo
                enddo
              enddo
              !
              !Off-diagonal
-             !if(ed_total_ud)then !!!! this is true by default in the CDMFT cod
+             !if(ed_total_ud)then !!!! this is true by default in the CDMFT code
                 do ispin=1,Nspin
                   do ilat=1,Nlat
                     do jlat=1,Nlat
@@ -382,8 +386,8 @@ contains
                                  binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
                             call indices2state(Jndices,[iDimUps,iDimDws],j)
                             !
-                            imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
-                                 imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
+                            single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
+                                 single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
                                  peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
                           endif
                         enddo
@@ -411,6 +415,128 @@ contains
     enddo
     !
     !
+    !
+    !
+    !
+    !CLUSTER DENSITY MATRIX [\rho_CIMP = Tr_BATH(\rho)]
+    cluster_density_matrix=zero    
+    do istate=1,state_list%size
+       isector = es_return_sector(state_list,istate)
+       Ei      = es_return_energy(state_list,istate)
+#ifdef _MPI
+       if(MpiStatus)then
+          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+       else
+          state_cvec => es_return_cvector(state_list,istate)
+       endif
+#else
+       state_cvec => es_return_cvector(state_list,istate)
+#endif
+       !
+       peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
+       peso = peso/zeta_function
+       !
+       iDim  = getdim(isector)
+       call get_DimUp(isector,iDimUps)
+       call get_DimDw(isector,iDimDws)
+       iDimUp = product(iDimUps)
+       iDimDw = product(iDimDws)
+       Nclust = Nlat*Norb
+       !
+       if(MpiMaster)then
+          call build_sector(isector,HI)
+          !
+          do i=1,iDim
+             !!! BUILD_OP_NS DOES NOT EXIST IN CDMFT CODE (YET)
+             !call build_op_Ns(i,IbUp,IbDw,sectorI) 
+             !!!So we fall back to call directly state2indices, bdecomp, breorder:
+             call state2indices(i,[iDimUps,iDimDws],Indices)
+             do ii=1,Ns_Ud !Actually, Ns_Ud = 1 in CDMFT code...look in ED_SETUP!
+               mup = HI(ii)%map(Indices(ii))
+               mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
+               Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
+               Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+             enddo
+             IbUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
+             IbDw = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
+             !!!
+             Iclust = bjoin([IbUp(1:Nclust),IbDw(1:Nclust)],2*Nclust) + 1
+             ! >> Full calculation: WAY TOO SLOW <<
+             ! Ibath= bjoin([IbUp((Nclust+1:),IbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
+             ! do j=1,iDim
+             !    !!! BUILD_OP_NS DOES NOT EXIST
+             !    !call build_op_Ns(j,JbUp,JbDw,HI)
+             !    !!! SO WE CALL:
+             !    call state2indices(j,[iDimUps,iDimDws],Jndices)
+             !    do ii=1,Ns_Ud 
+             !       mup = HI(ii)%map(Jndices(ii))
+             !       mdw = HI(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
+             !       Nups(ii,:) = Bdecomp(mup,Ns_Orb)
+             !       Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+             !    enddo
+             !    JbUp = Breorder(Nups)
+             !    JbDw = Breorder(Ndws)
+             !    !!!
+             !    Jclust = bjoin([JbUp(1:Nclust),JbDw(1:Nclust)],2*Nclust) + 1
+             !    Jbath= bjoin([JbUp(Nclust+1:),JbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
+             !    if(Jbath/=Ibath)cycle
+             !    cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
+             !    state_cvec(i)*state_cvec(j)*peso
+             ! enddo
+             !
+             !    > To speed up things we may want to avoid the whole (i,j)=1,iDim spanning,
+             !      generating instead the cluster and bath bit configurations separately.
+             !      This way we could just directly fix (Iclust,Jclust) and span with a _*single*_
+             !      cycle Ibath, so to take the trace. But we need to reason about 1. how to restrict
+             !      the generated bath configurations to the given sector (may be cumbersome, and 
+             !      not necessarily faster than what we have) and 2. how to rebuild the global (i,j),
+             !      in order to select the appropriate state_cvec elements.
+             !
+             ! >> Diagonal by construction: NOT GENERAL <<
+             j=i
+             Jclust=Iclust
+             cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
+                  state_cvec(i)*state_cvec(j)*peso
+          enddo
+          call delete_sector(isector,HI)         
+       endif
+       !
+#ifdef _MPI
+       if(MpiStatus)then
+          if(associated(state_cvec))deallocate(state_cvec)
+       else
+          if(associated(state_cvec))nullify(state_cvec)
+       endif
+#else
+       if(associated(state_cvec))nullify(state_cvec)
+#endif
+       !
+    enddo
+   !
+   !Useful prints to test:
+   if(MPIMASTER)then
+      if(Nclust==1)then
+         do i=1,4**Nclust
+            !PRINT FULL MATRIX (Norb=1)
+            write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nclust)
+         enddo
+         ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
+         print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1),abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
+         print*,dens_up(1,1)-docc(1,1),abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
+         print*,dens_dw(1,1)-docc(1,1),abs(dens_dw(1,1)-docc(1,1)-cluster_density_matrix(3,3))
+         print*,docc(1,1),abs(docc(1,1)-cluster_density_matrix(4,4))
+      else
+         do i=1,4**Nclust
+            !PRINT JUST THE DIAGONAL (Norb>1)
+            write(*,*) i, dreal(cluster_density_matrix(i,i))
+          enddo
+      endif
+   endif
+   !
+   !
+   !
+   !
+   !
     if(MPIMASTER)then
        call get_szr
        if(iolegend)call write_legend
@@ -641,11 +767,11 @@ contains
              do ii=1,Ns_Ud
                 mup = H(ii)%map(Indices(ii))
                 mdw = H(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Norb,1+Nbath]
+                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
                 Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
              enddo
-             Nup = Breorder(Nups)
-             Ndw = Breorder(Ndws)
+             Nup = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
+             Ndw = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
              !
              gs_weight=peso*abs(state_cvec(i))**2
              !

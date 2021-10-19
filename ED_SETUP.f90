@@ -251,6 +251,14 @@ contains
     !    ! allocate(pairChi_iv(Norb,0:Lmats))
     ! endif
     !
+    !allocate density matrices
+    !
+    allocate(single_particle_density_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+    single_particle_density_matrix=zero
+    !
+    allocate(cluster_density_matrix(4**(Nlat*Norb),4**(Nlat*Norb)))
+    cluster_density_matrix=zero
+    !
   end subroutine init_ed_structure
 
 
@@ -895,7 +903,7 @@ contains
   !+------------------------------------------------------------------+
   ! Reorder a binary decomposition so to have a state of the form:
   ! default: |(1:Norb),([1:Nbath]_1, [1:Nbath]_2, ... ,[1:Nbath]_Norb)>_spin
-  ! hybrid:  |(1:Norb),([1:Nbath])_spin
+  ! hybrid:  |(1:Norb),([1:Nbath])>_spin
   ! replica: |(1:Norb),([1:Norb]_1, [1:Norb]_2, ...  , [1:Norb]_Nbath)>_spin
   !
   !> case (ed_total_ud):
@@ -909,7 +917,7 @@ contains
     integer,intent(in),dimension(Ns_Ud,Ns_Orb) :: Nins ![1,Ns] - [Norb,1+Nbath]
     integer,dimension(Ns)                      :: Ivec ![Ns]
     integer                                    :: iud,ibath,indx
-    ! select case (ed_total_ud)
+    ! select case (ed_total_ud) !!! this is true by default in the CDMFT code
     ! case (.true.)
     Ivec = Nins(1,:)
     ! case (.false.)

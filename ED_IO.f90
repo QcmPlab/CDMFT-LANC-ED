@@ -190,12 +190,12 @@ MODULE ED_IO
 #endif
   end interface ed_get_dph
 
-   interface ed_get_density_matrix
-      module procedure :: ed_get_density_matrix_single
+   interface ed_get_single_particle_density_matrix
+      module procedure :: ed_get_single_particle_density_matrix_single
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-      module procedure :: ed_get_density_matrix_lattice
+      module procedure :: ed_get_single_particle_density_matrix_lattice
 #endif
-   end interface ed_get_density_matrix
+   end interface ed_get_single_particle_density_matrix
 
   interface ed_gf_cluster
      module procedure :: ed_gf_cluster_scalar
@@ -253,7 +253,7 @@ MODULE ED_IO
   public :: ed_get_dse
   public :: ed_get_dph
 
-  public :: ed_get_density_matrix
+  public :: ed_get_single_particle_density_matrix
 
   public :: ed_read_impSigma
   public :: ed_read_impG
@@ -314,7 +314,7 @@ contains
   include "ED_IO/get_docc.f90"
   include "ED_IO/get_eimp.f90"
   include "ED_IO/get_doubles.f90"
-  include "ED_IO/get_imp_dm.f90"
+  include "ED_IO/get_sp_dm.f90"
 
 #if __GFORTRAN__ &&  __GNUC__ > 8    
   include "ED_IO/lattice/get_dens.f90"
@@ -322,7 +322,7 @@ contains
   include "ED_IO/lattice/get_docc.f90"
   include "ED_IO/lattice/get_eimp.f90"
   include "ED_IO/lattice/get_doubles.f90"
-  include "ED_IO/lattice/get_imp_dm.f90"
+  include "ED_IO/lattice/get_sp_dm.f90"
 #endif
 
   !+------------------------------------------------------------------+

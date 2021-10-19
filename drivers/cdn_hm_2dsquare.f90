@@ -261,6 +261,16 @@ contains
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
+      real(8),dimension(2)                        :: e1,e2,bk1,bk2
+      real(8)                                     :: bklen
+      !
+      e1 = [1d0, 0d0]
+      e2 = [0d0, 1d0]
+      call TB_set_ei(eix=e1,eiy=e2)
+      bklen=2d0*pi
+      bk1=bklen*[1d0, 0d0]
+      bk2=bklen*[0d0, 1d0]
+      call TB_set_bk(bkx=bk1,bky=bk2)
       !
       call TB_build_kgrid([Nkx,Nky],kgrid)
       kgrid(:,1)=kgrid(:,1)/Nx

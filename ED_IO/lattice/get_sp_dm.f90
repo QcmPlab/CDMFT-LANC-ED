@@ -1,4 +1,4 @@
-  subroutine ed_get_density_matrix_lattice(dm_,custom_rot,dm_eig_,dm_rot_)
+  subroutine ed_get_single_particle_density_matrix_lattice(dm_,custom_rot,dm_eig_,dm_rot_)
     implicit none
     !passed
     complex(8),allocatable,intent(out)           :: dm_(:,:,:)
@@ -16,10 +16,10 @@
     complex(8),allocatable                       :: dm_rot_tmp(:,:)
     complex(8),allocatable                       :: dm_custom_rot_tmp(:,:)
     !
-    Nsites=size(imp_density_matrix_ii,1)
+    Nsites=size(single_particle_density_matrix_ii,1)
     !
-    if (.not.allocated(imp_density_matrix)) then
-       write(LOGfile,"(A)") "imp_density_matrix is not allocated"
+    if (.not.allocated(single_particle_density_matrix)) then
+       write(LOGfile,"(A)") "single_particle_density_matrix is not allocated"
        stop
     endif
     !
@@ -36,7 +36,7 @@
     do isite=1,Nsites
        !
        ! dm in the impurity problem basis
-       dm_(isite,:,:) = nnn2lso_reshape(imp_density_matrix_ii(isite,:,:,:,:,:,:),Nlat,Nspin,Norb)
+       dm_(isite,:,:) = nnn2lso_reshape(single_particle_density_matrix_ii(isite,:,:,:,:,:,:),Nlat,Nspin,Norb)
        !
        !
      ! dm in her diagonal basis
@@ -55,5 +55,5 @@
        call print_dm(dm_tmp,dm_rot_tmp,dm_eig_tmp,dm_custom_rot_tmp,isite)
        !
     enddo
-  end subroutine ed_get_density_matrix_lattice
+  end subroutine ed_get_single_particle_density_matrix_lattice
 

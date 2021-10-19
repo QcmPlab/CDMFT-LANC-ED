@@ -179,10 +179,11 @@ MODULE ED_VARS_GLOBAL
 
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii        ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: imp_density_matrix_ii    ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii                   ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii                   ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii                 ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: single_particle_density_matrix_ii ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+   complex(8),dimension(:,:,:)          ,allocatable,save :: cluster_density_matrix_ii         ![Nineq][4**(Nlat*Norb)][4**(Nlat*Norb)]
 #endif
 
 
@@ -244,19 +245,21 @@ MODULE ED_VARS_GLOBAL
   ! !Impurity operators
   ! !PRIVATE (now public but accessible thru routine)
   ! !=========================================================
-   complex(8),allocatable,dimension(:,:,:,:,:,:)          :: imp_density_matrix
+   complex(8),allocatable,dimension(:,:,:,:,:,:)          :: single_particle_density_matrix ![Nlat,Nlat,Nspin,Nspin,Norb,Norb]
+   complex(8),allocatable,dimension(:,:)                  :: cluster_density_matrix         ![4**(Nlat*Norb),4**(Nlat*Norb)]
 
 
 #if __GFORTRAN__ &&  __GNUC__ > 8     
   !--------------- LATTICE WRAP VARIABLES -----------------!
-  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq          ![Nlat][Nspin][Nspin][Norb][Norb][L]
+  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq    ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,L]
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: SAmats_ineq,SAreal_ineq
   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmats_ineq,Greal_ineq
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Fmats_ineq,Freal_ineq
   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0mats_ineq,G0real_ineq
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: F0mats_ineq,F0real_ineq
   !complex(8),dimension(:,:),allocatable,save         :: Dmats_ph_ineq,Dreal_ph_ineq
-  complex(8),dimension(:,:,:,:,:,:,:),allocatable,save   :: imp_density_matrix_ineq
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable,save   :: single_particle_density_matrix_ineq ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb]
+  complex(8),dimension(:,:,:),allocatable,save       :: cluster_density_matrix_ineq ![Nineq,4**(Nlat*Norb),4**(Nlat*Norb)]
   real(8),dimension(:,:,:),allocatable,save          :: dens_ineq 
   real(8),dimension(:,:,:),allocatable,save          :: docc_ineq
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
