@@ -593,72 +593,110 @@ contains
     real(8),save          :: var_new
     real(8),save          :: var_old
     real(8)               :: var_sign
+    real(8)               :: delta_n,delta_v,chi_shift
     !
     real(8)               :: ndiff
     integer,save          :: count=0,totcount=0,i
     integer               :: unit
+    logical :: master
     !
-    !check actual value of the density *ntmp* with respect to goal value *nread*
-    count=count+1
-    totcount=totcount+1
-    !  
-    if(count==1)then
-       chich = ndelta        !~0.2
-       inquire(file="var_compressibility.restart",EXIST=bool)
-       if(bool)then
-          open(free_unit(unit),file="var_compressibility.restart")
-          read(unit,*)chich
-          close(unit)
+#ifdef _DEBUG
+    if(ed_verbose>3)write(Logfile,"(A)")"DEBUG ed_search_variable: adjust var"
+#endif
+    !
+    if(nread==0d0)return
+    master=.true.
+#ifdef _MPI    
+    if(check_MPI())master  = get_master_MPI()
+#endif
+    !
+    if(master)then
+       !check actual value of the density *ntmp* with respect to goal value *nread*
+       count=count+1
+       totcount=totcount+1
+       !  
+       if(count==1)then
+          chich = ndelta        !~0.2
+          inquire(file="var_compressibility.restart",EXIST=bool)
+          if(bool)then
+             write(LOGfile,"(A)")"Reading compressibility from file"
+             open(free_unit(unit),file="var_compressibility.restart")
+             read(unit,*)chich
+             close(unit)
+          endif
+          var_old = var
        endif
+       !
+       ndiff=ntmp-nread
+       !
+       open(free_unit(unit),file="var_compressibility.used")
+       write(unit,*)chich
+       close(unit)
+       !
+       ! if(abs(ndiff)>nerr)then
+       !Get 'charge compressibility"
+       delta_n = ntmp-nold
+       delta_v = var-var_old
+       if(count>1)chich = delta_v/(delta_n+1d-10) !1d-4*nerr)  !((ntmp-nold)/(var-var_old))**-1
+       !
+       !Add here controls on chich: not to be too small....
+       if(chich>10d0)chich=2d0*chich/abs(chich) !do nothing?
+       !
+       chi_shift = ndiff*chich
+       !
+       !update chemical potential
+       var_new = var - chi_shift
+       !
+       !
+       !re-define variables:
+       nold    = ntmp
        var_old = var
+       var     = var_new
+       !
+       !Print information
+       write(LOGfile,"(A11,F16.9,A,F15.9)")  "n      = ",ntmp,"| instead of",nread
+       write(LOGfile,"(A11,ES16.9,A,ES16.9)")"n_diff = ",ndiff,"/",nerr
+       write(LOGfile,"(A11,ES16.9,A,ES16.9)")"dv     = ",delta_v
+       write(LOGfile,"(A11,ES16.9,A,ES16.9)")"dn     = ",delta_n
+       write(LOGfile,"(A11,F16.9,A,F15.9)")  "dv/dn  = ",chich
+       var_sign = (var-var_old)/abs(var-var_old)
+       if(var_sign>0d0)then
+          write(LOGfile,"(A11,ES16.9,A4)")"shift    = ",chi_shift," ==>"
+       else
+          write(LOGfile,"(A11,ES16.9,A4)")"shift    = ",chi_shift," <=="
+       end if
+       write(LOGfile,"(A11,F16.9)")"var     = ",var
+       !
+       ! else
+       !    count=0
+       ! endif
+       !Save info about search variable iteration:
+       open(free_unit(unit),file="search_variable_iteration_info"//reg(ed_file_suffix)//".ed",position="append")
+       ! if(count==1)write(unit,*)"#var,ntmp,ndiff"
+       write(unit,*)totcount,var,ntmp,ndiff
+       close(unit)
+       !
+       !If density is not converged set convergence to .false.
+       if(abs(ndiff)>nerr)converged=.false.
+       !
+       write(LOGfile,"(A18,I5)")"Search var count= ",count
+       write(LOGfile,"(A19,L2)")"Converged       = ",converged
+       print*,""
+       !
+       open(free_unit(unit),file="var_compressibility.restart")
+       write(unit,*)chich
+       close(unit)
+       !
     endif
-    !
-    ndiff=ntmp-nread
-    !
-    !Get 'charge compressibility"
-    if(count>1)chich = (ntmp-nold)/(var-var_old)
-    !
-    !Add here controls on chich: not to be too small....
-    if(chich<0.1d0)chich=0.1d0*chich/abs(chich)
-    !
-    !update chemical potential
-    var_new = var - ndiff/chich
-    !
-    !
-    !re-define variables:
-    nold    = ntmp
-    var_old = var
-    var     = var_new
-    !
-    !Print information
-    write(LOGfile,"(A9,F16.9,A,F15.9)")  "n    = ",ntmp,"| instead of",nread
-    write(LOGfile,"(A9,ES16.9,A,ES16.9)")"dn   = ",ndiff,"/",nerr
-    var_sign = (var-var_old)/abs(var-var_old)
-    if(var_sign>0d0)then
-       write(LOGfile,"(A9,ES16.9,A4)")"shift = ",ndiff/chich," ==>"
-    else
-       write(LOGfile,"(A9,ES16.9,A4)")"shift = ",ndiff/chich," <=="
-    end if
-    write(LOGfile,"(A9,F16.9)")"var  = ",var
-    !
-    !Save info about search variable iteration:
-    open(free_unit(unit),file="search_variable_iteration_info"//reg(ed_file_suffix)//".ed",position="append")
-    if(count==1)write(unit,*)"#var,ntmp,ndiff"
-    write(unit,*)var,ntmp,ndiff
-    close(unit)
-    !
-    !If density is not converged set convergence to .false.
-    if(abs(ndiff)>nerr)converged=.false.
-    !
-    write(LOGfile,"(A18,I5)")"Search var count= ",count
-    write(LOGfile,"(A19,L2)")"Converged       = ",converged
-    print*,""
-    !
-    open(free_unit(unit),file="var_compressibility.used")
-    write(unit,*)chich
-    close(unit)
-    !
+#ifdef _MPI
+    if(check_MPI())then
+       call Bcast_MPI(MPI_COMM_WORLD,converged)
+       call Bcast_MPI(MPI_COMM_WORLD,var)
+    endif
+#endif
   end subroutine ed_search_variable
+  
+  
   
   subroutine search_chemical_potential(var,ntmp,converged)
     real(8),intent(inout) :: var
