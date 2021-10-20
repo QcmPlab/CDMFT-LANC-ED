@@ -149,7 +149,15 @@ program cdn_kagome
         !call ed_get_dens(dens_2,2,1)
         !call ed_get_dens(dens_3,3,1)
         !dens=(dens_1+dens_2+dens_3)/3.d0
-        call ed_get_custom_observable(dens,"n")
+        !
+        !call ed_get_custom_observable(dens,"n")
+        !
+        dens_1=fft_get_density(Gmats(1,1,1,1,1,1,:),beta)+fft_get_density(Gmats(1,1,2,2,1,1,:),beta)
+        dens_2=fft_get_density(Gmats(2,2,1,1,1,1,:),beta)+fft_get_density(Gmats(2,2,2,2,1,1,:),beta)
+        dens_3=fft_get_density(Gmats(3,3,1,1,1,1,:),beta)+fft_get_density(Gmats(3,3,2,2,1,1,:),beta)
+        dens=(dens_1+dens_2+dens_3)/3.d0
+        print*,"DENSITY IS ",dens
+        !
         call search_chemical_potential(xmu,dens,converged)
      endif
     !
