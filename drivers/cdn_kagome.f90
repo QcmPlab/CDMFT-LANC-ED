@@ -103,58 +103,51 @@ program cdn_kagome
    !DMFT loop
    iloop=0;converged=.false.
    do while(.not.converged.AND.iloop<nloop)
-      iloop=iloop+1
-      if(master)call start_loop(iloop,nloop,"DMFT-loop")
-
+     iloop=iloop+1
+     call start_loop(iloop,nloop,"DMFT-loop")
       !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath,lso2nnn(hloc))
-      !!! GO ON HERE !!!
-      call ed_get_sigma_matsubara(Smats)
-      call ed_get_sigma_realaxis(Sreal)
-
+     call ed_solve(comm,bath,lso2nnn(hloc))
+     !!! GO ON HERE !!!
+     call ed_get_sigma_matsubara(Smats)
+     call ed_get_sigma_realaxis(Sreal)
       !Compute the local gfs:
-      call dmft_gloc_matsubara(Hk,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
-      !
-      !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
-      call Bcast_MPI(comm,Weiss)
-      !
-      !MIXING:
-      !if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
-      !Weiss_old=Weiss
-      !
-      !Perform the SELF-CONSISTENCY by fitting the new bath
-      if(master)then
-         !
-         bath_fitted=bath
-         call ed_chi2_fitgf(Weiss,bath_fitted)
-         call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
-         !
-         !call ed_chi2_fitgf(Weiss,bath)
-         !if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
-         !Bath_Prev=Bath
-         !
-         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
-         if(nread/=0.d0)then
-            call ed_get_dens(dens_1,1,1)
-            call ed_get_dens(dens_2,2,1)
-            call ed_get_dens(dens_3,3,1)
-            dens=(dens_1+dens_2+dens_3)/3.d0
-            call search_chemical_potential(xmu,dens,converged)
-         endif
-      endif
-      !
-      call Bcast_MPI(comm,bath)
-      call Bcast_MPI(comm,converged)
-      call Bcast_MPI(comm,xmu)
-      !
-      if(master)call end_loop
+     call dmft_gloc_matsubara(Hk,Gmats,Smats)
+     call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+     !
+     !Get the Weiss field/Delta function to be fitted
+     call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+     call Bcast_MPI(comm,Weiss)
+     !
+     !MIXING:
+     !if(iloop>1)Weiss = wmixing*Weiss + (1.d0-wmixing)*Weiss_Old
+     !Weiss_old=Weiss
+     !
+     !Perform the SELF-CONSISTENCY by fitting the new bath
+        !
+     bath_fitted=bath
+     call ed_chi2_fitgf(Weiss,bath_fitted)
+     call adaptive_mix(Bath(Nbath+1:),Bath_fitted(Nbath+1:)-Bath(Nbath+1:),wmixing,iloop)
+     !
+     !call ed_chi2_fitgf(Weiss,bath)
+     !if(iloop>1)Bath = wmixing*Bath + (1.d0-wmixing)*Bath_Prev
+     !Bath_Prev=Bath
+     !
+     converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+     if(nread/=0.d0)then
+        call ed_get_dens(dens_1,1,1)
+        call ed_get_dens(dens_2,2,1)
+        call ed_get_dens(dens_3,3,1)
+        dens=(dens_1+dens_2+dens_3)/3.d0
+        call search_chemical_potential(xmu,dens,converged)
+     endif
+    !
+    !
+    call end_loop
    enddo
 
    !Compute the local gfs:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+   call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
