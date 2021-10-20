@@ -726,15 +726,15 @@ contains
     !
     if(master)then
        !
-       if(count==0)then
-          inquire(file="var.restart",EXIST=bool)
-          if(bool)then
-             open(free_unit(unit),file="var.restart")
-             read(unit,*)var,ndelta
-             ndelta=abs(ndelta)*ncoeff
-             close(unit)
-          endif
-       endif
+       !if(count==0)then
+       !   inquire(file="xmu.restart",EXIST=bool)
+       !   if(bool)then
+       !      open(free_unit(unit),file="xmu.restart")
+       !      read(unit,*)var,ndelta
+       !      ndelta=abs(ndelta)*ncoeff
+       !      close(unit)
+       !   endif
+       !endif
        !
        ndiff=ntmp-nread
        nratio = 0.5d0;!nratio = 1.d0/(6.d0/11.d0*pi)
@@ -830,7 +830,7 @@ contains
        write(LOGfile,"(A,L2)")"Converged=",converged
        print*,""
        !
-       open(free_unit(unit),file="var.restart")
+       open(free_unit(unit),file="xmu.restart")
        write(unit,*)var,ndelta
        close(unit)
        !
