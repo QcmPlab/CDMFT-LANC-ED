@@ -92,6 +92,16 @@ program cdn_kagome
    lambdasym_vector(2)=2.d0
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(zeye(NLSO))
    !
+   !CUSTOM OBSERVABLES: n
+   allocate(observable_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+   call init_custom_observables(1,Hk)
+   observable_matrix=zero
+   do iii=1,Nlat
+      observable_matrix(iii,iii,1,1,1,1)=one/Nlat
+      observable_matrix(iii,iii,Nspin,Nspin,1,1)=one/Nlat
+   enddo
+   call add_custom_observable("n",nnn2lso(observable_matrix))
+   !
    !SETUP BATH STEP 2 and SETUP SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
    Nb=ed_get_bath_dimension(Hsym_basis)
@@ -133,11 +143,13 @@ program cdn_kagome
      !Bath_Prev=Bath
      !
      converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+     !
      if(nread/=0.d0)then
-        call ed_get_dens(dens_1,1,1)
-        call ed_get_dens(dens_2,2,1)
-        call ed_get_dens(dens_3,3,1)
-        dens=(dens_1+dens_2+dens_3)/3.d0
+        !call ed_get_dens(dens_1,1,1)
+        !call ed_get_dens(dens_2,2,1)
+        !call ed_get_dens(dens_3,3,1)
+        !dens=(dens_1+dens_2+dens_3)/3.d0
+        call ed_get_custom_observable(dens,"n")
         call search_chemical_potential(xmu,dens,converged)
      endif
     !
