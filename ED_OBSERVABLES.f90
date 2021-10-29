@@ -292,7 +292,7 @@ contains
                          sz2(ilat,jlat,iorb,jorb) = sz2(ilat,jlat,iorb,jorb)  +  (sz(ilat,iorb)*sz(jlat,jorb))*gs_weight
                          sz2(ilat,jlat,jorb,iorb) = sz2(ilat,jlat,jorb,iorb)  +  (sz(ilat,jorb)*sz(jlat,iorb))*gs_weight
                          n2(ilat,jlat,iorb,jorb)  = n2(ilat,jlat,iorb,jorb)   +  (nt(ilat,iorb)*nt(jlat,jorb))*gs_weight
-                         n2(ilat,jlat,jorb,iorb)  = n2(ilat,jlat,jorb,iorb)   +  (nt(jlat,jorb)*nt(ilat,iorb))*gs_weight
+                         n2(ilat,jlat,jorb,iorb)  = n2(ilat,jlat,jorb,iorb)   +  (nt(ilat,jorb)*nt(jlat,iorb))*gs_weight
                       enddo
                    enddo
                 enddo
@@ -854,8 +854,10 @@ contains
          (reg(txtfy(4*Norb+iorb))//"mag_"//reg(txtfy(iorb)),iorb=1,Norb),&
          reg(txtfy(5*Norb+1))//"s2",&
          reg(txtfy(5*Norb+2))//"egs",&
-         ((reg(txtfy(5*Norb+3+(ispin-1)*Norb+iorb))//"z_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin),&
-         ((reg(txtfy((5+Nspin)*Norb+3+(ispin-1)*Norb+iorb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin)
+         ((reg(txtfy(5*Norb+2+(iorb-1)*Norb+jorb))//"sz2_"//reg(txtfy(iorb))//reg(txtfy(jorb)),jorb=1,Norb),iorb=1,Norb),&
+         ((reg(txtfy((5+Norb)*Norb+2+(iorb-1)*Norb+jorb))//"n2_"//reg(txtfy(iorb))//reg(txtfy(jorb)),jorb=1,Norb),iorb=1,Norb),&
+         ((reg(txtfy((5+2*Norb)*Norb+2+(ispin-1)*Nspin+iorb))//"z_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin),&
+         ((reg(txtfy((5+2*Norb)*Norb+2+Norb*Nspin+(ispin-1)*Nspin+iorb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin)
     close(unit)
     !
     unit = free_unit()
@@ -902,14 +904,16 @@ contains
     do ilat=1,Nlat
        open(unit,file="observables_all"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed",position='append')
        write(unit,"(90(F15.9,1X))")&
-            (dens(ilat,iorb),iorb=1,Norb),&
-            (docc(ilat,iorb),iorb=1,Norb),&
-            (dens_up(ilat,iorb),iorb=1,Norb),&
-            (dens_dw(ilat,iorb),iorb=1,Norb),&
-            (magz(ilat,iorb),iorb=1,Norb),&
-            s2tot,egs,&
-            ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+         (dens(ilat,iorb),iorb=1,Norb),&
+         (docc(ilat,iorb),iorb=1,Norb),&
+         (dens_up(ilat,iorb),iorb=1,Norb),&
+         (dens_dw(ilat,iorb),iorb=1,Norb),&
+         (magz(ilat,iorb),iorb=1,Norb),&
+         s2tot(ilat),egs,&
+         ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+         ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+         ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
+         ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
        close(unit)
     enddo
     !
@@ -924,14 +928,16 @@ contains
     do ilat=1,Nlat
        open(unit,file="observables_last"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed")
        write(unit,"(90(F15.9,1X))")&
-            (dens(ilat,iorb),iorb=1,Norb),&
-            (docc(ilat,iorb),iorb=1,Norb),&
-            (dens_up(ilat,iorb),iorb=1,Norb),&
-            (dens_dw(ilat,iorb),iorb=1,Norb),&
-            (magz(ilat,iorb),iorb=1,Norb),&
-            s2tot,egs,&
-            ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+         (dens(ilat,iorb),iorb=1,Norb),&
+         (docc(ilat,iorb),iorb=1,Norb),&
+         (dens_up(ilat,iorb),iorb=1,Norb),&
+         (dens_dw(ilat,iorb),iorb=1,Norb),&
+         (magz(ilat,iorb),iorb=1,Norb),&
+         s2tot(ilat),egs,&
+         ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+         ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+         ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
+         ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
        close(unit)
     enddo
 
