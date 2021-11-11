@@ -198,14 +198,22 @@ contains
   !+-------------------------------------------------------------------+
   subroutine lanc_observables()
     integer                             :: istate,Nud(2,Ns),iud(2),jud(2),is,js
-    integer                             :: Nclust,Iclust,Jclust
-    integer,dimension(2*Ns_Ud)          :: Indices,Jndices
+    integer                             :: Nclust,Iclust,Jclust,iUP,iDW,jUP,jDW
+    integer,dimension(2*Ns_Ud)          :: Indices,Jndices,Yndices
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
-    integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
-    integer,dimension(Ns)               :: JbUp,JbDw  ![Ns]
+    integer,dimension(Ns_Ud)            :: iDimUpC, iDimDwC
+    integer,dimension(Ns_Ud)            :: iDimUpB, iDimDwB
+    integer                             :: iDimC,iDimB
+    integer,dimension(Ns)               :: tempUp,tempDw![Ns]
+    integer,dimension(Ns)               :: IbUp,IbDw    ![Ns]
+    integer,dimension(Ns)               :: JbUp,JbDw    ![Ns]
+    integer,dimension(Nlat*Norb)        :: IbUpC,IbDwC  ![Nlat*Norb]
+    integer,dimension(Nlat*Norb)        :: JbUpC,JbDwC  ![Nlat*Norb]
+    integer,dimension(Ns-Nlat*Norb)     :: IbUpB,IbDwB  ![Ns-Nlat*Norb]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
-    type(sector_map),dimension(2*Ns_Ud) :: HI
+    type(sector_map),dimension(2*Ns_Ud) :: HI,HC,HB
+    
     !
     !LOCAL OBSERVABLES:
     allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb))
@@ -435,70 +443,154 @@ contains
        !
        peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
        peso = peso/zeta_function
-       !
-       iDim  = getdim(isector)
-       call get_DimUp(isector,iDimUps)
-       call get_DimDw(isector,iDimDws)
-       iDimUp = product(iDimUps)
-       iDimDw = product(iDimDws)
+      !================================
+      iDim  = getdim(isector)
+      call get_DimUp(isector,iDimUps)
+      call get_DimDw(isector,iDimDws)
+      iDimUp = product(iDimUps)
+      iDimDw = product(iDimDws)
+      !================================
        Nclust = Nlat*Norb
        !
        if(MpiMaster)then
-          call build_sector(isector,HI)
-          !
-          do i=1,iDim
-             !!! BUILD_OP_NS DOES NOT EXIST IN CDMFT CODE (YET)
-             !call build_op_Ns(i,IbUp,IbDw,sectorI) 
-             !!!So we fall back to call directly state2indices, bdecomp, breorder:
-             call state2indices(i,[iDimUps,iDimDws],Indices)
-             do ii=1,Ns_Ud !Actually, Ns_Ud = 1 in CDMFT code...look in ED_SETUP!
-               mup = HI(ii)%map(Indices(ii))
-               mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-               Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
-               Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+         !================================
+         call build_sector(isector,HI)
+         !================================
+          call build_sector(isector,HC,HB,iDimUpC,iDimDwC,iDimUpB,iDimDwB)
+          iDimC = product(iDimUpC)*product(iDimDwC)
+          iDimB = product(iDimUpB)*product(iDimDwB)
+          write(*,*) "ISECTOR: "//str(isector)//" | dimSector: "//str(iDim)//" | dimCluster: "//str(iDimC)//" | dimBath: "//str(iDimB)  
+         !============
+         !do i=1,iDim
+         !============
+          do Iclust=1,iDimC
+             write(*,*) "Icluster = "//str(Iclust)
+            !==============================================================================================
+            !call state2indices(i,[iDimUps,iDimDws],Indices)
+            !do ii=1,Ns_Ud
+            !  mup = HI(ii)%map(Indices(ii))
+            !  mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
+            !  Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
+            !  Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+            !enddo
+            !IbUp = Breorder(Nups)
+            !IbDw = Breorder(Ndws)
+            !Iclust = bjoin([IbUp(1:Nclust),IbDw(1:Nclust)],2*Nclust) + 1
+            !==============================================================================================
+             call state2indices(Iclust,[iDimUpC,iDimDwC],Indices)
+             do ii=1,Ns_Ud !Actually, Ns_Ud = 1 in CDMFT code...look in ED_SETUP! (ed_setup_dimensions())
+                mup = HC(ii)%map(Indices(ii))
+                mdw = HC(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
+                Nups(ii,1:Nclust) = Bdecomp(mup,Nclust)
+                Ndws(ii,1:Nclust) = Bdecomp(mdw,Nclust)
              enddo
-             IbUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
-             IbDw = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
-             !!!
-             Iclust = bjoin([IbUp(1:Nclust),IbDw(1:Nclust)],2*Nclust) + 1
-             ! >> Full calculation: WAY TOO SLOW <<
-             ! Ibath= bjoin([IbUp((Nclust+1:),IbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
-             ! do j=1,iDim
-             !    !!! BUILD_OP_NS DOES NOT EXIST
-             !    !call build_op_Ns(j,JbUp,JbDw,HI)
-             !    !!! SO WE CALL:
-             !    call state2indices(j,[iDimUps,iDimDws],Jndices)
-             !    do ii=1,Ns_Ud 
-             !       mup = HI(ii)%map(Jndices(ii))
-             !       mdw = HI(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
-             !       Nups(ii,:) = Bdecomp(mup,Ns_Orb)
-             !       Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
-             !    enddo
-             !    JbUp = Breorder(Nups)
-             !    JbDw = Breorder(Ndws)
-             !    !!!
-             !    Jclust = bjoin([JbUp(1:Nclust),JbDw(1:Nclust)],2*Nclust) + 1
-             !    Jbath= bjoin([JbUp(Nclust+1:),JbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
-             !    if(Jbath/=Ibath)cycle
-             !    cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
-             !    state_cvec(i)*state_cvec(j)*peso
-             ! enddo
-             !
-             !    > To speed up things we may want to avoid the whole (i,j)=1,iDim spanning,
-             !      generating instead the cluster and bath bit configurations separately.
-             !      This way we could just directly fix (Iclust,Jclust) and span with a _*single*_
-             !      cycle Ibath, so to take the trace. But we need to reason about 1. how to restrict
-             !      the generated bath configurations to the given sector (may be cumbersome, and 
-             !      not necessarily faster than what we have) and 2. how to rebuild the global (i,j),
-             !      in order to select the appropriate state_cvec elements.
-             !
-             ! >> Diagonal by construction: NOT GENERAL <<
-             j=i
-             Jclust=Iclust
-             cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
-                  state_cvec(i)*state_cvec(j)*peso
-          enddo
-          call delete_sector(isector,HI)         
+             tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
+             tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
+             IbUpC = tempUp(1:Nclust) 
+             IbDwC = tempDw(1:Nclust) 
+            !iC = bjoin([IbUpC,IbDwC],2*Nclust) + 1 ! -> TRUE CLUSTER INTEGER FROM THE MAP
+           !==============================================================================================
+           ! >> Full calculation: WAY TOO SLOW <<
+           ! Ibath= bjoin([IbUp((Nclust+1:),IbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
+           ! do j=1,iDim
+           !==============================================================================================
+              do Jclust=1,iDimC
+                 write(*,*) "Jcluster = "//str(Jclust)
+                !=========================================================================================
+                !call state2indices(j,[iDimUps,iDimDws],Jndices)
+                !do ii=1,Ns_Ud 
+                !   mup = HI(ii)%map(Jndices(ii))
+                !   mdw = HI(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
+                !   Nups(ii,:) = Bdecomp(mup,Ns_Orb)
+                !   Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+                !enddo
+                !JbUp = Breorder(Nups)
+                !JbDw = Breorder(Ndws)
+                !Jclust = bjoin([JbUp(1:Nclust),JbDw(1:Nclust)],2*Nclust) + 1
+                !=========================================================================================
+                 call state2indices(Jclust,[iDimUpC,iDimDwC],Jndices)
+                 do ii=1,Ns_Ud
+                    mup = HC(ii)%map(Jndices(ii))
+                    mdw = HC(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
+                    Nups(ii,1:Nclust) = Bdecomp(mup,Nclust)
+                    Ndws(ii,1:Nclust) = Bdecomp(mdw,Nclust)
+                 enddo
+                 tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
+                 tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
+                 JbUpC = tempUp(1:Nclust)
+                 JbDwC = tempDw(1:Nclust)
+                 !jC = bjoin([JbUpC,JbDwC],2*Nclust) + 1 ! -> TRUE CLUSTER JNTEGER FROM THE MAP
+                !=========================================================================================
+                !Jbath= bjoin([JbUp(Nclust+1:),JbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
+                !if(Jbath/=Ibath)cycle
+                !=========================================================================================
+                 do Ibath=1,iDimB ! THIS LOOP PERFORMS THE TRACE: Tr_BATH{...}
+                    write(*,*) "Ibath = "//str(Ibath)
+                    call state2indices(Ibath,[iDimUpB,iDimDwB],Yndices)
+                    do ii=1,Ns_Ud
+                       mup=HB(ii)%map(Yndices(ii))
+                       mdw=HB(ii+Ns_Ud)%map(Yndices(ii+Ns_Ud))
+                       Nups(ii,1:(Ns_Orb-Nclust)) = Bdecomp(mup,Ns_Orb-Nclust)
+                       Ndws(ii,1:(Ns_Orb-Nclust)) = Bdecomp(mdw,Ns_Orb-Nclust)
+                    enddo
+                    tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
+                    tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
+                    IbUpB = tempUp(1:(Ns_Orb-Nclust))
+                    IbDwB = tempDw(1:(Ns_Orb-Nclust))
+                    !iB = bjoin([IbUpB,IbDwB],2*(Ns_Orb-Nclust)) + 1 ! -> TRUE BATH INTEGER FROM THE MAP
+                    !
+                    ! >>> COMPOSITION RULE FOR THE FULL INDICES <<<
+                    ! Attention to the ordering! 
+                    ! We need |ClusterUP,BathUP;ClusterDW,BathDW>,
+                    ! so iC, jC and iB are actually unuseful, since 
+                    ! joining them would lead to: 
+                    ! |ClusterUP,ClusterDW;BathUp,BathDW>.
+                    ! We want to join instead iUP=|ClusterUP,BathUp>
+                    ! and iDW=|ClusterDW,BathDW> so to fall back to
+                    ! the LIN-GUBERNATIS scheme.
+                    !
+                    ! >>> iFull = iUP + iDW * 2**Ns_Orb
+                    iUP = bjoin([IbUpC,IbUpB],Ns_Orb)
+                    iDW = bjoin([IbDwC,IbDwB],Ns_Orb)
+                    do ii=1,Ns_Ud
+                       Indices(ii) = binary_search(HI(ii)%map,iUP)
+                       Indices(ii+Ns_Ud) = binary_search(HI(ii+Ns_Ud)%map,iDW) 
+                    enddo
+                    call indices2state(Indices,[iDimUps,iDimDws],i)
+                    !
+                    ! >>> jFull = jUP + jDW * 2**Ns_Orb
+                    jUP = bjoin([JbUpC,IbUpB],Ns_Orb)
+                    jDW = bjoin([JbDwC,IbDwB],Ns_Orb)
+                    do ii=1,Ns_Ud
+                       Jndices(ii) = binary_search(HI(ii)%map,jUP)
+                       Jndices(ii+Ns_Ud) = binary_search(HI(ii+Ns_Ud)%map,jDW) 
+                    enddo
+                    call indices2state(Jndices,[iDimUps,iDimDws],j) 
+                   !====================================================================================
+                   !cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
+                   !state_cvec(i)*state_cvec(j)*peso
+                   !====================================================================================
+                    ! >>>> HAVING ALL THE NEEDED INDICES:
+                    cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + & 
+                    state_cvec(i)*state_cvec(j)*peso
+                    write(*,*) "I = "//str(i)//" | J = "//str(j)//" | rho += ", dreal(state_cvec(i)*state_cvec(j)*peso)
+                enddo
+             enddo
+            !===========================================================================================
+            ! enddo
+            !
+            ! >> Diagonal by construction: NOT GENERAL <<
+            !j=i
+            !Jclust=Iclust
+            !cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
+            !     state_cvec(i)*state_cvec(j)*peso
+            !===========================================================================================
+         enddo
+         !============
+         ! enddo
+         !============
+          call delete_sector(isector,HI)
+          call delete_sector(isector,HC,HB)       
        endif
        !
 #ifdef _MPI
