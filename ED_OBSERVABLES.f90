@@ -809,23 +809,20 @@ contains
      write(*,*) "----------------------------------------"
      write(*,*) "CLUSTER DENSITY MATRIX [OR ITS DIAGONAL]"
      write(*,*) "----------------------------------------"
-     if(Nimp<=2)then
+     if(Nimp==1)then
         do i=1,4**Nimp
            !PRINT FULL MATRIX (Norb=1)
            write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nimp)
         enddo
         write(*,*) "----------------------------------------"
-        if(Nimp==1)then
-            write(*,*) "BENCHMARK: Semi-Analitical | Relative Error"
-            ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
-            print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)," | ",abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
-            print*,dens_up(1,1)-docc(1,1)," | ",abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
-            print*,dens_dw(1,1)-docc(1,1)," | ",abs(dens_dw(1,1)-docc(1,1)-cluster_density_matrix(3,3))
-            print*,docc(1,1)," | ",abs(docc(1,1)-cluster_density_matrix(4,4))
-            write(*,*) "----------------------------------------"
-        endif
+        write(*,*) "BENCHMARK: Semi-Analitical | Relative Error"
+        ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
+        print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)," | ",abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
+        print*,dens_up(1,1)-docc(1,1)," | ",abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
+        print*,dens_dw(1,1)-docc(1,1)," | ",abs(dens_dw(1,1)-docc(1,1)-cluster_density_matrix(3,3))
+        print*,docc(1,1)," | ",abs(docc(1,1)-cluster_density_matrix(4,4))
+        write(*,*) "----------------------------------------"
      else
-        write(*,*)"GENERAL ALGORITHM:"
         do i=1,4**Nimp
            !PRINT JUST THE DIAGONAL (Norb>1)
            write(*,*) i, dreal(cluster_density_matrix(i,i))

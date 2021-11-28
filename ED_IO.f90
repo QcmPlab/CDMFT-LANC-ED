@@ -190,6 +190,14 @@ MODULE ED_IO
 #endif
   end interface ed_get_dph
 
+  interface ed_get_cluster_density_matrix
+      module procedure :: ed_get_cluster_density_matrix_single
+#if __GFORTRAN__ &&  __GNUC__ > 8     
+      module procedure :: ed_get_cluster_density_matrix_lattice
+#endif
+   end interface ed_get_cluster_density_matrix
+
+
    interface ed_get_single_particle_density_matrix
       module procedure :: ed_get_single_particle_density_matrix_single
 #if __GFORTRAN__ &&  __GNUC__ > 8     
@@ -253,6 +261,7 @@ MODULE ED_IO
   public :: ed_get_dse
   public :: ed_get_dph
 
+  public :: ed_get_cluster_density_matrix
   public :: ed_get_single_particle_density_matrix
 
   public :: ed_read_impSigma
@@ -264,6 +273,7 @@ MODULE ED_IO
   public :: ed_print_impSigma
   public :: ed_print_impG
   public :: ed_print_impG0
+  !public :: ed_print_dm [TODO: merge print_cluster_dm and print_sp_dm]
   ! public :: ed_print_impChi
 
 
@@ -314,6 +324,7 @@ contains
   include "ED_IO/get_docc.f90"
   include "ED_IO/get_eimp.f90"
   include "ED_IO/get_doubles.f90"
+  include "ED_IO/get_cluster_dm.f90"
   include "ED_IO/get_sp_dm.f90"
 
 #if __GFORTRAN__ &&  __GNUC__ > 8    
@@ -322,6 +333,7 @@ contains
   include "ED_IO/lattice/get_docc.f90"
   include "ED_IO/lattice/get_eimp.f90"
   include "ED_IO/lattice/get_doubles.f90"
+  include "ED_IO/lattice/get_cluster_dm.f90"
   include "ED_IO/lattice/get_sp_dm.f90"
 #endif
 
@@ -424,8 +436,11 @@ contains
   end subroutine ed_print_impG0
 
 
+  !+------------------------------------------------------------------+
+  !                      PRINT DENSITY MATRICES
+  !+------------------------------------------------------------------+ 
 
-
+  ! TODO: merge here print_sp_dm and print_cluster_dm (generic size, but proper suffix?)
 
   !+------------------------------------------------------------------+
   ! !                         PRINT CHI:

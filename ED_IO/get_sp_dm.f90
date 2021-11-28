@@ -1,107 +1,90 @@
-  subroutine ed_get_single_particle_density_matrix_single(dm_,custom_rot,dm_eig_,dm_rot_)
-    implicit none
-    !passed
-    complex(8),allocatable,intent(out)           :: dm_(:,:)
-    complex(8),allocatable,intent(in) ,optional  :: custom_rot(:,:)
-    real(8),allocatable,intent(out)   ,optional  :: dm_eig_(:)
-    complex(8),allocatable,intent(out),optional  :: dm_rot_(:,:)
-    !internal
-    integer                                      :: unit
-    integer                                      :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo
-    complex(8)                                   :: Tr
-    complex(8),allocatable                       :: dm_custom_rot(:,:)
-    real(8)                                      :: soc
+  subroutine ed_get_single_particle_density_matrix_single(dm,dm_eig,dm_rot,doprint)
+    complex(8),dimension(Nlat*Norb*Nspin,Nlat*Norb*Nspin),intent(out)            :: dm
+    complex(8),dimension(Nlat*Norb*Nspin,Nlat*Norb*Nspin),intent(out),optional   :: dm_rot
+    real(8)   ,dimension(Nlat*Norb*Nspin)                ,intent(out),optional   :: dm_eig
+    logical                                              ,intent(in) ,optional   :: doprint
+    logical                                                                      :: doprint_
     !
-    if (.not.allocated(single_particle_density_matrix)) then
+    doprint_=.false.; if(present(doprint)) doprint_=doprint
+    !
+    if(.not.allocated(single_particle_density_matrix))then
        write(LOGfile,"(A)") "single_particle_density_matrix is not allocated"
        stop
     endif
     !
-    if(allocated(dm_))                         deallocate(dm_)          ;allocate(dm_(Nlat*Nspin*Norb,Nlat*Nspin*Norb))          ;dm_ = zero
-    if(allocated(dm_custom_rot))               deallocate(dm_custom_rot);allocate(dm_custom_rot(Nlat*Nspin*Norb,Nlat*Nspin*Norb));dm_custom_rot = zero
-    if(present(dm_eig_).and.allocated(dm_eig_))deallocate(dm_eig_)      ;allocate(dm_eig_(Nlat*Nspin*Norb))                      ;dm_eig_ = 0.0d0
-    if(present(dm_rot_).and.allocated(dm_rot_))deallocate(dm_rot_)      ;allocate(dm_rot_(Nlat*Nspin*Norb,Nlat*Nspin*Norb))      ;dm_rot_ = zero
+    !Impurity problem basis
+    dm = nnn2lso_reshape(single_particle_density_matrix,Nlat,Nspin,Norb)
     !
-    ! dm in the impurity problem basis
-    dm_ = nnn2lso_reshape(single_particle_density_matrix,Nlat,Nspin,Norb)
-    !
-    !
-    ! dm in her diagonal basis
-    if(present(dm_eig_).and.present(dm_rot_))then
-      dm_rot_=dm_
-      call eigh(dm_rot_,dm_eig_,jobz='V',uplo='U')
+    !Diagonal (pure-state) basis
+    if(present(dm_eig).and.present(dm_rot))then
+      dm_rot=dm
+      call eigh(dm_rot,dm_eig,jobz='V',uplo='U')
     endif
     !
-    ! dm in the basis defined by custom_rot
-    dm_custom_rot=matmul(transpose(conjg(custom_rot)),matmul(dm_,custom_rot))
-    !
-    !
-    call print_dm(dm_,dm_rot_,dm_eig_,dm_custom_rot,1)
+    !Print to file (if requested)
+    if(doprint_)then
+      if(present(dm_eig).and.present(dm_rot))then
+         call print_sp_dm(dm,dm_eig,dm_rot)
+      else
+         call print_sp_dm(dm)
+      endif
+    endif
     !
   end subroutine ed_get_single_particle_density_matrix_single
 
 
-  subroutine print_dm(dm_,dm_rot_,dm_eig_,dm_custom_rot,ndx)
-    implicit none
-    integer               ,intent(in)            :: ndx
-    complex(8),allocatable,intent(in)            :: dm_(:,:)
-    complex(8),allocatable,intent(in)            :: dm_custom_rot(:,:)
-    real(8),allocatable   ,intent(in),optional   :: dm_eig_(:)
-    complex(8),allocatable,intent(in),optional   :: dm_rot_(:,:)
-    !internal
-    integer                                      :: unit
-    character(len=24)                            :: suffix
-    integer                                      :: ilat,jlat,iorb,jorb,ispin,jspin,io,jo
+  subroutine print_sp_dm(dm,dm_eig,dm_rot,ineq)
+    !Passed
+    complex(8),dimension(Nlat*Norb*Nspin,Nlat*Norb*Nspin),intent(in)            :: dm
+    complex(8),dimension(Nlat*Norb*Nspin,Nlat*Norb*Nspin),intent(in),optional   :: dm_rot
+    real(8)   ,dimension(Nlat*Norb*Nspin)                ,intent(in),optional   :: dm_eig
+    integer                                              ,intent(in),optional   :: ineq
+    !Internal
+    integer                                              :: unit
+    character(len=64)                                    :: suffix
+    integer                                              :: io,jo
     !
-    suffix="single_particle_density_matrix_"//reg(str(ndx))//".dat"
+    if(present(ineq))then
+      suffix="sp_density_matrix_ineq"//reg(str(ineq))//"_info.dat"
+    else
+      suffix="sp_density_matrix_info.dat"
+    endif
     !
     unit = free_unit()
     open(unit,file=suffix,action="write",position="rewind",status='unknown')
     !
-    write(unit,"(A90)")"# density matrix in the impurity problem basis REAL part:"
+    write(unit,"(A90)")"# single-particle density matrix in the impurity problem basis [REAL part]:"
     do io=1,Nlat*Nspin*Norb
-       write(unit,"(90(F15.9,1X))") (real(dm_(io,jo)),jo=1,Nlat*Nspin*Norb)
+       write(unit,"(90(F15.9,1X))") (real(dm(io,jo)),jo=1,Nlat*Nspin*Norb)
     enddo
     write(unit,*)
     !
-    write(unit,"(A90)")"# density matrix in the impurity problem basis IMAGINARY part:"
+    write(unit,"(A90)")"# single-particle density matrix in the impurity problem basis [IMAG part]:"
     do io=1,Nlat*Nspin*Norb
-       write(unit,"(90(F15.9,1X))") (aimag(dm_(io,jo)),jo=1,Nlat*Nspin*Norb)
+       write(unit,"(90(F15.9,1X))") (aimag(dm(io,jo)),jo=1,Nlat*Nspin*Norb)
     enddo
     write(unit,*)
     !
-    if(present(dm_eig_).and.present(dm_rot_))then
-       write(unit,"(A90)")"# eigenvalues of density matrix"
-       write(unit,'(10F22.12)') dm_eig_
-       write(unit,*)
-       !
-       write(unit,"(A90)")"# density matrix eigenvector matrix REAL part:"
+    if(present(dm_eig).and.present(dm_rot))then
+       write(unit,"(A90)")"# eigenvalues of single-particle density matrix"
        do io=1,Nlat*Nspin*Norb
-          write(unit,"(90(F15.9,1X))") (real(dm_rot_(io,jo)),jo=1,Nlat*Nspin*Norb)
+          write(unit,"(90(F15.9,1X))") dm_eig(io)
        enddo
        write(unit,*)
        !
-       write(unit,"(A90)")"# density matrix eigenvector matrix IMAGINARY part:"
+       write(unit,"(A90)")"# eigenvector matrix [REAL part]:"
        do io=1,Nlat*Nspin*Norb
-          write(unit,"(90(F15.9,1X))") (aimag(dm_rot_(io,jo)),jo=1,Nlat*Nspin*Norb)
+          write(unit,"(90(F15.9,1X))") (real(dm_rot(io,jo)),jo=1,Nlat*Nspin*Norb)
+       enddo
+       write(unit,*)
+       !
+       write(unit,"(A90)")"# eigenvector matrix [IMAG part]:"
+       do io=1,Nlat*Nspin*Norb
+          write(unit,"(90(F15.9,1X))") (aimag(dm_rot(io,jo)),jo=1,Nlat*Nspin*Norb)
        enddo
        write(unit,*)
     endif
     !
-    write(unit,"(A90)")"# density matrix in the basis defined by custom_rot REAL part:"
-    do io=1,Nlat*Nspin*Norb
-       write(unit,"(90(F15.9,1X))") (real(dm_custom_rot(io,jo)),jo=1,Nlat*Nspin*Norb)
-    enddo
-    write(unit,*)
-    !
-    write(unit,"(A90)")"# density matrix in the basis defined by custom_rot IMAGINARY part:"
-    do io=1,Nlat*Nspin*Norb
-       write(unit,"(90(F15.9,1X))") (aimag(dm_custom_rot(io,jo)),jo=1,Nlat*Nspin*Norb)
-    enddo
-    write(unit,*)
-    write(unit,"(A30)")"# J basis densities"
-    write(unit,"(90(F15.9,1X))") (real(dm_custom_rot(io,io)),io=1,Nlat*Nspin*Norb)
-    !
     close(unit)
     !
-  end subroutine print_dm
+  end subroutine print_sp_dm
