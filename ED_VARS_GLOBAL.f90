@@ -1,6 +1,7 @@
 MODULE ED_VARS_GLOBAL
   USE SF_CONSTANTS
   USE ED_SPARSE_MATRIX
+  USE ED_SPARSE_MAP
   USE ED_INPUT_VARS
 #ifdef _MPI
   USE MPI
@@ -49,6 +50,7 @@ MODULE ED_VARS_GLOBAL
   !---------------- SECTOR-TO-FOCK SPACE STRUCTURE -------------------!
   type sector_map
      integer,dimension(:),allocatable :: map
+     type(sparse_map)                 :: sp
      logical                          :: status=.false.
   end type sector_map
 
@@ -108,7 +110,8 @@ MODULE ED_VARS_GLOBAL
   integer,save                                       :: Ns_orb
   integer,save                                       :: Ns_ud
   !
-  integer                                            :: Nlso
+  integer                                            :: Nimp     !Total number of levels in the impurity cluster: Nlat*Norb
+  integer                                            :: Nlso     !Nlat*Nspin*Norb
 
   !local part of the Hamiltonian
   !INTERNAL USE (accessed thru functions)
@@ -310,20 +313,27 @@ contains
 
 
   !=========================================================
-  subroutine map_allocate_scalar(H,N)
+  subroutine map_allocate_scalar(H,N,Nsp)
     type(sector_map) :: H
     integer          :: N
+    integer,optional :: Nsp
     if(H%status) call map_deallocate_scalar(H)
     allocate(H%map(N))
+    if(present(Nsp))call sp_init_map(H%sp,Nsp)
     H%status=.true.
   end subroutine map_allocate_scalar
   !
-  subroutine map_allocate_vector(H,N)
+  subroutine map_allocate_vector(H,N,Nsp)
     type(sector_map),dimension(:)       :: H
     integer,dimension(size(H))          :: N
+    integer,optional,dimension(size(H)) :: Nsp
     integer                             :: i
     do i=1,size(H)
-       call map_allocate_scalar(H(i),N(i))
+       if(present(Nsp))then
+          call map_allocate_scalar(H(i),N(i),Nsp(i))
+       else
+          call map_allocate_scalar(H(i),N(i))
+       endif
     enddo
   end subroutine map_allocate_vector
 
@@ -336,6 +346,7 @@ contains
        return
     endif
     if(allocated(H%map))deallocate(H%map)
+    call sp_delete_map(H%sp)
     H%status=.false.
   end subroutine map_deallocate_scalar
   !

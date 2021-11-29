@@ -4,6 +4,7 @@ MODULE ED_OBSERVABLES
   USE SF_ARRAYS, only: arange
   USE SF_INTEGRATE, only: quad
   USE SF_LINALG
+  USE SF_TIMER
   USE ED_INPUT_VARS
   USE ED_VARS_GLOBAL
   USE ED_EIGENSPACE
@@ -23,6 +24,7 @@ MODULE ED_OBSERVABLES
   
   public :: observables_impurity
   public :: local_energy_impurity
+  public :: density_matrix_impurity
   public :: init_custom_observables
   public :: add_custom_observable
   public :: get_custom_observables
@@ -72,11 +74,15 @@ contains
   !PURPOSE  : Evaluate and print out many interesting physical qties
   !+-------------------------------------------------------------------+
   subroutine observables_impurity()
+    write(LOGfile,"(A)")" "
+    write(LOGfile,"(A)")"Get observables:"
     call lanc_observables()
   end subroutine observables_impurity
 
 
   subroutine local_energy_impurity()
+    write(LOGfile,"(A)")" "
+    write(LOGfile,"(A)")"Get local energy:"
     call lanc_local_energy()
   end subroutine local_energy_impurity
 
@@ -198,21 +204,12 @@ contains
   !+-------------------------------------------------------------------+
   subroutine lanc_observables()
     integer                             :: istate,Nud(2,Ns),iud(2),jud(2),is,js
-    integer                             :: Nclust,Iclust,Jclust,iUP,iDW,jUP,jDW
-    integer,dimension(2*Ns_Ud)          :: Indices,Jndices,Yndices
+    integer,dimension(2*Ns_Ud)          :: Indices
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
-    integer,dimension(Ns_Ud)            :: iDimUpC, iDimDwC
-    integer,dimension(Ns_Ud)            :: iDimUpB, iDimDwB
-    integer                             :: iDimC,iDimB
-    integer,dimension(Ns)               :: tempUp,tempDw![Ns]
-    integer,dimension(Ns)               :: IbUp,IbDw    ![Ns]
-    integer,dimension(Ns)               :: JbUp,JbDw    ![Ns]
-    integer,dimension(Nlat*Norb)        :: IbUpC,IbDwC  ![Nlat*Norb]
-    integer,dimension(Nlat*Norb)        :: JbUpC,JbDwC  ![Nlat*Norb]
-    integer,dimension(Ns-Nlat*Norb)     :: IbUpB,IbDwB  ![Ns-Nlat*Norb]
+    integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
-    type(sector_map),dimension(2*Ns_Ud) :: HI,HC,HB
+    type(sector_map),dimension(2*Ns_Ud) :: HI
     
     !
     !LOCAL OBSERVABLES:
@@ -324,311 +321,6 @@ contains
     enddo
     !
     !
-    !
-    !
-    !
-    !SINGLE PARTICLE DENSITY MATRIX [<C^+_a C_b>]
-    do istate=1,state_list%size
-       isector = es_return_sector(state_list,istate)
-       Ei      = es_return_energy(state_list,istate)
-#ifdef _MPI
-       if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
-       else
-          state_cvec => es_return_cvector(state_list,istate)
-       endif
-#else
-       state_cvec => es_return_cvector(state_list,istate)
-#endif
-       !
-       peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
-       peso = peso/zeta_function
-       !
-       idim  = getdim(isector)
-       call get_DimUp(isector,iDimUps)
-       call get_DimDw(isector,iDimDws)
-       iDimUp = product(iDimUps)
-       iDimDw = product(iDimDws)
-       !
-       if(MpiMaster)then
-          call build_sector(isector,HI)
-          do i=1,iDim
-             call state2indices(i,[iDimUps,iDimDws],Indices)
-             do ii=1,Ns_Ud
-                mup = HI(ii)%map(Indices(ii))
-                mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-                Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
-                Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
-             enddo
-             Nud(1,:) = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
-             Nud(2,:) = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
-             !
-             !Diagonal densities
-             do ilat=1,Nlat
-               do ispin=1,Nspin
-                  do iorb=1,Norb
-                     is = imp_state_index(ilat,iorb)
-                     single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
-                          single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
-                          peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
-                  enddo
-               enddo
-             enddo
-             !
-             !Off-diagonal
-             !if(ed_total_ud)then !!!! this is true by default in the CDMFT code
-                do ispin=1,Nspin
-                  do ilat=1,Nlat
-                    do jlat=1,Nlat
-                      do iorb=1,Norb
-                        do jorb=1,Norb
-                          is = imp_state_index(ilat,iorb)
-                          js = imp_state_index(jlat,jorb)
-                          if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
-                            iud(1) = HI(1)%map(Indices(1))
-                            iud(2) = HI(2)%map(Indices(2))
-                            call c(js,iud(ispin),r,sgn1)
-                            call cdg(is,r,k,sgn2)
-                            Jndices = Indices
-                            Jndices(1+(ispin-1)*Ns_Ud) = &
-                                 binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
-                            call indices2state(Jndices,[iDimUps,iDimDws],j)
-                            !
-                            single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
-                                 single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
-                                 peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
-                          endif
-                        enddo
-                      enddo
-                    enddo
-                  enddo
-                enddo
-             !endif
-             !
-             !
-          enddo
-          call delete_sector(isector,HI)         
-       endif
-       !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
-       !
-    enddo
-    !
-    !
-    !
-    !
-    !
-    !CLUSTER DENSITY MATRIX [\rho_CIMP = Tr_BATH(\rho)]
-    cluster_density_matrix=zero    
-    do istate=1,state_list%size
-       isector = es_return_sector(state_list,istate)
-       Ei      = es_return_energy(state_list,istate)
-#ifdef _MPI
-       if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
-       else
-          state_cvec => es_return_cvector(state_list,istate)
-       endif
-#else
-       state_cvec => es_return_cvector(state_list,istate)
-#endif
-       !
-       peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
-       peso = peso/zeta_function
-      !================================
-      iDim  = getdim(isector)
-      call get_DimUp(isector,iDimUps)
-      call get_DimDw(isector,iDimDws)
-      iDimUp = product(iDimUps)
-      iDimDw = product(iDimDws)
-      !================================
-       Nclust = Nlat*Norb
-       !
-       if(MpiMaster)then
-         !================================
-         call build_sector(isector,HI)
-         !================================
-          call build_sector(isector,HC,HB,iDimUpC,iDimDwC,iDimUpB,iDimDwB)
-          iDimC = product(iDimUpC)*product(iDimDwC)
-          iDimB = product(iDimUpB)*product(iDimDwB)
-          write(*,*) "ISECTOR: "//str(isector)//" | dimSector: "//str(iDim)//" | dimCluster: "//str(iDimC)//" | dimBath: "//str(iDimB)  
-         !============
-         !do i=1,iDim
-         !============
-          do Iclust=1,iDimC
-             write(*,*) "Icluster = "//str(Iclust)
-            !==============================================================================================
-            !call state2indices(i,[iDimUps,iDimDws],Indices)
-            !do ii=1,Ns_Ud
-            !  mup = HI(ii)%map(Indices(ii))
-            !  mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-            !  Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
-            !  Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
-            !enddo
-            !IbUp = Breorder(Nups)
-            !IbDw = Breorder(Ndws)
-            !Iclust = bjoin([IbUp(1:Nclust),IbDw(1:Nclust)],2*Nclust) + 1
-            !==============================================================================================
-             call state2indices(Iclust,[iDimUpC,iDimDwC],Indices)
-             do ii=1,Ns_Ud !Actually, Ns_Ud = 1 in CDMFT code...look in ED_SETUP! (ed_setup_dimensions())
-                mup = HC(ii)%map(Indices(ii))
-                mdw = HC(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-                Nups(ii,1:Nclust) = Bdecomp(mup,Nclust)
-                Ndws(ii,1:Nclust) = Bdecomp(mdw,Nclust)
-             enddo
-             tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
-             tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
-             IbUpC = tempUp(1:Nclust) 
-             IbDwC = tempDw(1:Nclust) 
-            !iC = bjoin([IbUpC,IbDwC],2*Nclust) + 1 ! -> TRUE CLUSTER INTEGER FROM THE MAP
-           !==============================================================================================
-           ! >> Full calculation: WAY TOO SLOW <<
-           ! Ibath= bjoin([IbUp((Nclust+1:),IbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
-           ! do j=1,iDim
-           !==============================================================================================
-              do Jclust=1,iDimC
-                 write(*,*) "Jcluster = "//str(Jclust)
-                !=========================================================================================
-                !call state2indices(j,[iDimUps,iDimDws],Jndices)
-                !do ii=1,Ns_Ud 
-                !   mup = HI(ii)%map(Jndices(ii))
-                !   mdw = HI(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
-                !   Nups(ii,:) = Bdecomp(mup,Ns_Orb)
-                !   Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
-                !enddo
-                !JbUp = Breorder(Nups)
-                !JbDw = Breorder(Ndws)
-                !Jclust = bjoin([JbUp(1:Nclust),JbDw(1:Nclust)],2*Nclust) + 1
-                !=========================================================================================
-                 call state2indices(Jclust,[iDimUpC,iDimDwC],Jndices)
-                 do ii=1,Ns_Ud
-                    mup = HC(ii)%map(Jndices(ii))
-                    mdw = HC(ii+Ns_Ud)%map(Jndices(ii+Ns_ud))
-                    Nups(ii,1:Nclust) = Bdecomp(mup,Nclust)
-                    Ndws(ii,1:Nclust) = Bdecomp(mdw,Nclust)
-                 enddo
-                 tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
-                 tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
-                 JbUpC = tempUp(1:Nclust)
-                 JbDwC = tempDw(1:Nclust)
-                 !jC = bjoin([JbUpC,JbDwC],2*Nclust) + 1 ! -> TRUE CLUSTER JNTEGER FROM THE MAP
-                !=========================================================================================
-                !Jbath= bjoin([JbUp(Nclust+1:),JbDw(Nclust+1:)],2*(Ns-Nclust)) + 1
-                !if(Jbath/=Ibath)cycle
-                !=========================================================================================
-                 do Ibath=1,iDimB ! THIS LOOP PERFORMS THE TRACE: Tr_BATH{...}
-                    write(*,*) "Ibath = "//str(Ibath)
-                    call state2indices(Ibath,[iDimUpB,iDimDwB],Yndices)
-                    do ii=1,Ns_Ud
-                       mup=HB(ii)%map(Yndices(ii))
-                       mdw=HB(ii+Ns_Ud)%map(Yndices(ii+Ns_Ud))
-                       Nups(ii,1:(Ns_Orb-Nclust)) = Bdecomp(mup,Ns_Orb-Nclust)
-                       Ndws(ii,1:(Ns_Orb-Nclust)) = Bdecomp(mdw,Ns_Orb-Nclust)
-                    enddo
-                    tempUp = Breorder(Nups) !Actually, they are already reordered in CDMFT code and
-                    tempDw = Breorder(Ndws) !breorder() corresponds to an identity: look in ED_SETUP!
-                    IbUpB = tempUp(1:(Ns_Orb-Nclust))
-                    IbDwB = tempDw(1:(Ns_Orb-Nclust))
-                    !iB = bjoin([IbUpB,IbDwB],2*(Ns_Orb-Nclust)) + 1 ! -> TRUE BATH INTEGER FROM THE MAP
-                    !
-                    ! >>> COMPOSITION RULE FOR THE FULL INDICES <<<
-                    ! Attention to the ordering! 
-                    ! We need |ClusterUP,BathUP;ClusterDW,BathDW>,
-                    ! so iC, jC and iB are actually unuseful, since 
-                    ! joining them would lead to: 
-                    ! |ClusterUP,ClusterDW;BathUp,BathDW>.
-                    ! We want to join instead iUP=|ClusterUP,BathUp>
-                    ! and iDW=|ClusterDW,BathDW> so to fall back to
-                    ! the LIN-GUBERNATIS scheme.
-                    !
-                    ! >>> iFull = iUP + iDW * 2**Ns_Orb
-                    iUP = bjoin([IbUpC,IbUpB],Ns_Orb)
-                    iDW = bjoin([IbDwC,IbDwB],Ns_Orb)
-                    do ii=1,Ns_Ud
-                       Indices(ii) = binary_search(HI(ii)%map,iUP)
-                       Indices(ii+Ns_Ud) = binary_search(HI(ii+Ns_Ud)%map,iDW) 
-                    enddo
-                    call indices2state(Indices,[iDimUps,iDimDws],i)
-                    !
-                    ! >>> jFull = jUP + jDW * 2**Ns_Orb
-                    jUP = bjoin([JbUpC,IbUpB],Ns_Orb)
-                    jDW = bjoin([JbDwC,IbDwB],Ns_Orb)
-                    do ii=1,Ns_Ud
-                       Jndices(ii) = binary_search(HI(ii)%map,jUP)
-                       Jndices(ii+Ns_Ud) = binary_search(HI(ii+Ns_Ud)%map,jDW) 
-                    enddo
-                    call indices2state(Jndices,[iDimUps,iDimDws],j) 
-                   !====================================================================================
-                   !cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
-                   !state_cvec(i)*state_cvec(j)*peso
-                   !====================================================================================
-                    ! >>>> HAVING ALL THE NEEDED INDICES:
-                    cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + & 
-                    state_cvec(i)*state_cvec(j)*peso
-                    write(*,*) "I = "//str(i)//" | J = "//str(j)//" | rho += ", dreal(state_cvec(i)*state_cvec(j)*peso)
-                enddo
-             enddo
-            !===========================================================================================
-            ! enddo
-            !
-            ! >> Diagonal by construction: NOT GENERAL <<
-            !j=i
-            !Jclust=Iclust
-            !cluster_density_matrix(Iclust,Jclust) = cluster_density_matrix(Iclust,Jclust) + &
-            !     state_cvec(i)*state_cvec(j)*peso
-            !===========================================================================================
-         enddo
-         !============
-         ! enddo
-         !============
-          call delete_sector(isector,HI)
-          call delete_sector(isector,HC,HB)       
-       endif
-       !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
-       !
-    enddo
-   !
-   !Useful prints to test:
-   if(MPIMASTER)then
-      if(Nclust==1)then
-         do i=1,4**Nclust
-            !PRINT FULL MATRIX (Norb=1)
-            write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nclust)
-         enddo
-         ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
-         print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1),abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
-         print*,dens_up(1,1)-docc(1,1),abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
-         print*,dens_dw(1,1)-docc(1,1),abs(dens_dw(1,1)-docc(1,1)-cluster_density_matrix(3,3))
-         print*,docc(1,1),abs(docc(1,1)-cluster_density_matrix(4,4))
-      else
-         do i=1,4**Nclust
-            !PRINT JUST THE DIAGONAL (Norb>1)
-            write(*,*) i, dreal(cluster_density_matrix(i,i))
-          enddo
-      endif
-   endif
-   !
-   !
-   !
-   !
-   !
     if(MPIMASTER)then
        call get_szr
        if(iolegend)call write_legend
@@ -641,6 +333,8 @@ contains
        !
        write(LOGfile,"(A,10f18.12,A)")"docc       "//reg(ed_file_suffix)//" =",(sum(docc(:,iorb))/Nlat,iorb=1,Norb)
        if(Nspin==2)write(LOGfile,"(A,10f18.12,A)") "mag "//reg(ed_file_suffix)//"=",(sum(magz(:,iorb))/Nlat,iorb=1,Norb)
+       !
+       write(LOGfile,"(A)")" "
        !
        ed_dens_up=dens_up
        ed_dens_dw=dens_dw
@@ -656,7 +350,8 @@ contains
     endif
 #endif
     !
-    deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
+    !DO NOT FORGET TO UNCOMMENT THIS LINE! (use ed_dens* and ed_docc variables instead...)
+    !deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
     deallocate(simp,zimp)
   end subroutine lanc_observables
 
@@ -680,7 +375,6 @@ contains
   end function calculate_observable_integral_zero_t
 
   !T finite
-
   function calculate_observable_integral_finite_t() result(out_2)
     integer                         :: inf,Nmax,ii
     real(8)                         :: out_2,spin_multiplicity,omegamax,integralpart
@@ -715,105 +409,12 @@ contains
   end function calculate_observable_integral_finite_t
 
 
- function integral_contour(zeta) result(f)
-    real(8)                 :: zeta,f
-    complex(8)              :: w,fermi
-    !
-    w=integrationR*exp(xi*zeta)
-    if(dreal((w-XMU)*beta)>= 100)then
-      fermi=0.d0
-    else
-      fermi=(1/(exp(beta*(w-XMU))+1))
-    endif
-    !
-    f=dreal((1.d0/pi)*w*fermi*sum_observable_kmesh_complex(w))
- end function integral_contour
-
-
-  !+-------------------------------------------------------------------+
-  !PURPOSE  : sum on k-vectors
-  !+-------------------------------------------------------------------+
-
-  function sum_observable_kmesh(omega) result(out_1)
-    integer                                                           :: ii,jj,kk
-    real(8)                                                           :: omega
-    real(8)                                                           :: out_1
-    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
-    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
-    !
-    out_1=0.d0
-    !
-    g=zero
-    invg0=zero
-    invg_lso=zero
-    invg0_lso=zero
-    Gk_lso=zero
-    Sigma=zero
-    !
-    !Obtain Sigma(iw)
-    call ed_gf_cluster(dcmplx(0.d0,omega),g)
-    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
-    call inv(invg_lso)
-    invg0=invg0_bath(dcmplx(0.d0,omega))
-    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
-    Sigma=invg0_lso-invg_lso
-    !
-    !Do the k-sum
-    do ii=1,size(Hk,3)
-       Gk_lso=(dcmplx(0d0,omega)+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii) - Sigma    
-       call inv(Gk_lso)
-       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)) - trace(sij(:,:,ii))/(dcmplx(-1.1d0,omega)))
-    enddo
-    !
-    out_1=out_1/(size(Hk,3))
-    !
-    return
-    !
-  end function sum_observable_kmesh
-
-  function sum_observable_kmesh_complex(omega) result(out_1)
-    integer                                                           :: ii,jj,kk
-    complex(8)                                                        :: omega
-    complex(8)                                                        :: out_1
-    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
-    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
-    !
-    out_1=0.d0
-    !
-    g=zero
-    invg0=zero
-    invg_lso=zero
-    invg0_lso=zero
-    Gk_lso=zero
-    Sigma=zero
-    !
-    !    
-    call ed_gf_cluster(omega,g)
-    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
-    call inv(invg_lso)
-    invg0=invg0_bath(omega)
-    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
-    Sigma=invg0_lso-invg_lso
-    !
-    do ii=1,size(Hk,3)
-       Gk_lso=(xi*omega+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii)- Sigma    
-       call inv(Gk_lso)
-       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)))
-    enddo
-    out_1=out_1/(size(Hk,3))
-    !
-    return
-    !
-  end function sum_observable_kmesh_complex
-
-
-
   !+-------------------------------------------------------------------+
   !PURPOSE  : Get internal energy from the Impurity problem.
   !+-------------------------------------------------------------------+
   subroutine lanc_local_energy()
     integer                             :: istate,iud(2),jud(2),is,js
-    integer,dimension(2*Ns_Ud)          :: Indices,Jndices
+    integer,dimension(2*Ns_Ud)          :: Indices
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     real(8),dimension(Ns)               :: Nup,Ndw
@@ -1009,13 +610,14 @@ contains
     !
     ed_Epot = ed_Epot + ed_Ehartree
     !
-    if(ed_verbose==3)then
+    if(ed_verbose>=3)then
        write(LOGfile,"(A,10f18.12)")"<Hint>  =",ed_Epot
        write(LOGfile,"(A,10f18.12)")"<V>     =",ed_Epot-ed_Ehartree
        write(LOGfile,"(A,10f18.12)")"<E0>    =",ed_Eknot
        write(LOGfile,"(A,10f18.12)")"<Ehf>   =",ed_Ehartree    
        write(LOGfile,"(A,10f18.12)")"Dust    =",ed_Dust
        write(LOGfile,"(A,10f18.12)")"Dund    =",ed_Dund
+       write(LOGfile,"(A)")" "
     endif
     !
     if(MPIMASTER)then
@@ -1027,7 +629,323 @@ contains
   end subroutine lanc_local_energy
 
 
-
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : Build the impurity density matrices
+  !+-------------------------------------------------------------------+
+  subroutine density_matrix_impurity()
+   integer                             :: istate
+   integer                             :: iUP,iDW,jUP,jDW
+   integer                             :: IimpUp,IimpDw,JimpUp,JimpDw
+   integer                             :: IbathUp,IbathDw,bUP,bDW
+   integer                             :: lenBATHup,lenBATHdw
+   integer,allocatable                 :: BATHup(:),BATHdw(:)
+   integer                             :: Nup, Ndw
+   integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws         ![1,Ns]-[Norb,1+Nbath]
+   integer,dimension(Ns_Ud)            :: iDimUps,iDimDws   ![1]-[Norb]
+   integer,dimension(Ns)               :: IbUp,IbDw         ![Ns]
+   type(sector_map)                    :: HUP,HDW
+   type(sector_map),dimension(2*Ns_Ud) :: HI                ![2]-[2*Norb]
+   integer,dimension(2*Ns_Ud)          :: Indices,Jndices   ![2]-[2*Norb]
+   integer                             :: Nud(2,Ns),iud(2),jud(2),is,js,io,jo
+#ifdef _DEBUG 
+   !=================================================================
+   complex(8),dimension(4**Nimp, 4**Nimp) :: diagonal_density_matrix
+   !=================================================================
+#endif
+   !
+   ! Here we build two different density matrices related to the impurity problem
+   ! > The CLUSTER-Reduced density matrix: \rho_IMP = Tr_BATH(\rho) 
+   ! > The SINGLE-PARTICLE-Reduced density matrix: \rho_sp = <C^+_a C_b> 
+   !
+   write(LOGfile,"(A)")"Get cluster density matrix:"
+   !CLUSTER DENSITY MATRIX [\rho_IMP = Tr_BATH(\rho)]
+   cluster_density_matrix=zero
+   !Selecting a sector and loading the eigenspace
+   if(MpiMaster) call start_timer()  
+   do istate=1,state_list%size
+      isector = es_return_sector(state_list,istate)
+      Ei      = es_return_energy(state_list,istate)
+#ifdef _DEBUG
+       diagonal_density_matrix = zero
+       if(ed_verbose>2)write(Logfile,"(A)")&
+            "DEBUG cluster density matrix: get contribution from state:"//str(istate)
+#endif
+#ifdef _MPI
+      if(MpiStatus)then
+         state_cvec => es_return_cvector(MpiComm,state_list,istate)
+      else
+         state_cvec => es_return_cvector(state_list,istate)
+      endif
+#else
+      state_cvec => es_return_cvector(state_list,istate)
+#endif
+      !Finite temperature weighting factor
+      peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
+      peso = peso/zeta_function
+      !
+      !Sector sizes (per spin)
+      call get_DimUp(isector,iDimUps)
+      call get_DimDw(isector,iDimDws)
+      iDimUp = product(iDimUps)
+      iDimDw = product(iDimDws)
+      !
+      if(MpiMaster)then
+        !---------------------------------
+        !Let's build the UP and DW sectors
+        !---------------------------------
+#ifdef _DEBUG
+       if(ed_verbose>3)write(Logfile,"(A)")&
+         "DEBUG cluster density matrix: building spin-resolved sector"
+#endif
+        call build_sector(isector,HUP,HDW)
+        !
+        do IimpUp=0,2**Nimp-1
+           do JimpUp=0,2**Nimp-1
+#ifdef _DEBUG
+              if(ed_verbose>3)then 
+                 write(LOGfile,"(A)")&
+                 "  DEBUG sparse map: computing UP intersection"
+                 write(Logfile,"(A)")&
+                 "  Iimp: "//str(IimpUp)//" | Jimp: "//str(JimpUp)
+              endif
+#endif
+              !Finding the unique bath states connecting IimpUp and JimpUp -> BATHup(:)
+              call sp_return_intersection(HUP%sp,IimpUp,JimpUp,BATHup,lenBATHup)
+              if(lenBATHup==0)cycle  !there are not bath states intersecting IimpUp,JimpUp
+              do IimpDw=0,2**Nimp-1
+                 do JimpDw=0,2**Nimp-1
+#ifdef _DEBUG
+               if(ed_verbose>4)then 
+                  write(LOGfile,"(A)")&
+                  "     DEBUG sparse map: computing DW intersection"
+                  write(Logfile,"(A)")&
+                  "     Iimp: "//str(IimpDw)//" | Jimp: "//str(JimpDw)
+               endif
+#endif
+                    !Finding the unique bath states connecting IimpDw and JimpDw -> BATHdw(:)
+                    call sp_return_intersection(HDW%sp,IimpDw,JimpDw,BATHdw,lenBATHdw)
+                    if(lenBATHdw==0)cycle  !there are not bath states intersecting IimpDw,JimpDw
+                    !------------------------------------------------------------------------------------
+                    !Arrived here we have finally determined the {IbathUp,IbathDw} states to trace on.
+                    !We shall use them to build back the Fock space states (IimpSIGMA,IbathSIGMA) and
+                    !through those search the map to retrieve the formal labels i=(iUP,iDW), j=(jUP,jDW)
+                    !------------------------------------------------------------------------------------
+                    do bUP=1,lenBATHup !=== >>> THE TRACE <<< ===========================================
+                       IbathUp = BATHup(bUP)
+                       do bDW=1,lenBATHdw
+                          IbathDw = BATHdw(bDW)
+                          !-----------------------------------------------------
+                          !Allowed spin Fock space Istates: 
+                          !Iup = IimpUp +  2^Nimp * IbathUp
+                          !Idw = IimpDw +  2^Nimp * IbathDw
+                          !
+                          !Corresponding sector indices per spin:
+                          iUP= binary_search(HUP%map,IimpUp + 2**Nimp*IbathUp)
+                          iDW= binary_search(HDW%map,IimpDw + 2**Nimp*IbathDw)
+                          !
+                          !Global sector index:
+                          i  = iUP + (iDW-1)*iDimUp
+                          !----------------------------------------------------- 
+                          !Allowed spin Fock space Jstates: 
+                          !Jup = JimpUp +  2^Nimp * IbathUp
+                          !Jdw = JimpDw +  2^Nimp * IbathDw
+                          !
+                          !Corresponding sector jndices per spin:
+                          jUP= binary_search(HUP%map,JimpUp + 2**Nimp*IbathUp)
+                          jDW= binary_search(HDW%map,JimpDw + 2**Nimp*IbathDw)
+                          !
+                          !Global sector jndex:
+                          j  = jUP + (jDW-1)*iDimUp
+                          !-----------------------------------------------------
+                          !Final Lin-Gubernatis composition:
+                          io = (IimpUp + 2**Nimp*IimpDw) + 1 
+                          jo = (JimpUp + 2**Nimp*JimpDw) + 1
+                          !-----------------------------------------------------------------
+                          !(i,j)_th contrinution to the (io,jo)_th element of \rho_IMP
+                          cluster_density_matrix(io,jo) = cluster_density_matrix(io,jo) + &
+                               state_cvec(i)*conjg(state_cvec(j))*peso
+                          !-----------------------------------------------------------------
+                       enddo
+                    enddo !=============================================================================
+                    !
+                 enddo
+              enddo
+              !
+           enddo
+        enddo
+        !
+#ifdef _DEBUG
+        if(ed_verbose>3)write(Logfile,"(A)")&
+           "DEBUG cluster density matrix: deleting spin-resolved sector"
+#endif
+        !
+        call delete_sector(isector,HUP,HDW)       
+      endif
+      !
+      !
+      !
+      !
+      !
+#ifdef _MPI
+      if(MpiStatus)then
+         if(associated(state_cvec))deallocate(state_cvec)
+      else
+         if(associated(state_cvec))nullify(state_cvec)
+      endif
+#else
+      if(associated(state_cvec))nullify(state_cvec)
+#endif
+      !
+   enddo
+   if(MpiMaster) call stop_timer()
+   !
+   !
+   !
+   !
+   !
+#ifdef _DEBUG
+   !==== USEFUL PRINTS TO TEST [benchmarks] ==========================================================================================
+   if(MPIMASTER)then
+     write(*,*) "----------------------------------------"
+     write(*,*) "CLUSTER DENSITY MATRIX [OR ITS DIAGONAL]"
+     write(*,*) "----------------------------------------"
+     if(Nimp<=2)then
+        do i=1,4**Nimp
+           !PRINT FULL MATRIX (Norb=1)
+           write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nimp)
+        enddo
+        write(*,*) "----------------------------------------"
+        if(Nimp==1)then
+            write(*,*) "BENCHMARK: Semi-Analitical | Relative Error"
+            ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
+            print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)," | ",abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
+            print*,dens_up(1,1)-docc(1,1)," | ",abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
+            print*,dens_dw(1,1)-docc(1,1)," | ",abs(dens_dw(1,1)-docc(1,1)-cluster_density_matrix(3,3))
+            print*,docc(1,1)," | ",abs(docc(1,1)-cluster_density_matrix(4,4))
+            write(*,*) "----------------------------------------"
+        endif
+     else
+        write(*,*)"GENERAL ALGORITHM:"
+        do i=1,4**Nimp
+           !PRINT JUST THE DIAGONAL (Norb>1)
+           write(*,*) i, dreal(cluster_density_matrix(i,i))
+        enddo
+        write(*,*) "----------------------------------------"
+     endif
+   endif
+   !==================================================================================================================================
+#endif
+   !
+   ! THIS SHOULD DISAPPEAR AFTER WE CORRECTLY USE ed_dens* and ed_docc
+   deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
+   !
+   !
+   !
+   !
+   !
+   !
+   write(LOGfile,"(A)")"Get single-particle density matrix (no print)"
+   !SINGLE PARTICLE DENSITY MATRIX [<C^+_a C_b>]
+   do istate=1,state_list%size
+      isector = es_return_sector(state_list,istate)
+      Ei      = es_return_energy(state_list,istate)
+#ifdef _MPI
+      if(MpiStatus)then
+         state_cvec => es_return_cvector(MpiComm,state_list,istate)
+      else
+         state_cvec => es_return_cvector(state_list,istate)
+      endif
+#else
+      state_cvec => es_return_cvector(state_list,istate)
+#endif
+      !
+      peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
+      peso = peso/zeta_function
+      !
+      idim  = getdim(isector)
+      call get_DimUp(isector,iDimUps)
+      call get_DimDw(isector,iDimDws)
+      iDimUp = product(iDimUps)
+      iDimDw = product(iDimDws)
+      !
+      if(MpiMaster)then
+         call build_sector(isector,HI)
+         do i=1,iDim
+            call state2indices(i,[iDimUps,iDimDws],Indices)
+            do ii=1,Ns_Ud
+               mup = HI(ii)%map(Indices(ii))
+               mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
+               Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
+               Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
+            enddo
+            Nud(1,:) = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
+            Nud(2,:) = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
+            !
+            !Diagonal densities
+            do ilat=1,Nlat
+              do ispin=1,Nspin
+                 do iorb=1,Norb
+                    is = imp_state_index(ilat,iorb)
+                    single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
+                         single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
+                         peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
+                 enddo
+              enddo
+            enddo
+            !
+            !Off-diagonal
+            !if(ed_total_ud)then !!!! this is true by default in the CDMFT code
+               do ispin=1,Nspin
+                 do ilat=1,Nlat
+                   do jlat=1,Nlat
+                     do iorb=1,Norb
+                       do jorb=1,Norb
+                         is = imp_state_index(ilat,iorb)
+                         js = imp_state_index(jlat,jorb)
+                         if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
+                           iud(1) = HI(1)%map(Indices(1))
+                           iud(2) = HI(2)%map(Indices(2))
+                           call c(js,iud(ispin),r,sgn1)
+                           call cdg(is,r,k,sgn2)
+                           Jndices = Indices
+                           Jndices(1+(ispin-1)*Ns_Ud) = &
+                                binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
+                           call indices2state(Jndices,[iDimUps,iDimDws],j)
+                           !
+                           single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
+                                single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
+                                peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
+                         endif
+                       enddo
+                     enddo
+                   enddo
+                 enddo
+               enddo
+            !endif
+            !
+            !
+         enddo
+         call delete_sector(isector,HI)         
+      endif
+      !
+#ifdef _MPI
+      if(MpiStatus)then
+         if(associated(state_cvec))deallocate(state_cvec)
+      else
+         if(associated(state_cvec))nullify(state_cvec)
+      endif
+#else
+      if(associated(state_cvec))nullify(state_cvec)
+#endif
+      !
+   enddo
+   ! 
+   !
+   !
+   !
+   !
+   !
+   end subroutine density_matrix_impurity 
 
 
 
@@ -1054,9 +972,106 @@ contains
        enddo
     enddo
   end subroutine get_szr
+  !
+  !
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : complex integration
+  !+-------------------------------------------------------------------+
+  function integral_contour(zeta) result(f)
+    real(8)                 :: zeta,f
+    complex(8)              :: w,fermi
+    !
+    w=integrationR*exp(xi*zeta)
+    if(dreal((w-XMU)*beta)>= 100)then
+      fermi=0.d0
+    else
+      fermi=(1/(exp(beta*(w-XMU))+1))
+    endif
+    !
+    f=dreal((1.d0/pi)*w*fermi*sum_observable_kmesh_complex(w))
+  end function integral_contour
+  !
+  !
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : sum on k-vectors
+  !+-------------------------------------------------------------------+
+  !
+  function sum_observable_kmesh(omega) result(out_1)
+    integer                                                           :: ii,jj,kk
+    real(8)                                                           :: omega
+    real(8)                                                           :: out_1
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
+    !
+    out_1=0.d0
+    !
+    g=zero
+    invg0=zero
+    invg_lso=zero
+    invg0_lso=zero
+    Gk_lso=zero
+    Sigma=zero
+    !
+    !Obtain Sigma(iw)
+    call ed_gf_cluster(dcmplx(0.d0,omega),g)
+    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
+    call inv(invg_lso)
+    invg0=invg0_bath(dcmplx(0.d0,omega))
+    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
+    Sigma=invg0_lso-invg_lso
+    !
+    !Do the k-sum
+    do ii=1,size(Hk,3)
+       Gk_lso=(dcmplx(0d0,omega)+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii) - Sigma    
+       call inv(Gk_lso)
+       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)) - trace(sij(:,:,ii))/(dcmplx(-1.1d0,omega)))
+    enddo
+    !
+    out_1=out_1/(size(Hk,3))
+    !
+    return
+    !
+  end function sum_observable_kmesh
+  !
+  function sum_observable_kmesh_complex(omega) result(out_1)
+    integer                                                           :: ii,jj,kk
+    complex(8)                                                        :: omega
+    complex(8)                                                        :: out_1
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)             :: g,invg0
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)             :: invg_lso,invg0_lso,sigma,Gk_lso
+    !
+    out_1=0.d0
+    !
+    g=zero
+    invg0=zero
+    invg_lso=zero
+    invg0_lso=zero
+    Gk_lso=zero
+    Sigma=zero
+    !
+    !    
+    call ed_gf_cluster(omega,g)
+    invg_lso=nnn2lso_reshape(g,Nlat,Nspin,Norb)
+    call inv(invg_lso)
+    invg0=invg0_bath(omega)
+    invg0_lso=nnn2lso_reshape(invg0,Nlat,Nspin,Norb)
+    Sigma=invg0_lso-invg_lso
+    !
+    do ii=1,size(Hk,3)
+       Gk_lso=(xi*omega+xmu)*eye(Nlat*Nspin*Norb) - Hk(:,:,ii)- Sigma    
+       call inv(Gk_lso)
+       out_1=out_1+DREAL(trace(matmul(sij(:,:,ii),Gk_lso)))
+    enddo
+    out_1=out_1/(size(Hk,3))
+    !
+    return
+    !
+  end function sum_observable_kmesh_complex
 
 
-
+  !####################################################################
+  !                        PRINTING ROUTINES
+  !####################################################################
   !+-------------------------------------------------------------------+
   !PURPOSE  : write legend, i.e. info about columns 
   !+-------------------------------------------------------------------+

@@ -27,13 +27,13 @@ MODULE ED_SETUP
   end interface set_Himpurity
 
    interface build_sector
-      module procedure :: build_sector_old !TO BE RENAMED
-      module procedure :: build_sector_new !TO BE RENAMED
+      module procedure :: build_sector_full !A unique map for the full sector, separating spins
+      module procedure :: build_sector_spin !Two spin-resolved maps, separating imp and bath states
    end interface build_sector
 
    interface delete_sector
-      module procedure :: delete_sector_old !TO BE RENAMED
-      module procedure :: delete_sector_new !TO BE RENAMED
+      module procedure :: delete_sector_full
+      module procedure :: delete_sector_spin
    end interface delete_sector
 
   public :: init_ed_structure
@@ -110,7 +110,8 @@ contains
   !+------------------------------------------------------------------+
   subroutine ed_setup_dimensions()
     !
-    Ns = Nlat*Norb*(Nbath+1)
+    Nimp = Nlat*Norb    !Total number of levels in the impurity cluster
+    Ns = Nimp*(Nbath+1) !Total number of levels per spin
     !
     Ns_Orb = Ns
     Ns_Ud  = 1
@@ -267,7 +268,7 @@ contains
     allocate(single_particle_density_matrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
     single_particle_density_matrix=zero
     !
-    allocate(cluster_density_matrix(4**(Nlat*Norb),4**(Nlat*Norb)))
+    allocate(cluster_density_matrix(4**Nimp,4**Nimp))
     cluster_density_matrix=zero
     !
   end subroutine init_ed_structure
@@ -712,7 +713,11 @@ contains
   !BUILD SECTORS: given isector build / delete the corresponding map(s)
   !######################################################################
   !######################################################################
-  subroutine build_sector_old(isector,H)
+  !
+  ! FULL LIN-GUBERNATIS: one map object containing all the spin-states
+  !                      no distinction between impurity and bath bits
+  !
+  subroutine build_sector_full(isector,H)
     integer                             :: isector
     type(sector_map),dimension(2*Ns_Ud) :: H !Just a unique map
     integer,dimension(Ns_Ud)            :: Nups,Ndws
@@ -734,9 +739,9 @@ contains
        !UP    
        dim=0
        do iup=0,2**Ns_Orb-1
-          nup_ = popcnt(iup)
+          nup_ = popcnt(iup)  
           if(nup_ /= Nups(iud))cycle
-          dim  = dim+1
+          dim = dim+1
           H(iud)%map(dim) = iup
        enddo
                         !write(*,*)"dimUP: "//str(dim)
@@ -751,155 +756,113 @@ contains
                         !write(*,*)"dimDW: "//str(dim)
     enddo
     !
-  end subroutine build_sector_old
+  end subroutine build_sector_full
   !
-  ! We want a "cluster-sector-map" containing the integers obtained 
-  ! by bjoining only the first Nlat*Norb bits of the state
-  ! AND
-  ! a "bath-sector-map" containing the integers obtained by bjoining 
-  ! only the last (Ns_Orb-Nlat*Norb) bits of the state
   !
-  ! * Crucial to return also the dimensions of these maps!
-  !   -> dim{Up,Dw}{C,B} are returned :)
-  ! * Crucial to be able to rejoin into the full index!
-  !   -> fall back to Lin-Gubernatis scheme :)
+  ! SPIN-RESOLVED ALGORITHM: two map objects Hsigma, with a *sparse* 
+  !                          structure capable to store separately
+  !                          the impurity and the bath spin-states
   !
-  subroutine build_sector_new(isector,HC,HB,dimUpC,dimDwC,dimUpB,dimDwB)
-   integer                             :: isector,i
-   type(sector_map),dimension(2*Ns_Ud) :: HC !Map for the Cluster
-   type(sector_map),dimension(2*Ns_Ud) :: HB !Map for the Bath
-   integer,dimension(Ns_Ud)            :: Nups,Ndws
-   integer,dimension(Ns_Ud)            :: DimUps,DimDws
-   integer,dimension(Ns_Ud)            :: dimUpC, dimDwC
-   integer,dimension(Ns_Ud)            :: dimUpB, dimDwB
-   integer,dimension(Ns_Orb)           :: upket, dwket   ! Full kets
-   integer,dimension(Nlat*Norb)        :: upketC, dwketC ! Cluster kets
-   integer,dimension(Ns_Orb-Nlat*Norb) :: upketB, dwketB ! Bath kets
-   integer                             :: iup,idw
-   integer                             :: iupC,idwC
-   integer                             :: iupB,idwB
-   integer                             :: nup_,ndw_
-   integer                             :: ifound,iud
-   integer                             :: Nclust
-   !
-   Nclust=Nlat*Norb
-   !
-   call get_Nup(isector,Nups)
-   call get_Ndw(isector,Ndws)
-   call get_DimUp(isector,DimUps)
-   call get_DimDw(isector,DimDws)
-   !
-   call map_allocate(HC,[DimUps,DimDws])![2**Nclust-1,2**Nclust-1])
-   call map_allocate(HB,[DimUps,DimDws])![DimUps/2**Nclust+1,DimDws/2**Nclust+1])
-   !
-   do iud=1,Ns_Ud
-      !UP    
-      ! > init the up maps with proper values
-      ! (we'll look for >=0 values into them)
-      HC(iud)%map = -1
-      HB(iud)%map = -1 
-      ! > init the dimension counters
-      dimUpC(iud)=0; dimUpB(iud)=0
-      ! > loop on all candidate states
-      do iup=0,2**Ns_Orb-1
-         ! > sector check on the full state
-         nup_ = popcnt(iup)
-         if(nup_ /= Nups(iud))cycle
-         ! > extract the CLUSTER part: iupC
-         upket = breorder(bdecomp(iup,Ns_Orb))
-         upketC = upket(:Nclust)
-         iupC = bjoin(upketC,Nclust)
-         !write(*,*)"Testing iupC = "//str(iupC)
-         ! > look for it in the cluster map [HC(up)]
-         !write(*,*) "Size of HCmap: "//str(size(HC(iud)%map))
-         !write(*,*) (HC(iud)%map(i),i=1,size(HC(iud)%map))
-         ifound = sequential_search(HC(iud)%map,iupC)
-         !write(*,*)"found at position: "//str(ifound)
-         ! > if not found: increment dimension; fill in.
-         if(ifound==0)then
-            dimUpC(iud) = dimUpC(iud)+1
-            HC(iud)%map(dimUpC(iud)) = iupC
-           ! write(*,*)"Adding to up cluster map: "//str(iupC)
-           ! write(*,*) (HC(iud)%map(i),i=1,size(HC(iud)%map))
-         endif
-         ! > extract the BATH part: iupB
-         upketB = upket(Nclust+1:)
-         iupB = bjoin(upketB,(Ns_Orb-Nclust))
-         !write(*,*)"Testing iupB = "//str(iupB)
-         ! > look for it in the bath map [HB(up)]
-         !write(*,*) "Size of HBmap: "//str(size(HB(iud)%map))
-         !write(*,*) (HB(iud)%map(i),i=1,size(HB(iud)%map))
-         ifound = sequential_search(HB(iud)%map,iupB)
-         !write(*,*)"found at position: "//str(ifound)
-         ! > if not found: increment dimension; fill in.
-         if(ifound==0)then
-            dimUpB(iud) = dimUpB(iud)+1
-            HB(iud)%map(dimUpB(iud)) = iupB
-           ! write(*,*)"Adding to up bath map: "//str(iupB)
-           ! write(*,*) (HB(iud)%map(i),i=1,size(HB(iud)%map))
-         endif
-         !
-      enddo
-      !DW
-      ! > init the dw map(s) with proper values
-      ! (we'll look for >=0 values into them)
-      HC(iud+Ns_Ud)%map = -1
-      HB(iud+Ns_Ud)%map = -1  
-      ! > init the dimension counters
-      dimDwC(iud)=0; dimDwB(iud)=0
-      ! > loop on all candidate states
-      do idw=0,2**Ns_Orb-1
-         ! > sector check on the full state
-         ndw_= popcnt(idw)
-         if(ndw_ /= Ndws(iud))cycle
-         ! > extract the CLUSTER part: idwC
-         dwket = breorder(bdecomp(idw,Ns_Orb))
-         dwketC = dwket(:Nclust)
-         idwC = bjoin(dwketC,Nclust)
-         !write(*,*)"Testing idwC = "//str(idwC)
-         ! > look for it in the cluster map [HC(dw)]
-         ifound = sequential_search(HC(iud+Ns_Ud)%map,idwC)
-         !write(*,*)"found at position: "//str(ifound)
-         ! > if not found: increment dimension; fill in.
-         if(ifound==0)then
-            dimDwC(iud) = dimDwC(iud)+1
-            HC(iud+Ns_Ud)%map(dimDwC(iud)) = idwC
-            !write(*,*)"Adding to dw cluster map: "//str(idwC)
-         endif
-         ! > extract the BATH part: idwB
-         dwketB = dwket(Nclust+1:)
-         idwB = bjoin(dwketB,(Ns_Orb-Nclust))
-         write(*,*)"Testing idwB = "//str(idwB)
-         ! > look for it in the bath map [HB(dw)]
-         write(*,*) "Size of HBmap: "//str(size(HB(iud+Ns_Ud)%map))
-         write(*,*) (HB(iud+Ns_Ud)%map(i),i=1,size(HB(iud+Ns_Ud)%map))
-         ifound = sequential_search(HB(iud+Ns_Ud)%map,idwB)
-         write(*,*)"found at position: "//str(ifound)
-         ! > if not found: increment dimension; fill in.
-         if(ifound==0)then
-            dimDwB(iud) = dimDwB(iud)+1
-            HB(iud+Ns_Ud)%map(dimDwB(iud)) = idwB
-            write(*,*)"Adding to dw bath map: "//str(idwB)
-         endif
-         !
-        enddo
-   enddo
-   !
- end subroutine build_sector_new
+  subroutine build_sector_spin(isector,Hup,Hdw)
+    integer                            :: isector
+    type(sector_map)                   :: HUP !Map for the UPs
+    type(sector_map)                   :: HDW !Map for the Dws
+    integer,dimension(Ns_Ud)           :: Nups,Ndws
+    integer,dimension(Ns_Ud)           :: DimUps,DimDws
+    integer                            :: DimUp,DimDw,impDIM
+    integer                            :: iup,idw
+    integer                            :: nup_,ndw_
+    integer                            :: imap,iud
+    integer                            :: iIMP,iBATH
+    !
+    impDIM = 2**(Nimp/Ns_ud) !Number of states for the impurity
+    !
+    !Init UP sub-sector:
+    ! > allocate UP-map to binomial(Ns_Orb Nup)
+    call get_Nup(isector,Nups)
+    call get_DimUp(isector,DimUps); DimUp = product(DimUps)
+    call map_allocate(HUP,DimUp,impDIM)
+    !
+    !Init DW sub-sector:
+    ! > allocate DW-map to binomial(Ns_Orb Ndw)
+    call get_Ndw(isector,Ndws)
+    call get_DimDw(isector,DimDws); DimDw = product(DimDws)
+    call map_allocate(HDW,DimDw,impDIM)
+    !
+    !Formally dealing with ed_total_ud == .false.
+    !->iud=1:Ns_Ud (formally because Ns_Ud = 1 in CDMFT code...)
+    ![STILL PROBLEMS WITH Ns_Ud, don't know how to deal with it in density_matrix_impurity()] 
+    do iud=1,Ns_Ud 
+#ifdef _DEBUG
+       if(ed_verbose>3)write(Logfile,"(A)")&
+         "  DEBUG build_sector_spin(): working UP sub-sector"
+#endif
+       imap=0
+       do iup=0,2**Ns_Orb-1
+          nup_ = popcnt(iup) !equivalent to sum(binary_decomposition(iup))
+          if(nup_ /= Nups(iud))cycle !the state does not have the required number of UPs
+          imap = imap+1
+          !HUP(iud)%map(imap) = iup
+          HUP%map(imap) = iup
+          !
+          iIMP  = ibits(iup,0,Nimp)
+          iBATH = ibits(iup,Nimp,Nimp*Nbath) !check: Nimp+Nimp*Nbath=Nimp(1*Nbath)=Ns
+          !call sp_insert_state(HUP(iud)%sp,iIMP,iBATH,imap)
+#ifdef _DEBUG
+          if(ed_verbose>4)then 
+             write(Logfile,"(A)")&
+             "    DEBUG build_sector_spin(): inserting UP state"
+             write(Logfile,"(A)")&
+             "      Iup: "//str(iup)//" | IimpUp: "//str(iIMP)//" | IbathUp: "//str(iBATH)
+          endif
+#endif
+          call sp_insert_state(HUP%sp,iIMP,iBATH,imap) 
+          !
+       enddo
+       !
+#ifdef _DEBUG
+       if(ed_verbose>3)write(Logfile,"(A)")&
+         "  DEBUG build_sector_spin(): working DW sub-sector"
+#endif
+       imap=0
+       do idw=0,2**Ns_Orb-1
+          ndw_=popcnt(idw)   !equivalent to sum(binary_decomposition(idw))
+          if(ndw_ /= Ndws(iud))cycle !the state does not have the required number of DWs
+          imap = imap+1
+          !HDW(iud)%map(imap) = idw
+          HDW%map(imap) = idw
+          !
+          iIMP  = ibits(idw,0,Nimp)
+          iBATH = ibits(idw,Nimp,Nimp*Nbath) !check: Nimp+Nimp*Nbath=Nimp(1*Nbath)=Ns
+          !call sp_insert_state(HDW(iud)%sp,iIMP,iBATH,imap)
+#ifdef _DEBUG
+          if(ed_verbose>4)then 
+             write(LOGfile,"(A)")&
+             "    DEBUG build_sector_spin(): inserting DW state"
+             write(LOGfile,"(A)")&
+             "      Idw: "//str(idw)//" | IimpDw: "//str(iIMP)//" | IbathDw: "//str(iBATH)
+          endif
+#endif
+          call sp_insert_state(HDW%sp,iIMP,iBATH,imap)
+          !
+       enddo
+    enddo
+    !
+  end subroutine build_sector_spin
 
-  subroutine delete_sector_old(isector,H)
+  subroutine delete_sector_full(isector,H)
     integer                   :: isector
     type(sector_map)          :: H(:)
     call map_deallocate(H)
-  end subroutine delete_sector_old
+  end subroutine delete_sector_full
 
-  subroutine delete_sector_new(isector,HC,HB)
+  subroutine delete_sector_spin(isector,HUP,HDW)
    integer                   :: isector
-   type(sector_map)          :: HC(:)
-   type(sector_map)          :: HB(:)
-   call map_deallocate(HC)
-   call map_deallocate(HB)
- end subroutine delete_sector_new
+   type(sector_map)          :: HUP
+   type(sector_map)          :: HDW
+   call map_deallocate(HUP)
+   call map_deallocate(HDW)
+ end subroutine delete_sector_spin
 
 
 

@@ -38,6 +38,9 @@ The code structure is as follow:
 
 - [x] Add real-space CDMFT case for finite systems
 - [ ] Test Kane-Mele model with real-space CDMFT
+- [x] Add cluster density matrix (CDM) computation
+- [ ] Add local and nonlocal entanglement entropies (EEs) from cdm
+- [ ] Test CDM and EEs on 2d BHZ model TQPT and square lattice MIT 
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
 
