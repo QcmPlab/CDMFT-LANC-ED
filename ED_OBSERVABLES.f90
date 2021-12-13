@@ -38,11 +38,15 @@ MODULE ED_OBSERVABLES
   real(8),dimension(:,:,:,:),allocatable          :: sz2,n2
   real(8),dimension(:,:,:),allocatable            :: zimp,simp
   real(8),dimension(:),allocatable                :: s2tot
+  real(8),dimension(:),allocatable                :: prob
   real(8)                                         :: Egs
   real(8)                                         :: Ei
   real(8)                                         :: integrationR
   complex(8),allocatable,dimension(:,:,:)         :: sij
   complex(8),allocatable,dimension(:,:,:)         :: Hk
+  real(8),dimension(:,:),allocatable              :: cdocc
+  real(8),dimension(:,:,:),allocatable            :: tocc
+  real(8)                                 :: qocc
   !
   integer                                         :: iorb,jorb,iorb1,jorb1
   integer                                         :: ispin,jspin
@@ -209,20 +213,24 @@ contains
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws
     integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
-    type(sector_map),dimension(2*Ns_Ud) :: HI
-    
+    real(8),dimension(Nlat,Norb,2)      :: matN
+    type(sector_map),dimension(2*Ns_Ud) :: HI 
     !
     !LOCAL OBSERVABLES:
+    allocate(prob(4**Nimp))
     allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb))
-    allocate(docc(Nlat,Norb),s2tot(Nlat))
-    allocate(magz(Nlat,Norb),sz2(Nlat,Nlat,Norb,Norb),n2(Nlat,Nlat,Norb,Norb))
-    allocate(simp(Nlat,Norb,Nspin),zimp(Nlat,Norb,Nspin))
+    allocate(docc(Nlat,Norb),cdocc(2,2),tocc(Nlat,Nlat,2))                    
+    allocate(s2tot(Nlat),magz(Nlat,Norb),sz2(Nlat,Nlat,Norb,Norb),n2(Nlat,Nlat,Norb,Norb))
+    allocate(simp(Nlat,Norb,2),zimp(Nlat,Norb,2))
     !
     Egs     = state_list%emin
     dens    = 0.d0
     dens_up = 0.d0
     dens_dw = 0.d0
     docc    = 0.d0
+    cdocc   = 0.d0
+    tocc    = 0.d0
+    qocc    = 0.d0    
     magz    = 0.d0
     sz2     = 0.d0
     n2      = 0.d0
@@ -275,6 +283,16 @@ contains
                 enddo
              enddo
              !
+             !
+             !n_site,orbital,spin matrix
+             do ilat=1,Nlat
+               do iorb=1,Norb
+                  matN(ilat,iorb,1)=nup(ilat,iorb)
+                  matN(ilat,iorb,2)=ndw(ilat,iorb)                   
+               enddo
+             enddo
+
+
              !Evaluate averages of observables:
              !>TODO:
              !add non-local averges like spin-spin, density-density etc...
@@ -289,7 +307,46 @@ contains
                 enddo
                 s2tot(ilat) = s2tot(ilat)  + (sum(sz(ilat,:)))**2*gs_weight
              enddo
+             
+             do iorb=1,Norb
+                do ilat=1,Nlat
+                   do jlat = ilat+1,Nlat 
+                    qocc = qocc + nup(ilat,iorb)*ndw(ilat,iorb)*nup(jlat,iorb)*ndw(jlat,iorb)*gs_weight
+       
+                     do ispin=1,2                        
+                        tocc(ilat,jlat,ispin) = tocc(ilat,jlat,ispin) + matN(ilat,iorb,ispin)*nup(jlat,iorb)*ndw(jlat,iorb)*gs_weight            
+                        tocc(jlat,ilat,ispin) = tocc(jlat,ilat,ispin) + matN(jlat,iorb,ispin)*nup(ilat,iorb)*ndw(ilat,iorb)*gs_weight
+                        cdocc(ispin,ispin)    = cdocc(ispin,ispin) + matN(ilat,iorb,ispin)*matN(jlat,iorb,ispin)*gs_weight             
 
+                        do jspin=ispin+1,2
+                           cdocc(ispin,jspin) = cdocc(ispin,jspin) + matN(ilat,iorb,ispin)*matN(jlat,iorb,jspin)*gs_weight
+                           cdocc(jspin,ispin) = cdocc(jspin,ispin) + matN(ilat,iorb,jspin)*matN(jlat,iorb,ispin)*gs_weight
+                        enddo                
+                     enddo
+                       
+                   enddo
+                enddo                   
+             enddo
+             ! 
+             if(Norb==1.AND.Nlat==2)then
+                prob(1)  = 1.d0-4.d0*dens_up(1,1)+2.d0*docc(1,1)+2.d0*cdocc(1,1)+2.d0*cdocc(1,2)-4.d0*tocc(1,2,1)+qocc   !zero el
+                prob(2)  = dens_up(1,1)-docc(1,1)-cdocc(1,1)-cdocc(1,2)+3.d0*tocc(1,2,1)-qocc                            !1up in orb2 
+                prob(3)  = prob(2)                                                                                       !1dw in orb2
+                prob(4)  = cdocc(1,1)-2.d0*tocc(1,2,1)+qocc                                                              !1up in orb1 & 1up in orb2
+                prob(5)  = prob(2)                                                                                       !1up in orb1
+                prob(6)  = docc(1,1)-2.d0*tocc(1,2,1)+qocc                                                               !2e in orb2
+                prob(7)  = cdocc(1,2)-2.d0*tocc(1,2,1)+qocc                                                              !1up in orb1 & 1dw in orb2
+                prob(8)  = tocc(1,2,1)-qocc                                                                              !1up in orb1 & 2e in orb2   
+                prob(9)  = prob(2)                                 !1dw in orb1
+                prob(10) = prob(7)                                 !1dw in orb1 & 1up in orb2
+                prob(11) = prob(6)                                 !1dw in orb1 & 1dw in orb2
+                prob(12) = prob(8)                                 !1dw in orb1 & 2e in orb2   
+                prob(13) = prob(4)                                 !2e in orb1
+                prob(14) = prob(8)                                 !2e in orb1 & 1up in orb2
+                prob(15) = prob(8)                                 !2e in orb1 & 1dw in orb2
+                prob(16) = qocc                                    !2e in orb1 & 2e in orb2
+             endif
+             !
              do ilat=1,Nlat
                 do iorb=1,Norb
                    sz2(ilat,ilat,iorb,iorb) = sz2(ilat,ilat,iorb,iorb)  +  (sz(ilat,iorb)*sz(ilat,iorb))*gs_weight
@@ -633,7 +690,7 @@ contains
   !PURPOSE  : Build the impurity density matrices
   !+-------------------------------------------------------------------+
   subroutine density_matrix_impurity()
-   integer                             :: istate
+   integer                             :: istate, unit
    integer                             :: iUP,iDW,jUP,jDW
    integer                             :: IimpUp,IimpDw,JimpUp,JimpDw
    integer                             :: IbathUp,IbathDw,bUP,bDW
@@ -647,11 +704,6 @@ contains
    type(sector_map),dimension(2*Ns_Ud) :: HI                ![2]-[2*Norb]
    integer,dimension(2*Ns_Ud)          :: Indices,Jndices   ![2]-[2*Norb]
    integer                             :: Nud(2,Ns),iud(2),jud(2),is,js,io,jo
-#ifdef _DEBUG 
-   !=================================================================
-   complex(8),dimension(4**Nimp, 4**Nimp) :: diagonal_density_matrix
-   !=================================================================
-#endif
    !
    ! Here we build two different density matrices related to the impurity problem
    ! > The CLUSTER-Reduced density matrix: \rho_IMP = Tr_BATH(\rho) 
@@ -815,7 +867,7 @@ contains
            write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nimp)
         enddo
         write(*,*) "----------------------------------------"
-        write(*,*) "BENCHMARK: Semi-Analitical | Relative Error"
+        write(*,*) "BENCHMARK: Semi-Analytical | Error"
         ! Cfr Eq. 4 in Mod Phys Lett B 2013 27:05
         print*,1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)," | ",abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cluster_density_matrix(1,1))
         print*,dens_up(1,1)-docc(1,1)," | ",abs(dens_up(1,1)-docc(1,1)-cluster_density_matrix(2,2))
@@ -824,17 +876,31 @@ contains
         write(*,*) "----------------------------------------"
      else
         do i=1,4**Nimp
-           !PRINT JUST THE DIAGONAL (Norb>1)
-           write(*,*) i, dreal(cluster_density_matrix(i,i))
+            !PRINT JUST THE DIAGONAL (Norb>1)
+            write(*,*) i, dreal(cluster_density_matrix(i,i))
         enddo
         write(*,*) "----------------------------------------"
+        if(Norb==1.and.Nlat==2)then
+           write(*,*) "BENCHMARK: Semi-Analytical | Error" 
+           do i=1,4**Nimp
+             ! WRT analytical calculations done by @frapao
+             write(*,*) prob(i), abs(prob(i)-cluster_density_matrix(i,i))
+           enddo
+           write(*,*) "----------------------------------------"
+        endif
      endif
    endif
+   !
+   unit = free_unit()
+   open(unit,file="diag_dm"//reg(ed_file_suffix)//".ed")
+   write(unit,"(90(F15.9,1X))")&
+            (dreal(cluster_density_matrix(i,i)),i=1,4**Nimp)
+   close(unit)
    !==================================================================================================================================
 #endif
    !
    ! THIS SHOULD DISAPPEAR AFTER WE CORRECTLY USE ed_dens* and ed_docc
-   deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
+   deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot,tocc,cdocc,prob)
    !
    !
    !
@@ -1085,8 +1151,19 @@ contains
          reg(txtfy(5*Norb+1))//"s2",&
          reg(txtfy(5*Norb+2))//"egs",&
          ((reg(txtfy(5*Norb+3+(ispin-1)*Norb+iorb))//"z_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin),&
-         ((reg(txtfy((5+Nspin)*Norb+3+(ispin-1)*Norb+iorb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin)
+         ((reg(txtfy((5+Nspin)*Norb+3+(ispin-1)*Norb+iorb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin) 
     close(unit)
+    !
+
+    unit = free_unit()
+    open(unit,file="occupations_info.ed")
+    write(unit,"(A1,90(A10,6X))")"#",&
+         (("cdocc_"//reg(txtfy(ispin))//reg(txtfy(jspin)),jspin=1,2),ispin=1,2),&
+         ((("tocc_"//reg(txtfy(ilat))//reg(txtfy(jlat))//reg(txtfy(ispin)),ispin=1,2),jlat=1,Nlat),ilat=1,Nlat),&
+         "qocc" 
+    close(unit)
+
+
     !
     unit = free_unit()
     open(unit,file="parameters_info.ed")
@@ -1139,9 +1216,10 @@ contains
             (magz(ilat,iorb),iorb=1,Norb),&
             s2tot,egs,&
             ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)        
        close(unit)
     enddo
+
     !
     unit = free_unit()
     do ilat=1,Nlat
@@ -1161,10 +1239,25 @@ contains
             (magz(ilat,iorb),iorb=1,Norb),&
             s2tot,egs,&
             ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)    
        close(unit)
     enddo
 
+
+    unit = free_unit()
+    open(unit,file="occupations"//reg(ed_file_suffix)//".ed")
+    write(unit,"(90(F15.9,1X))")&
+            ((cdocc(ispin,jspin),jspin=1,2),ispin=1,2),&
+            (((tocc(ilat,jlat,ispin),ispin=1,2),jlat=1,Nlat),ilat=1,Nlat),&
+            qocc 
+    close(unit)
+
+    unit = free_unit()
+    open(unit,file="probabilities"//reg(ed_file_suffix)//".ed")
+    write(unit,"(90(F15.9,1X))")&
+            (prob(i),i=1,4**Nimp)
+    close(unit)
+    
     unit = free_unit()
     open(unit,file="Sz_ij_ab_last"//reg(ed_file_suffix)//".ed")
     write(unit,"(A)")"#I, J, a, b, Sz(I,J,a,b)"
@@ -1226,20 +1319,3 @@ contains
 
 
 END MODULE ED_OBSERVABLES
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
