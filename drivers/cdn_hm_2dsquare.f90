@@ -127,10 +127,11 @@ program cdn_hm_2dsquare
       if(Norb*Nlat==1)then
          call ed_get_mag(mag)
          call ed_get_dens(dens)
+         call ed_get_docc(docc)
          dens_up = 0.5d0*(dens + mag)
          dens_dw = 0.5d0*(dens - mag)
          write(*,*)
-         write(*,*) "BENCHMARK: Semi-Analytical | Error"
+         write(*,*) "CDM BENCHMARK: Semi-Analytical | Error"
          write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cdm(1,1))
          write(*,*) dens_up(1,1)-docc(1,1),                abs(dens_up(1,1)-docc(1,1)-cdm(2,2))
          write(*,*) dens_dw(1,1)-docc(1,1),                abs(dens_dw(1,1)-docc(1,1)-cdm(3,3))

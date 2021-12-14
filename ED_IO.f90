@@ -102,12 +102,6 @@ MODULE ED_IO
   end interface ed_get_invg0and_realaxis
 
 
-  !Retrieve custom observable 
-  interface ed_get_custom_observable
-     module procedure ed_get_custom_observable_1
-  end interface ed_get_custom_observable
-
-
   !Retrieve static common observables  
   interface ed_get_dens
      module procedure ed_get_dens_1
@@ -227,8 +221,6 @@ MODULE ED_IO
 #endif
   end interface ed_read_impG
 
-  public :: ed_get_custom_observable
-
   public :: ed_get_sigma_matsubara
   public :: ed_get_sigma_realaxis
 
@@ -322,7 +314,6 @@ contains
   !+--------------------------------------------------------------------------+!
   ! PURPOSE: Retrieve measured values of the local observables
   !+--------------------------------------------------------------------------+!
-  include "ED_IO/get_custom_observable.f90"
   include "ED_IO/get_dens.f90"
   include "ED_IO/get_mag.f90"
   include "ED_IO/get_docc.f90"
