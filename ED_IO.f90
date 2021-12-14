@@ -441,6 +441,37 @@ contains
   !+------------------------------------------------------------------+ 
 
   ! TODO: merge here print_sp_dm and print_cluster_dm (generic size, but proper suffix?)
+  subroutine print_cluster_dm(dm,ineq)
+   complex(8),dimension(4**Nimp,4**Nimp),intent(in)            :: dm
+   integer                              ,intent(in),optional   :: ineq
+   integer                              :: unit
+   character(len=64)                    :: suffix
+   integer                              :: io,jo
+   !
+   if(present(ineq))then
+     suffix = "cluster_density_matrix_ineq"//reg(str(ineq))//".dat"
+   else
+     suffix = "cluster_density_matrix.dat"
+   endif
+   !
+   unit = free_unit()
+   open(unit,file=suffix,action="write",position="rewind",status='unknown')
+   !
+   write(unit,"(A90)")"# cluster density matrix [REAL part]:"
+   do io=1,4**Nimp
+      write(unit,"(90(F15.9,1X))") (real(dm(io,jo)),jo=1,4**Nimp)
+   enddo
+   write(unit,*)
+   !
+   write(unit,"(A90)")"# cluster density matrix [IMAG part]:"
+   do io=1,4**Nimp
+      write(unit,"(90(F15.9,1X))") (aimag(dm(io,jo)),jo=1,4**Nimp)
+   enddo
+   write(unit,*)
+   !
+   close(unit)
+   !
+ end subroutine print_cluster_dm
 
   !+------------------------------------------------------------------+
   ! !                         PRINT CHI:
