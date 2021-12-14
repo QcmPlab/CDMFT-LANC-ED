@@ -9,6 +9,10 @@ MODULE ED_GREENS_FUNCTIONS
   public :: buildGf_impurity
   !public :: buildChi_impurity
 
+
+  real(8),dimension(:,:,:),allocatable            :: zimp,simp
+
+
 contains
 
 
@@ -39,6 +43,12 @@ contains
        if(ed_print_G)call ed_print_impG()
        if(ed_print_G0)call ed_print_impG0()
     endif
+    !
+    allocate(simp(Nlat,Norb,Nspin),zimp(Nlat,Norb,Nspin))
+    call get_szr
+    call write_szr()
+    deallocate(simp,zimp)
+
     !
     call deallocate_grids
     !
@@ -93,6 +103,70 @@ contains
   !call deallocate_grids
   !!
   !end subroutine buildChi_impurity
+
+
+
+
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : get scattering rate and renormalization constant Z
+  !+-------------------------------------------------------------------+
+  subroutine get_szr()
+    integer                  :: ilat,ispin,iorb
+    real(8)                  :: wm1,wm2
+    wm1 = pi/beta ; wm2=3d0*pi/beta
+    do ilat=1,Nlat
+       do ispin=1,Nspin
+          do iorb=1,Norb
+             simp(ilat,iorb,ispin) = dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1)) - &
+                  wm1*(dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,2))-dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1)))/(wm2-wm1)
+             zimp(ilat,iorb,ispin)   = 1.d0/( 1.d0 + abs( dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1))/wm1 ))
+          enddo
+       enddo
+    enddo
+  end subroutine get_szr
+
+
+
+
+  !+-------------------------------------------------------------------+
+  !PURPOSE  : write observables to file
+  !+-------------------------------------------------------------------+
+  subroutine write_szr()
+    integer :: unit
+    integer :: iorb,jorb,ispin,ilat
+    !
+    open(free_unit(unit),file="zeta_info.ed")
+    write(unit,"(A1,90(A10,6X))")"#",&
+         ((reg(txtfy(iorb+(ispin-1)*Norb))//"z_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin)
+    close(unit)
+    !
+    open(free_unit(unit),file="sig_info.ed")
+    write(unit,"(A1,90(A10,6X))")"#",&
+         ((reg(txtfy(iorb+(ispin-1)*Norb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin) 
+    close(unit)
+    !
+    do ilat=1,Nlat
+       open(free_unit(unit),file="zeta_all"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed",position='append')
+       write(unit,"(90(F15.9,1X))")&
+            ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+       close(unit)
+       open(free_unit(unit),file="zeta_last"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed")
+       write(unit,"(90(F15.9,1X))")&
+            ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+       close(unit)
+       !
+       open(free_unit(unit),file="sig_all"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed",position='append')
+       write(unit,"(90(F15.9,1X))")&
+            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)        
+       close(unit)
+       open(free_unit(unit),file="sig_last"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed")
+       write(unit,"(90(F15.9,1X))")&
+            ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)    
+       close(unit)
+    enddo
+    !
+  end subroutine write_szr
+
 
 
 

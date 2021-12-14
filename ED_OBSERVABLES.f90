@@ -23,6 +23,7 @@ MODULE ED_OBSERVABLES
   
   public :: observables_impurity
   public :: local_energy_impurity
+  !
   public :: init_custom_observables
   public :: add_custom_observable
   public :: get_custom_observables
@@ -34,7 +35,6 @@ MODULE ED_OBSERVABLES
   real(8),dimension(:,:),allocatable              :: docc
   real(8),dimension(:,:),allocatable              :: magz
   real(8),dimension(:,:,:,:),allocatable          :: sz2,n2
-  real(8),dimension(:,:,:),allocatable            :: zimp,simp
   real(8),dimension(:),allocatable                :: s2tot
   real(8)                                         :: Egs
   real(8)                                         :: Ei
@@ -81,117 +81,6 @@ contains
   end subroutine local_energy_impurity
 
   
-  subroutine init_custom_observables(N,Hk)
-    integer                      :: N
-    complex(8),dimension(:,:,:)  :: Hk
-    !
-    if(MpiMaster)then
-      custom_o%N_filled=0
-      custom_o%N_asked=N
-      allocate(custom_o%Hk(size(Hk,1),size(Hk,2),size(Hk,3)))
-      custom_o%Hk=Hk
-      allocate(custom_o%item(N))
-      custom_o%init=.true.
-    endif
-    !
-  end subroutine init_custom_observables
-    
-  subroutine add_custom_observable_local(o_name,sij)
-    integer                               :: i
-    complex(8),dimension(:,:)             :: sij
-    character(len=*)                      :: o_name
-    !
-    if(MpiMaster .and. custom_o%init)then
-      if(custom_o%N_filled .gt. custom_o%N_asked)then
-        STOP "add_custom_observable: too many observables given"
-        call clear_custom_observables
-      endif
-      !
-      custom_o%N_filled=custom_o%N_filled+1
-      custom_o%item(custom_o%N_filled)%o_name=o_name
-      custom_o%item(custom_o%N_filled)%o_value=0.d0
-      !
-      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
-      do i=1,size(custom_o%item(custom_o%N_filled)%sij,3)
-        custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
-      enddo
-    else
-      STOP "add_custom_observable: custom observables not initialized"
-    endif
-  end subroutine add_custom_observable_local
-
-
-  subroutine add_custom_observable_kdep(o_name,sijk)
-    integer                               :: i
-    complex(8),dimension(:,:,:)           :: sijk
-    character(len=*)                      :: o_name
-    !
-    if(MpiMaster .and. custom_o%init)then
-      if(custom_o%N_filled .gt. custom_o%N_asked)then
-        STOP "add_custom_observable: too many observables given"
-        call clear_custom_observables
-      endif
-      !
-      custom_o%N_filled=custom_o%N_filled+1
-      custom_o%item(custom_o%N_filled)%o_name=o_name
-      custom_o%item(custom_o%N_filled)%o_value=0.d0
-      !
-      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
-      custom_o%item(custom_o%N_filled)%sij=sijk
-    else
-      STOP "add_custom_observable: custom observables not initialized"
-    endif
-  end subroutine add_custom_observable_kdep
-
-
-  subroutine get_custom_observables()
-    integer            :: i
-    !
-    if(MpiMaster .and. custom_o%init)then
-      if(custom_o%N_filled .eq. 0)then
-        write(Logfile,*)"WARNING! Custom observables initialized but none given."
-        RETURN
-      endif
-      !
-      write(LOGfile,*)"Calculating custom observables"
-      !
-      allocate(sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
-      allocate(Hk(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
-      sij=zero
-      Hk=zero
-      !
-      Hk=custom_o%Hk
-      do i=1,custom_o%N_filled
-        sij=custom_o%item(i)%sij
-        if(finiteT) then
-          custom_o%item(i)%o_value=calculate_observable_integral_finite_t()
-        else
-          custom_o%item(i)%o_value=calculate_observable_integral_zero_t()
-        endif
-        write(LOGfile,"(A,10f18.12,A)")reg(custom_o%item(i)%o_name)//" = ",custom_o%item(i)%o_value
-      enddo
-      call write_custom_legend()
-      call write_custom_observables()
-      deallocate(sij,Hk)
-    endif
-    !
-  end subroutine get_custom_observables
-  
-
-  subroutine clear_custom_observables()
-    integer                       :: i
-    if(MpiMaster .and. custom_o%init)then 
-      do i=1,custom_o%N_filled
-        deallocate(custom_o%item(i)%sij)
-        custom_o%item(i)%o_name=""
-        custom_o%item(i)%o_value=0.d0
-      enddo
-      deallocate(custom_o%Hk)
-      custom_o%N_asked=0
-      custom_o%N_filled=0
-      custom_o%init=.false.
-    endif
-  end subroutine clear_custom_observables
 
   !+-------------------------------------------------------------------+
   !PURPOSE  : Lanc method
@@ -209,7 +98,6 @@ contains
     allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb))
     allocate(docc(Nlat,Norb),s2tot(Nlat))
     allocate(magz(Nlat,Norb),sz2(Nlat,Nlat,Norb,Norb),n2(Nlat,Nlat,Norb,Norb))
-    allocate(simp(Nlat,Norb,Nspin),zimp(Nlat,Norb,Nspin))
     !
     Egs     = state_list%emin
     dens    = 0.d0
@@ -353,44 +241,44 @@ contains
              !
              !Diagonal densities
              do ilat=1,Nlat
-               do ispin=1,Nspin
-                  do iorb=1,Norb
-                     is = imp_state_index(ilat,iorb)
-                     imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
-                          imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
-                          peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
-                  enddo
-               enddo
+                do ispin=1,Nspin
+                   do iorb=1,Norb
+                      is = imp_state_index(ilat,iorb)
+                      imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
+                           imp_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
+                           peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
+                   enddo
+                enddo
              enddo
              !
              !Off-diagonal
              !if(ed_total_ud)then !!!! this is true by default in the CDMFT cod
-                do ispin=1,Nspin
-                  do ilat=1,Nlat
-                    do jlat=1,Nlat
+             do ispin=1,Nspin
+                do ilat=1,Nlat
+                   do jlat=1,Nlat
                       do iorb=1,Norb
-                        do jorb=1,Norb
-                          is = imp_state_index(ilat,iorb)
-                          js = imp_state_index(jlat,jorb)
-                          if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
-                            iud(1) = HI(1)%map(Indices(1))
-                            iud(2) = HI(2)%map(Indices(2))
-                            call c(js,iud(ispin),r,sgn1)
-                            call cdg(is,r,k,sgn2)
-                            Jndices = Indices
-                            Jndices(1+(ispin-1)*Ns_Ud) = &
-                                 binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
-                            call indices2state(Jndices,[iDimUps,iDimDws],j)
-                            !
-                            imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
-                                 imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
-                                 peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
-                          endif
-                        enddo
+                         do jorb=1,Norb
+                            is = imp_state_index(ilat,iorb)
+                            js = imp_state_index(jlat,jorb)
+                            if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
+                               iud(1) = HI(1)%map(Indices(1))
+                               iud(2) = HI(2)%map(Indices(2))
+                               call c(js,iud(ispin),r,sgn1)
+                               call cdg(is,r,k,sgn2)
+                               Jndices = Indices
+                               Jndices(1+(ispin-1)*Ns_Ud) = &
+                                    binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
+                               call indices2state(Jndices,[iDimUps,iDimDws],j)
+                               !
+                               imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
+                                    imp_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
+                                    peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
+                            endif
+                         enddo
                       enddo
-                    enddo
-                  enddo
+                   enddo
                 enddo
+             enddo
              !endif
              !
              !
@@ -412,7 +300,6 @@ contains
     !
     !
     if(MPIMASTER)then
-       call get_szr
        if(iolegend)call write_legend
        call write_observables()
        !
@@ -439,7 +326,6 @@ contains
 #endif
     !
     deallocate(dens,docc,dens_up,dens_dw,magz,sz2,n2,s2tot)
-    deallocate(simp,zimp)
   end subroutine lanc_observables
 
 
@@ -819,23 +705,119 @@ contains
   !####################################################################
   !                    COMPUTATIONAL ROUTINES
   !####################################################################
-  !+-------------------------------------------------------------------+
-  !PURPOSE  : get scattering rate and renormalization constant Z
-  !+-------------------------------------------------------------------+
-  subroutine get_szr()
-    integer                  :: ilat,ispin,iorb
-    real(8)                  :: wm1,wm2
-    wm1 = pi/beta ; wm2=3d0*pi/beta
-    do ilat=1,Nlat
-       do ispin=1,Nspin
-          do iorb=1,Norb
-             simp(ilat,iorb,ispin) = dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1)) - &
-                  wm1*(dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,2))-dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1)))/(wm2-wm1)
-             zimp(ilat,iorb,ispin)   = 1.d0/( 1.d0 + abs( dimag(impSmats(ilat,ilat,ispin,ispin,iorb,iorb,1))/wm1 ))
-          enddo
-       enddo
-    enddo
-  end subroutine get_szr
+    subroutine init_custom_observables(N,Hk)
+    integer                      :: N
+    complex(8),dimension(:,:,:)  :: Hk
+    !
+    if(MpiMaster)then
+      custom_o%N_filled=0
+      custom_o%N_asked=N
+      allocate(custom_o%Hk(size(Hk,1),size(Hk,2),size(Hk,3)))
+      custom_o%Hk=Hk
+      allocate(custom_o%item(N))
+      custom_o%init=.true.
+    endif
+    !
+  end subroutine init_custom_observables
+    
+  subroutine add_custom_observable_local(o_name,sij)
+    integer                               :: i
+    complex(8),dimension(:,:)             :: sij
+    character(len=*)                      :: o_name
+    !
+    if(MpiMaster .and. custom_o%init)then
+      if(custom_o%N_filled .gt. custom_o%N_asked)then
+        STOP "add_custom_observable: too many observables given"
+        call clear_custom_observables
+      endif
+      !
+      custom_o%N_filled=custom_o%N_filled+1
+      custom_o%item(custom_o%N_filled)%o_name=o_name
+      custom_o%item(custom_o%N_filled)%o_value=0.d0
+      !
+      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      do i=1,size(custom_o%item(custom_o%N_filled)%sij,3)
+        custom_o%item(custom_o%N_filled)%sij(:,:,i)=sij
+      enddo
+    else
+      STOP "add_custom_observable: custom observables not initialized"
+    endif
+  end subroutine add_custom_observable_local
+
+
+  subroutine add_custom_observable_kdep(o_name,sijk)
+    integer                               :: i
+    complex(8),dimension(:,:,:)           :: sijk
+    character(len=*)                      :: o_name
+    !
+    if(MpiMaster .and. custom_o%init)then
+      if(custom_o%N_filled .gt. custom_o%N_asked)then
+        STOP "add_custom_observable: too many observables given"
+        call clear_custom_observables
+      endif
+      !
+      custom_o%N_filled=custom_o%N_filled+1
+      custom_o%item(custom_o%N_filled)%o_name=o_name
+      custom_o%item(custom_o%N_filled)%o_value=0.d0
+      !
+      allocate(custom_o%item(custom_o%N_filled)%sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      custom_o%item(custom_o%N_filled)%sij=sijk
+    else
+      STOP "add_custom_observable: custom observables not initialized"
+    endif
+  end subroutine add_custom_observable_kdep
+
+
+  subroutine get_custom_observables()
+    integer            :: i
+    !
+    if(MpiMaster .and. custom_o%init)then
+      if(custom_o%N_filled .eq. 0)then
+        write(Logfile,*)"WARNING! Custom observables initialized but none given."
+        RETURN
+      endif
+      !
+      write(LOGfile,*)"Calculating custom observables"
+      !
+      allocate(sij(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      allocate(Hk(size(custom_o%Hk,1),size(custom_o%Hk,2),size(custom_o%Hk,3)))
+      sij=zero
+      Hk=zero
+      !
+      Hk=custom_o%Hk
+      do i=1,custom_o%N_filled
+        sij=custom_o%item(i)%sij
+        if(finiteT) then
+          custom_o%item(i)%o_value=calculate_observable_integral_finite_t()
+        else
+          custom_o%item(i)%o_value=calculate_observable_integral_zero_t()
+        endif
+        write(LOGfile,"(A,10f18.12,A)")reg(custom_o%item(i)%o_name)//" = ",custom_o%item(i)%o_value
+      enddo
+      call write_custom_legend()
+      call write_custom_observables()
+      deallocate(sij,Hk)
+    endif
+    !
+  end subroutine get_custom_observables
+  
+
+  subroutine clear_custom_observables()
+    integer                       :: i
+    if(MpiMaster .and. custom_o%init)then 
+      do i=1,custom_o%N_filled
+        deallocate(custom_o%item(i)%sij)
+        custom_o%item(i)%o_name=""
+        custom_o%item(i)%o_value=0.d0
+      enddo
+      deallocate(custom_o%Hk)
+      custom_o%N_asked=0
+      custom_o%N_filled=0
+      custom_o%init=.false.
+    endif
+  end subroutine clear_custom_observables
+
+  
 
 
 
@@ -855,9 +837,7 @@ contains
          reg(txtfy(5*Norb+1))//"s2",&
          reg(txtfy(5*Norb+2))//"egs",&
          ((reg(txtfy(5*Norb+2+(iorb-1)*Norb+jorb))//"sz2_"//reg(txtfy(iorb))//reg(txtfy(jorb)),jorb=1,Norb),iorb=1,Norb),&
-         ((reg(txtfy((5+Norb)*Norb+2+(iorb-1)*Norb+jorb))//"n2_"//reg(txtfy(iorb))//reg(txtfy(jorb)),jorb=1,Norb),iorb=1,Norb),&
-         ((reg(txtfy((5+2*Norb)*Norb+2+(ispin-1)*Nspin+iorb))//"z_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin),&
-         ((reg(txtfy((5+2*Norb)*Norb+2+Norb*Nspin+(ispin-1)*Nspin+iorb))//"sig_"//reg(txtfy(iorb))//"s"//reg(txtfy(ispin)),iorb=1,Norb),ispin=1,Nspin)
+         ((reg(txtfy((5+Norb)*Norb+2+(iorb-1)*Norb+jorb))//"n2_"//reg(txtfy(iorb))//reg(txtfy(jorb)),jorb=1,Norb),iorb=1,Norb)
     close(unit)
     !
     unit = free_unit()
@@ -904,16 +884,14 @@ contains
     do ilat=1,Nlat
        open(unit,file="observables_all"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed",position='append')
        write(unit,"(90(F15.9,1X))")&
-         (dens(ilat,iorb),iorb=1,Norb),&
-         (docc(ilat,iorb),iorb=1,Norb),&
-         (dens_up(ilat,iorb),iorb=1,Norb),&
-         (dens_dw(ilat,iorb),iorb=1,Norb),&
-         (magz(ilat,iorb),iorb=1,Norb),&
-         s2tot(ilat),egs,&
-         ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
-         ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
-         ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-         ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+            (dens(ilat,iorb),iorb=1,Norb),&
+            (docc(ilat,iorb),iorb=1,Norb),&
+            (dens_up(ilat,iorb),iorb=1,Norb),&
+            (dens_dw(ilat,iorb),iorb=1,Norb),&
+            (magz(ilat,iorb),iorb=1,Norb),&
+            s2tot(ilat),egs,&
+            ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+            ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb)
        close(unit)
     enddo
     !
@@ -928,16 +906,14 @@ contains
     do ilat=1,Nlat
        open(unit,file="observables_last"//reg(ed_file_suffix)//"_site"//str(ilat,3)//".ed")
        write(unit,"(90(F15.9,1X))")&
-         (dens(ilat,iorb),iorb=1,Norb),&
-         (docc(ilat,iorb),iorb=1,Norb),&
-         (dens_up(ilat,iorb),iorb=1,Norb),&
-         (dens_dw(ilat,iorb),iorb=1,Norb),&
-         (magz(ilat,iorb),iorb=1,Norb),&
-         s2tot(ilat),egs,&
-         ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
-         ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
-         ((zimp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin),&
-         ((simp(ilat,iorb,ispin),iorb=1,Norb),ispin=1,Nspin)
+            (dens(ilat,iorb),iorb=1,Norb),&
+            (docc(ilat,iorb),iorb=1,Norb),&
+            (dens_up(ilat,iorb),iorb=1,Norb),&
+            (dens_dw(ilat,iorb),iorb=1,Norb),&
+            (magz(ilat,iorb),iorb=1,Norb),&
+            s2tot(ilat),egs,&
+            ((sz2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb),&
+            ((n2(ilat,ilat,iorb,jorb),jorb=1,Norb),iorb=1,Norb)
        close(unit)
     enddo
 
