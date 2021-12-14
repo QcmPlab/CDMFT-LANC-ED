@@ -31,6 +31,7 @@ program cdn_hm_2dsquare
    logical                                                                :: master
    logical                                                                :: periodize
    character(len=6)                                                       :: scheme
+   real(8),dimension(:,:),allocatable                                     :: dens, dens_up, dens_dw, docc, mag
    !Init MPI: use of MPI overloaded functions in SciFor
    call init_MPI(comm,.true.)
    rank   = get_Rank_MPI(comm)
@@ -86,6 +87,8 @@ program cdn_hm_2dsquare
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats_lso(Nlso,Nlso,Lmats))
 
+   allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb),docc(Nlat,Norb),mag(Nlat,Norb))
+
    !Build Hk and Hloc
    call generate_hk_hloc()
 
@@ -119,6 +122,22 @@ program cdn_hm_2dsquare
       call ed_get_sigma_realaxis(Sreal)
       if(master)call ed_get_single_particle_density_matrix(spdm,doprint=.true.)
       if(master)call ed_get_cluster_density_matrix(cdm,doprint=.true.)
+
+      ! BENCHMARK: build the probabilities according to Eq.4 in Mod.Phys.Lett.B.2013.27:05
+      if(Norb*Nlat==1)then
+         call ed_get_mag(mag)
+         call ed_get_dens(dens)
+         dens_up = 0.5d0*(dens + mag)
+         dens_dw = 0.5d0*(dens - mag)
+         write(*,*)
+         write(*,*) "BENCHMARK: Semi-Analytical | Error"
+         write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cdm(1,1))
+         write(*,*) dens_up(1,1)-docc(1,1),                abs(dens_up(1,1)-docc(1,1)-cdm(2,2))
+         write(*,*) dens_dw(1,1)-docc(1,1),                abs(dens_dw(1,1)-docc(1,1)-cdm(3,3))
+         write(*,*) docc(1,1),                             abs(docc(1,1)-cdm(4,4))
+         write(*,*)
+      endif
+
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)

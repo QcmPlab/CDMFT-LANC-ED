@@ -24,7 +24,9 @@ MODULE CDMFT_ED
        ed_get_cluster_density_matrix          , &
        ed_get_single_particle_density_matrix  , &
        ed_print_dm                            , &
-       ed_get_dens
+       ed_get_dens                            , &
+       ed_get_docc                            , &
+       ed_get_mag
 
   USE ED_BATH, only:                            &
        ed_set_Hreplica                 => set_Hreplica            ,&
