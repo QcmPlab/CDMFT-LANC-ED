@@ -710,17 +710,15 @@ contains
 #endif
               !Finding the unique bath states connecting IimpUp and JimpUp -> BATHup(:)
               call sp_return_intersection(HUP%sp,IimpUp,JimpUp,BATHup,lenBATHup)
+#ifdef _DEBUG
+              if(ed_verbose>3)then 
+                 write(Logfile,"(A)")&
+                 "  --> len(bath): "//str(lenBATHup)
+              endif
+#endif
               if(lenBATHup==0)cycle  !there are no bath states intersecting IimpUp,JimpUp
               do IimpDw=0,2**Nimp-1
                  do JimpDw=0,2**Nimp-1
-#ifdef _DEBUG
-               if(ed_verbose>4)then 
-                  write(LOGfile,"(A)")&
-                  "     DEBUG sparse map: computing DW intersection"
-                  write(Logfile,"(A)")&
-                  "     Iimp: "//str(IimpDw)//" | Jimp: "//str(JimpDw)
-               endif
-#endif
                     !Finding the unique bath states connecting IimpDw and JimpDw -> BATHdw(:)
                     call sp_return_intersection(HDW%sp,IimpDw,JimpDw,BATHdw,lenBATHdw)
                     if(lenBATHdw==0)cycle  !there are no bath states intersecting IimpDw,JimpDw

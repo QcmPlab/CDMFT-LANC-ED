@@ -19,9 +19,9 @@
        !
        dm(isite,:,:) = cluster_density_matrix_ii(isite,:,:)
        !
-       !Print to file [print_cluster_dm() is defined in ED_IO.f90]
+       !Print to file [ed_print_dm() is defined in ED_IO.f90]
        if(doprint_)then
-          call print_cluster_dm(dm(isite,:,:),ineq=isite)
+          call ed_print_dm(dm(isite,:,:),4**Nimp,ineq=isite)
        endif
        !
     enddo
@@ -32,3 +32,4 @@
 
 
 
+  

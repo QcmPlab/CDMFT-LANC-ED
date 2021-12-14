@@ -14,11 +14,11 @@
     !
     !Print to file (if requested)
     if(doprint_)then
-       call print_cluster_dm(dm)
+       call ed_print_dm(dm,4**Nimp)
     endif
     !
   end subroutine ed_get_cluster_density_matrix_single
 
 
 
-  
+
