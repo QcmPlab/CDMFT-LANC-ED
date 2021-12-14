@@ -1,6 +1,7 @@
 MODULE ED_VARS_GLOBAL
   USE SF_CONSTANTS
   USE ED_SPARSE_MATRIX
+  USE ED_SPARSE_MAP
   USE ED_INPUT_VARS
 #ifdef _MPI
   USE MPI
@@ -49,6 +50,7 @@ MODULE ED_VARS_GLOBAL
   !---------------- SECTOR-TO-FOCK SPACE STRUCTURE -------------------!
   type sector_map
      integer,dimension(:),allocatable :: map
+     type(sparse_map)                 :: sp
      logical                          :: status=.false.
   end type sector_map
 
@@ -108,7 +110,8 @@ MODULE ED_VARS_GLOBAL
   integer,save                                       :: Ns_orb
   integer,save                                       :: Ns_ud
   !
-  integer                                            :: Nlso
+  integer                                            :: Nimp     !Total number of levels in the impurity cluster: Nlat*Norb
+  integer                                            :: Nlso     !Nlat*Nspin*Norb
 
   !local part of the Hamiltonian
   !INTERNAL USE (accessed thru functions)
@@ -179,10 +182,11 @@ MODULE ED_VARS_GLOBAL
 
   ! !--------------- LATTICE WRAP VARIABLES -----------------!
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii          ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii        ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
-   complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: imp_density_matrix_ii    ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smatsii,Srealii                   ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmatsii,Grealii                   ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0matsii,G0realii                 ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb][L]
+   complex(8),dimension(:,:,:,:,:,:,:)  ,allocatable,save :: single_particle_density_matrix_ii ![Nineq][Nlat][Nlat][Nspin][Nspin][Norb][Norb]
+   complex(8),dimension(:,:,:)          ,allocatable,save :: cluster_density_matrix_ii         ![Nineq][4**(Nlat*Norb)][4**(Nlat*Norb)]
 #endif
 
 
@@ -244,19 +248,21 @@ MODULE ED_VARS_GLOBAL
   ! !Impurity operators
   ! !PRIVATE (now public but accessible thru routine)
   ! !=========================================================
-   complex(8),allocatable,dimension(:,:,:,:,:,:)          :: imp_density_matrix
+   complex(8),allocatable,dimension(:,:,:,:,:,:)          :: single_particle_density_matrix ![Nlat,Nlat,Nspin,Nspin,Norb,Norb]
+   complex(8),allocatable,dimension(:,:)                  :: cluster_density_matrix         ![4**(Nlat*Norb),4**(Nlat*Norb)]
 
 
 #if __GFORTRAN__ &&  __GNUC__ > 8     
   !--------------- LATTICE WRAP VARIABLES -----------------!
-  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq          ![Nlat][Nspin][Nspin][Norb][Norb][L]
+  complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Smats_ineq,Sreal_ineq    ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb,L]
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: SAmats_ineq,SAreal_ineq
   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Gmats_ineq,Greal_ineq
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: Fmats_ineq,Freal_ineq
   complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: G0mats_ineq,G0real_ineq
   !complex(8),dimension(:,:,:,:,:,:,:,:),allocatable,save :: F0mats_ineq,F0real_ineq
   !complex(8),dimension(:,:),allocatable,save         :: Dmats_ph_ineq,Dreal_ph_ineq
-  complex(8),dimension(:,:,:,:,:,:,:),allocatable,save   :: imp_density_matrix_ineq
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable,save   :: single_particle_density_matrix_ineq ![Nineq,Nlat,Nlat,Nspin,Nspin,Norb,Norb]
+  complex(8),dimension(:,:,:),allocatable,save       :: cluster_density_matrix_ineq ![Nineq,4**(Nlat*Norb),4**(Nlat*Norb)]
   real(8),dimension(:,:,:),allocatable,save          :: dens_ineq 
   real(8),dimension(:,:,:),allocatable,save          :: docc_ineq
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
@@ -307,20 +313,27 @@ contains
 
 
   !=========================================================
-  subroutine map_allocate_scalar(H,N)
+  subroutine map_allocate_scalar(H,N,Nsp)
     type(sector_map) :: H
     integer          :: N
+    integer,optional :: Nsp
     if(H%status) call map_deallocate_scalar(H)
     allocate(H%map(N))
+    if(present(Nsp))call sp_init_map(H%sp,Nsp)
     H%status=.true.
   end subroutine map_allocate_scalar
   !
-  subroutine map_allocate_vector(H,N)
+  subroutine map_allocate_vector(H,N,Nsp)
     type(sector_map),dimension(:)       :: H
     integer,dimension(size(H))          :: N
+    integer,optional,dimension(size(H)) :: Nsp
     integer                             :: i
     do i=1,size(H)
-       call map_allocate_scalar(H(i),N(i))
+       if(present(Nsp))then
+          call map_allocate_scalar(H(i),N(i),Nsp(i))
+       else
+          call map_allocate_scalar(H(i),N(i))
+       endif
     enddo
   end subroutine map_allocate_vector
 
@@ -333,6 +346,7 @@ contains
        return
     endif
     if(allocated(H%map))deallocate(H%map)
+    call sp_delete_map(H%sp)
     H%status=.false.
   end subroutine map_deallocate_scalar
   !

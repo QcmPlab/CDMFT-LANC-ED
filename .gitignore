@@ -1,6 +1,6 @@
 *.o
 *.mod
-test
+test*/
 Makefile
 *.inc
 build*/

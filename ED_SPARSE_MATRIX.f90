@@ -106,7 +106,7 @@ MODULE ED_SPARSE_MATRIX  !THIS VERSION CONTAINS ONLY DBLE ELEMENT: (SYMMETRIC MA
 
 
 
-
+  !PRIVATE AUX
   interface add_to
      module procedure :: add_to_I
      module procedure :: add_to_D

@@ -7,7 +7,7 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
    integer,dimension(2):: recover
    logical                                                                :: converged
    real(8)                                                                :: ts,wmixing
@@ -19,6 +19,9 @@ program cdn_hm_2dsquare
    character(len=16)                                                      :: finput
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
+   !Density matrices
+   complex(8),allocatable,dimension(:,:)                                  :: cdm,spdm,cdm_pure,spdm_pure
+   real(8),allocatable,dimension(:)                                       :: cdm_prob,spdm_prob
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -67,6 +70,7 @@ program cdn_hm_2dsquare
    !Nky=Nkx
    Nlat=Nx*Ny
    Nso=Nspin*Norb
+   Nlo=Nlat*Norb
    Nlso=Nlat*Nspin*Norb
    if(.not.allocated(wm))allocate(wm(Lmats))
    if(.not.allocated(wr))allocate(wr(Lreal))
@@ -100,6 +104,14 @@ program cdn_hm_2dsquare
    bath_prev=zero
    call ed_init_solver(comm,bath)
 
+   !SETUP DENSITY MATRICES
+   if(.not.allocated(spdm))allocate(spdm(Nlso,Nlso));             spdm=zero
+   if(.not.allocated(spdm_pure))allocate(spdm_pure(Nlso,Nlso));   spdm_pure=zero
+   if(.not.allocated(spdm_prob))allocate(spdm_prob(Nlso));        spdm_prob=zero
+   if(.not.allocated(cdm))allocate(cdm(4**Nlo,4**Nlo));           cdm=zero
+   if(.not.allocated(cdm_pure))allocate(cdm_pure(4**Nlo,4**Nlo)); cdm_pure=zero
+   if(.not.allocated(cdm_prob))allocate(cdm_prob(4**Nlo));        cdm_prob=zero
+
    !DMFT loop
    iloop=0;converged=.false.
    do while(.not.converged.AND.iloop<nloop)
@@ -110,6 +122,8 @@ program cdn_hm_2dsquare
       call ed_solve(comm,bath,lso2nnn(Hloc)) 
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
+      if(master)call ed_get_single_particle_density_matrix(spdm,spdm_prob,spdm_pure,doprint=.true.)
+      if(master)call ed_get_cluster_density_matrix(cdm,cdm_prob,cdm_pure,doprint=.true.)
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
@@ -261,6 +275,16 @@ contains
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
+      real(8),dimension(2)                        :: e1,e2,bk1,bk2
+      real(8)                                     :: bklen
+      !
+      e1 = [1d0, 0d0]
+      e2 = [0d0, 1d0]
+      call TB_set_ei(eix=e1,eiy=e2)
+      bklen=2d0*pi
+      bk1=bklen*[1d0, 0d0]
+      bk2=bklen*[0d0, 1d0]
+      call TB_set_bk(bkx=bk1,bky=bk2)
       !
       call TB_build_kgrid([Nkx,Nky],kgrid)
       kgrid(:,1)=kgrid(:,1)/Nx

@@ -21,9 +21,9 @@ MODULE CDMFT_ED
        ed_get_g0and_matsubara                 , &
        ed_get_delta_realaxis                  , &
        ed_get_g0and_realaxis                  , &
-       ed_get_density_matrix                  , &
-       ed_get_dens                            , &
-       ed_get_custom_observable
+       ed_get_cluster_density_matrix          , &
+       ed_get_single_particle_density_matrix  , &
+       ed_get_dens
 
   USE ED_BATH, only:                            &
        ed_set_Hreplica                 => set_Hreplica            ,&
