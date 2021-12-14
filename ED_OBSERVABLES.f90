@@ -110,7 +110,7 @@ contains
     dens    = 0.d0
     dens_up = 0.d0
     dens_dw = 0.d0
-    docc    = 0.d0
+    docc    = 0.d0   
     magz    = 0.d0
     sz2     = 0.d0
     n2      = 0.d0
@@ -163,6 +163,7 @@ contains
                 enddo
              enddo
              !
+             !
              !Evaluate averages of observables:
              !>TODO:
              !add non-local averges like spin-spin, density-density etc...
@@ -177,7 +178,8 @@ contains
                 enddo
                 s2tot(ilat) = s2tot(ilat)  + (sum(sz(ilat,:)))**2*gs_weight
              enddo
-
+             !
+             !
              do ilat=1,Nlat
                 do iorb=1,Norb
                    sz2(ilat,ilat,iorb,iorb) = sz2(ilat,ilat,iorb,iorb)  +  (sz(ilat,iorb)*sz(ilat,iorb))*gs_weight
@@ -195,6 +197,7 @@ contains
           enddo
           call delete_sector(isector,HI)
        endif
+       !
        !
 #ifdef _MPI
        if(MpiStatus)then

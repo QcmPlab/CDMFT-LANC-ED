@@ -20,8 +20,7 @@ program cdn_hm_2dsquare
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !Density matrices
-   complex(8),allocatable,dimension(:,:)                                  :: cdm,spdm,cdm_pure,spdm_pure
-   real(8),allocatable,dimension(:)                                       :: cdm_prob,spdm_prob
+   complex(8),allocatable,dimension(:,:)                                  :: cdm,spdm
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -105,12 +104,8 @@ program cdn_hm_2dsquare
    call ed_init_solver(comm,bath)
 
    !SETUP DENSITY MATRICES
-   if(.not.allocated(spdm))allocate(spdm(Nlso,Nlso));             spdm=zero
-   if(.not.allocated(spdm_pure))allocate(spdm_pure(Nlso,Nlso));   spdm_pure=zero
-   if(.not.allocated(spdm_prob))allocate(spdm_prob(Nlso));        spdm_prob=zero
-   if(.not.allocated(cdm))allocate(cdm(4**Nlo,4**Nlo));           cdm=zero
-   if(.not.allocated(cdm_pure))allocate(cdm_pure(4**Nlo,4**Nlo)); cdm_pure=zero
-   if(.not.allocated(cdm_prob))allocate(cdm_prob(4**Nlo));        cdm_prob=zero
+   if(.not.allocated(spdm))allocate(spdm(Nlso,Nlso));   spdm=zero
+   if(.not.allocated(cdm))allocate(cdm(4**Nlo,4**Nlo));  cdm=zero
 
    !DMFT loop
    iloop=0;converged=.false.
@@ -122,8 +117,8 @@ program cdn_hm_2dsquare
       call ed_solve(comm,bath,lso2nnn(Hloc)) 
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
-      if(master)call ed_get_single_particle_density_matrix(spdm,spdm_prob,spdm_pure,doprint=.true.)
-      if(master)call ed_get_cluster_density_matrix(cdm,cdm_prob,cdm_pure,doprint=.true.)
+      if(master)call ed_get_single_particle_density_matrix(spdm,doprint=.true.)
+      if(master)call ed_get_cluster_density_matrix(cdm,doprint=.true.)
 
       !Compute the local gfs:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)

@@ -276,7 +276,7 @@ MODULE ED_IO
   public :: ed_print_impSigma
   public :: ed_print_impG
   public :: ed_print_impG0
-  !public :: ed_print_dm [TODO: merge print_cluster_dm and print_sp_dm]
+  public :: ed_print_dm
   ! public :: ed_print_impChi
 
 
@@ -442,9 +442,39 @@ contains
 
   !+------------------------------------------------------------------+
   !                      PRINT DENSITY MATRICES
-  !+------------------------------------------------------------------+ 
-
-  ! TODO: merge here print_sp_dm and print_cluster_dm (generic size, but proper suffix?)
+  !+------------------------------------------------------------------+
+  subroutine ed_print_dm(dm,N,ineq)
+   integer                  ,intent(in)            :: N
+   complex(8),dimension(N,N),intent(in)            :: dm
+   integer                  ,intent(in),optional   :: ineq
+   integer                                         :: unit
+   character(len=64)                               :: suffix
+   integer                                         :: io,jo
+   !
+   if(present(ineq))then
+     suffix = "reduced_density_matrix"//"_rank"//reg(str(N))//"_ineq"//reg(str(ineq))//".dat"
+   else
+     suffix = "reduced_density_matrix"//"_rank"//reg(str(N))//".dat"
+   endif
+   !
+   unit = free_unit()
+   open(unit,file=suffix,action="write",position="rewind",status='unknown')
+   !
+   write(unit,"(A90)")"#[REAL part]:"
+   do io=1,N
+      write(unit,"(90(F15.9,1X))") (real(dm(io,jo)),jo=1,N)
+   enddo
+   write(unit,*)
+   !
+   write(unit,"(A90)")"#[IMAG part]:"
+   do io=1,N
+      write(unit,"(90(F15.9,1X))") (aimag(dm(io,jo)),jo=1,N)
+   enddo
+   write(unit,*)
+   !
+   close(unit)
+   !
+ end subroutine ed_print_dm
 
   !+------------------------------------------------------------------+
   ! !                         PRINT CHI:
