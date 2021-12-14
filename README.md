@@ -1,7 +1,6 @@
 # Cluster-DMFT Lanczos Exact Diagonalization
 
-A Lanczos based solver for the **Cluster** Dynamical Mean-Field Theory using the N_up:N_dw implementation.  
-**This code solves the normal (N_up, N_dw) case only.**
+A Lanczos based solver for the **Cluster** Dynamical Mean-Field Theory using the `N_up:N_dw` implementation in the normal phase (plus long-range magnetic or charge order).  
 
 The code is based on:  
 
@@ -32,14 +31,14 @@ The code structure is as follow:
 ### MILESTONE 2
 
 - [x] Include complex routines for diagonalization and bath
-- [ ] Test 2d BHZ model 
+- [x] Test 2d BHZ model 
 
 ### MILESTONE 3
 
 - [x] Add real-space CDMFT case for finite systems
 - [ ] Test Kane-Mele model with real-space CDMFT
 - [x] Add cluster density matrix (CDM) computation
-- [ ] Add local and nonlocal entanglement entropies (EEs) from cdm
+- [x] Add local and nonlocal entanglement entropies (EEs) from cdm
 - [ ] Test CDM and EEs on 2d BHZ model TQPT and square lattice MIT 
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
@@ -48,10 +47,9 @@ The code structure is as follow:
 --
 
 ***COPYRIGHT & LICENSING***  
-Copyright 2012 -  (c), Adriano Amaricci, Lorenzo Crippa, Massimo Capone.  
+Copyright 2012 -  (c) Adriano Amaricci, Lorenzo Crippa, Gabriele Bellomia, Massimo Capone.  
 All rights reserved. 
 
-The software is provided with no license, as such it is protected by copyright.
-The software is provided as it is and can be read and copied, in agreement with 
-the Terms of Service of GITHUB. Use of the code is constrained to author agreement.   
+The software is provided with no license, as such it is protected by copyright. The software is provided as it is and can be read and copied, in agreement with the Terms of Service of GITHUB. 
+Use of the code is constrained to authors agreement.   
 

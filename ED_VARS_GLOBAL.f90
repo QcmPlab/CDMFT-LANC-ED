@@ -324,13 +324,13 @@ contains
   end subroutine map_allocate_scalar
   !
   subroutine map_allocate_vector(H,N,Nsp)
-    type(sector_map),dimension(:)       :: H
-    integer,dimension(size(H))          :: N
-    integer,optional,dimension(size(H)) :: Nsp
-    integer                             :: i
+    type(sector_map),dimension(:) :: H
+    integer,dimension(size(H))    :: N
+    integer,optional              :: Nsp
+    integer                       :: i
     do i=1,size(H)
        if(present(Nsp))then
-          call map_allocate_scalar(H(i),N(i),Nsp(i))
+          call map_allocate_scalar(H(i),N(i),Nsp)
        else
           call map_allocate_scalar(H(i),N(i))
        endif
