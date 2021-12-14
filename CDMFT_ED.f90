@@ -23,6 +23,7 @@ MODULE CDMFT_ED
        ed_get_g0and_realaxis                  , &
        ed_get_cluster_density_matrix          , &
        ed_get_single_particle_density_matrix  , &
+       ed_print_dm                            , &
        ed_get_dens
 
   USE ED_BATH, only:                            &

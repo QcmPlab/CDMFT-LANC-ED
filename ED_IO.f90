@@ -438,9 +438,7 @@ contains
 
   !+------------------------------------------------------------------+
   !                      PRINT DENSITY MATRICES
-  !+------------------------------------------------------------------+ 
-
-  ! TODO: merge here print_sp_dm and print_cluster_dm (generic size, but proper suffix?)
+  !+------------------------------------------------------------------+
   subroutine ed_print_dm(dm,N,ineq)
    integer                  ,intent(in)            :: N
    complex(8),dimension(N,N),intent(in)            :: dm
