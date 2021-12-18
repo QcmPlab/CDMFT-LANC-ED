@@ -175,7 +175,7 @@ contains
     select case(cg_method)     !0=NR-CG[default]; 1=CG-MINIMIZE
     case default
        if(cg_grad==0)then
-#if __GNUC__ >= 9 || __INTEL_COMPILER >= 1500
+#if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
           write(LOGfile,*)"  Using analytic gradient"
           select case (cg_scheme)
           case ("weiss")
