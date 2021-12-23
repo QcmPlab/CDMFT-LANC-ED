@@ -7,10 +7,10 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,Ntr
    integer,dimension(2):: recover
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing
+   real(8)                                                                :: ts,wmixing,delta
    !Bath:
    real(8),allocatable                                                    :: bath(:),bath_prev(:)
    !The local hybridization function:
@@ -20,7 +20,10 @@ program cdn_hm_2dsquare
    complex(8),allocatable                                                 :: wm(:),wr(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !Density matrices
-   complex(8),allocatable,dimension(:,:)                                  :: cdm,spdm
+   complex(8),allocatable,dimension(:,:)                                  :: cluster_density_matrix
+   complex(8),allocatable,dimension(:,:)                                  :: reduced_density_matrix
+   complex(8),allocatable,dimension(:,:)                                  :: small_dm, big_dm
+   complex(8),allocatable,dimension(:,:)                                  :: local_density_matrix
    !SYMMETRIES TEST
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -106,10 +109,6 @@ program cdn_hm_2dsquare
    bath_prev=zero
    call ed_init_solver(comm,bath)
 
-   !SETUP DENSITY MATRICES
-   if(.not.allocated(spdm))allocate(spdm(Nlso,Nlso));   spdm=zero
-   if(.not.allocated(cdm))allocate(cdm(4**Nlo,4**Nlo));  cdm=zero
-
    !DMFT loop
    iloop=0;converged=.false.
    do while(.not.converged.AND.iloop<nloop)
@@ -120,23 +119,42 @@ program cdn_hm_2dsquare
       call ed_solve(comm,bath,lso2nnn(Hloc)) 
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
-      if(master)call ed_get_single_particle_density_matrix(spdm,doprint=.true.)
-      if(master)call ed_get_cluster_density_matrix(cdm,doprint=.true.)
 
-      ! BENCHMARK: build the probabilities according to Eq.4 in Mod.Phys.Lett.B.2013.27:05
-      if(Norb*Nlat==1)then
-         call ed_get_mag(mag)
-         call ed_get_dens(dens)
-         call ed_get_docc(docc)
-         dens_up = 0.5d0*(dens + mag)
-         dens_dw = 0.5d0*(dens - mag)
-         write(*,*)
-         write(*,*) "CDM BENCHMARK: Semi-Analytical | Error"
-         write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-cdm(1,1))
-         write(*,*) dens_up(1,1)-docc(1,1),                abs(dens_up(1,1)-docc(1,1)-cdm(2,2))
-         write(*,*) dens_dw(1,1)-docc(1,1),                abs(dens_dw(1,1)-docc(1,1)-cdm(3,3))
-         write(*,*) docc(1,1),                             abs(docc(1,1)-cdm(4,4))
-         write(*,*)
+      !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
+      if(master)then
+         call ed_get_cluster_dm(cluster_density_matrix,doprint=.false.)
+         big_dm = cluster_density_matrix
+         do Ntr=1,Nlat-1 ! Ntr: number of sites we want to trace out
+            call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
+            call subtrace(small_dm,big_dm,Nlat-Ntr+1,Nlat-Ntr)
+            !>>>[Whatever you need to do with reduced_density_matrix...]<<<
+            !e.g. CROSS-CHECK:
+            print*,"*************************************************************************"
+            print*,str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
+            delta = maxval(abs(reduced_density_matrix-small_dm))
+            print*,"direct and iterative subtracings match up to",delta
+            print*,"*************************************************************************"
+            deallocate(big_dm)
+            big_dm = small_dm
+         enddo
+         !
+         if(Norb==1)then
+            ! BENCHMARK: build the local-dm according to Eq.4 in Mod.Phys.Lett.B.2013.27:05
+            call ed_get_reduced_dm(local_density_matrix,1,doprint=.false.)
+            call ed_get_mag(mag)
+            call ed_get_dens(dens)
+            call ed_get_docc(docc)
+            dens_up = 0.5d0*(dens + mag)
+            dens_dw = 0.5d0*(dens - mag)
+            write(*,*)
+            write(*,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
+            write(*,*) "Semi-Analytical Estimate  |  Error"
+            write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
+            write(*,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
+            write(*,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
+            write(*,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
+            write(*,*)
+         endif
       endif
 
 
@@ -723,7 +741,62 @@ contains
       enddo
     end function nn2so
 
-  
+
+    !==> TO BE REMOVED, here just for testing 
+    !+---------------------------------------------------------------------+
+    !PURPOSE :  reduce a generic dm by tracing out a given number of sites
+    !+---------------------------------------------------------------------+
+    subroutine subtrace(red_dm,big_dm,bigNsites,redNsites)
+      complex(8),dimension(:,:),allocatable,intent(out) :: red_dm
+      complex(8),dimension(:,:),allocatable,intent(in)  :: big_dm
+      integer                              ,intent(in)  :: bigNsites
+      integer                              ,intent(in)  :: redNsites
+      integer         :: i,j,io,jo,iUP,iDW,jUP,jDW
+      integer         :: iIMPup,iIMPdw,jIMPup,jIMPdw
+      integer         :: iREDup,iREDdw,jREDup,jREDdw
+      integer         :: iTrUP,iTrDW,jTrUP,jTrDW
+      integer         :: Nbig,Nred,dimBIG,dimRED
+      !
+      Nbig=Norb*bigNsites
+      Nred=Norb*redNsites
+      !
+      dimBIG = 4**Nbig
+      dimRED = 4**Nred
+      !
+      if(size(big_dm(:,1))/=dimBIG)stop "ERROR: Nsites is not consistent with the given big_dm"
+      !
+      allocate(red_dm(dimRED,dimRED)); red_dm=0.d0
+      !
+      do iUP = 1,2**Nbig
+         do iDW = 1,2**Nbig
+              i = iUP + (iDW-1)*2**Nbig
+              iIMPup = iup-1
+              iIMPdw = idw-1
+              iREDup = Ibits(iIMPup,0,Nred)
+              iREDdw = Ibits(iIMPdw,0,Nred)
+              iTrUP  = Ibits(iIMPup,Nred,Nbig)
+              iTrDW  = Ibits(iIMPdw,Nred,Nbig)
+              do jUP = 1,2**Nbig
+                 do jDW = 1,2**Nbig
+                       j = jUP + (jDW-1)*2**Nbig
+                       jIMPup = jup-1
+                       jIMPdw = jdw-1
+                       jREDup = Ibits(jIMPup,0,Nred)
+                       jREDdw = Ibits(jIMPdw,0,Nred)
+                       jTrUP  = Ibits(jIMPup,Nred,Nbig)
+                       jTrDW  = Ibits(jIMPdw,Nred,Nbig)
+                       if(jTrUP/=iTrUP.or.jTrDW/=iTrDW)cycle
+                       io = (iREDup+1) + iREDdw*2**Nred
+                       jo = (jREDup+1) + jREDdw*2**Nred
+                       red_dm(io,jo) = red_dm(io,jo) + big_dm(i,j)
+                 enddo
+              enddo
+         enddo
+      enddo
+      !
+    end subroutine subtrace
+    !<== TO BE REMOVED, here just for testing
+
 
 end program cdn_hm_2dsquare
 

@@ -21,8 +21,9 @@ MODULE CDMFT_ED
        ed_get_g0and_matsubara                 , &
        ed_get_delta_realaxis                  , &
        ed_get_g0and_realaxis                  , &
-       ed_get_cluster_density_matrix          , &
-       ed_get_single_particle_density_matrix  , &
+       ed_get_cluster_dm                      , &
+       ed_get_reduced_dm                      , &
+       ed_get_sp_dm                           , &
        ed_print_dm                            , &
        ed_get_dens                            , &
        ed_get_docc                            , &

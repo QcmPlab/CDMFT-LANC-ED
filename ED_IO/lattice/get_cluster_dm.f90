@@ -2,26 +2,24 @@
     complex(8),allocatable,intent(out)           :: dm(:,:,:)
     logical               ,intent(in) ,optional  :: doprint
     logical                                      :: doprint_
-    integer                                      :: isite,Nsites
+    integer                                      :: ii,Nineq
     !
     doprint_=.false.; if(present(doprint)) doprint_=doprint
     !
-    Nsites=size(cluster_density_matrix_ii,1)
-    !
     if(.not.allocated(cluster_density_matrix_ii))then
-       write(LOGfile,"(A)") "cluster_density_matrix_ii is not allocated"
-       stop
+       stop "ERROR: cluster_density_matrix_ii is not allocated"
     endif
     !
-    allocate(dm(Nsites,4**Nimp,4**Nimp)); dm=zero
+    Nineq=size(cluster_density_matrix_ii,1)
+    allocate(dm(Nineq,4**Nimp,4**Nimp)); dm=zero
     !
-    do isite=1,Nsites
+    do ii=1,Nineq
        !
-       dm(isite,:,:) = cluster_density_matrix_ii(isite,:,:)
+       dm(ii,:,:) = cluster_density_matrix_ii(ii,:,:)
        !
-       !Print to file [ed_print_dm() is defined in ED_IO.f90]
+       !Print to file (if requested)
        if(doprint_)then
-          call ed_print_dm(dm(isite,:,:),4**Nimp,ineq=isite)
+          call ed_print_dm(dm(ii,:,:),4**Nimp,ineq=ii)
        endif
        !
     enddo

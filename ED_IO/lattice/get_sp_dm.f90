@@ -2,27 +2,25 @@
     complex(8),allocatable,intent(out)           :: dm(:,:,:)
     logical               ,intent(in),optional   :: doprint
     logical                                      :: doprint_
-    integer                                      :: isite,Nsites
+    integer                                      :: ii,Nineq
     !
     doprint_=.false.; if(present(doprint)) doprint_=doprint
     !
-    Nsites=size(single_particle_density_matrix_ii,1)
-    !
     if(.not.allocated(single_particle_density_matrix_ii))then
-       write(LOGfile,"(A)") "single_particle_density_matrix_ii is not allocated"
-       stop
+       stop "ERROR: single_particle_density_matrix_ii is not allocated"
     endif
     !
-    allocate(dm(Nsites,Nlat*Nspin*Norb,Nlat*Nspin*Norb)); dm=zero
+    Nineq=size(single_particle_density_matrix_ii,1)
+    allocate(dm(Nineq,Nlat*Nspin*Norb,Nlat*Nspin*Norb)); dm=zero
     !
-    do isite=1,Nsites
+    do ii=1,Nineq
        !
        !Impurity problem basis
-       dm(isite,:,:) = nnn2lso_reshape(single_particle_density_matrix_ii(isite,:,:,:,:,:,:),Nlat,Nspin,Norb)
+       dm(ii,:,:) = nnn2lso_reshape(single_particle_density_matrix_ii(ii,:,:,:,:,:,:),Nlat,Nspin,Norb)
        !
-       !Print to file [ed_print_dm() is defined in ED_IO.f90]
+       !Print to file (if requested)
        if(doprint_)then
-          call ed_print_dm(dm(isite,:,:),Nlat*Nspin*Norb,ineq=isite)
+          call ed_print_dm(dm(ii,:,:),Nlat*Nspin*Norb,ineq=ii)
        endif
        !
     enddo
