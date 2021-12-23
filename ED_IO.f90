@@ -451,15 +451,13 @@ contains
    unit = free_unit()
    open(unit,file=suffix,action="write",position="rewind",status='unknown')
    !
-   write(unit,"(A90)")"#[REAL part]:"
    do io=1,N
-      write(unit,"(90(F15.9,1X))") (real(dm(io,jo)),jo=1,N)
+      write(unit,"(90(F15.9,1X))") (dreal(dm(io,jo)),jo=1,N)
    enddo
    write(unit,*)
    !
-   write(unit,"(A90)")"#[IMAG part]:"
    do io=1,N
-      write(unit,"(90(F15.9,1X))") (aimag(dm(io,jo)),jo=1,N)
+      write(unit,"(90(F15.9,1X))") (dimag(dm(io,jo)),jo=1,N)
    enddo
    write(unit,*)
    !

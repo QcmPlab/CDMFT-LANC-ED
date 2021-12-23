@@ -40,7 +40,7 @@ The code structure is as follow:
 - [x] Add cluster density matrix (CDM) computation
 - [x] Test and benchmark CDM computation
 - [ ] Build smaller-rank reduced DMs from CDM
-- [ ] Check local reduced DM against semi-analytic build (at least Norb=1 case) 
+- [ ] Check local reduced DM against semi-analytical build (at least Norb=1 case) 
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
 

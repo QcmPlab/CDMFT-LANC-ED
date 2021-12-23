@@ -42,11 +42,11 @@ program cdn_hm_2dsquare
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputHM2D.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
-   call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
+   call parse_input_variable(ts,"TS",finput,default=1.d0,comment="hopping parameter")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
-   call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ku point for BZ integration")
+   call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ky point for BZ integration")
    call parse_input_variable(periodize,"PERIODIZE",finput,default=.false.,comment="Periodization: T or F")
    call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
 

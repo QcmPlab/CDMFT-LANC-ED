@@ -220,6 +220,7 @@ contains
     if(ed_get_dm) call density_matrix_impurity()  !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
     !if(chiflag) call buildchi_impurity()         !build the local susceptibilities (todo)
     !
+    !GET IMPURITY GFs and RELATED QUANTITIES
     call buildgf_impurity()                       !build the one-particle impurity Green's functions & Self-energy
     !
     call deallocate_dmft_bath()
@@ -254,16 +255,17 @@ contains
     !
     !
     !SOLVE THE QUANTUM IMPURITY PROBLEM:
-    call diagonalize_impurity()         !find target states by digonalization of Hamiltonian
-    call observables_impurity()         !obtain impurity observables as thermal averages.
-    call get_custom_observables()       !obtain custom user-defined observables(if initialized)
-    call local_energy_impurity()        !obtain the local energy of the effective impurity problem
+    call diagonalize_impurity()                   !find target states by digonalization of Hamiltonian
+    call observables_impurity()                   !obtain impurity observables as thermal averages.
+    call get_custom_observables()                 !obtain custom user-defined observables(if initialized)
+    call local_energy_impurity()                  !obtain the local energy of the effective impurity problem
     !
     !OPTIONAL (HEAVY) CALCULATIONS 
     if(ed_get_dm) call density_matrix_impurity()  !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
     !if(chiflag) call buildchi_impurity()         !build the local susceptibilities (todo)
     !
-    call buildgf_impurity()             !build the one-particle impurity Green's functions  & Self-energy
+    !GET IMPURITY GFs and RELATED QUANTITIES
+    call buildgf_impurity()                       !build the one-particle impurity Green's functions  & Self-energy
     !
     call deallocate_dmft_bath()
     call es_delete_espace(state_list)

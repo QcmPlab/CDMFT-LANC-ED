@@ -532,19 +532,20 @@ contains
                 !
                 !Finding the unique bath states connecting IimpUp and JimpUp -> BATHup(:)
                 call sp_return_intersection(HI(1)%sp,IimpUp,JimpUp,BATHup,lenBATHup)
-                if(lenBATHup==0)cycle  !there are not bath states intersecting IimpUp,JimpUp
+                if(lenBATHup==0)cycle  !there are no bath states intersecting IimpUp,JimpUp
+                !
                 do IimpDw=0,2**Nimp-1
                    do JimpDw=0,2**Nimp-1
                       !
                       !Finding the unique bath states connecting IimpDw and JimpDw -> BATHdw(:)
                       call sp_return_intersection(HI(2)%sp,IimpDw,JimpDw,BATHdw,lenBATHdw)
-                      if(lenBATHdw==0)cycle  !there are not bath states intersecting IimpDw,JimpDw
+                      if(lenBATHdw==0)cycle  !there are no bath states intersecting IimpDw,JimpDw
                       !------------------------------------------------------------------------------------
                       !Arrived here we have finally determined the {IbathUp,IbathDw} states to trace on.
                       !We shall use them to build back the Fock space states (IimpSIGMA,IbathSIGMA) and
                       !through those search the map to retrieve the formal labels i=(iUP,iDW), j=(jUP,jDW)
                       !------------------------------------------------------------------------------------
-                      ! TRACE over bath states:
+                      !=== >>> TRACE over bath states <<< =================================================
                       do bUP=1,lenBATHup
                          IbathUp = BATHup(bUP)
                          do bDW=1,lenBATHdw
@@ -572,9 +573,11 @@ contains
                             !Global sector jndex:
                             j  = jUP + (jDW-1)*iDimUp
                             !-----------------------------------------------------
-                            !Final composition:
+                            !Final composition for the impurity:
                             io = (IimpUp + 2**Nimp*IimpDw) + 1 
                             jo = (JimpUp + 2**Nimp*JimpDw) + 1
+                            !-----------------------------------------------------------------
+                            !(i,j)_th contribution to the (io,jo)_th element of \rho_IMP
                             cluster_density_matrix(io,jo) = cluster_density_matrix(io,jo) + &
                                  state_cvec(i)*conjg(state_cvec(j))*peso
                             !-----------------------------------------------------------------
@@ -603,31 +606,6 @@ contains
     enddo
     if(MpiMaster) call stop_timer()
     !
-    !TO BE REMOVED:
-    ! #ifdef _DEBUG
-    !     if(MPIMASTER.AND.ed_verbose>3)then
-    !        write(*,*) "----------------------------------------"
-    !        write(*,*) "CLUSTER DENSITY MATRIX [OR ITS DIAGONAL]"
-    !        write(*,*) "----------------------------------------"
-    !        if(Nimp==1)then
-    !           do i=1,4**Nimp
-    !              write(*,*)(dreal(cluster_density_matrix(i,j)),j=1,4**Nimp)
-    !           enddo
-    !           write(*,*) "----------------------------------------"
-    !           write(*,*) "BENCHMARK: Semi-Analytical | Error"
-    !           ! Build the probabilities according to Eq.4 in Mod.Phys.Lett.B.2013.27:05
-    !           probabilities(1) = 1-ed_dens_up(1,1)-ed_dens_dw(1,1)+ed_docc(1,1)
-    !           probabilities(2) = ed_dens_up(1,1)-ed_docc(1,1)
-    !           probabilities(3) = ed_dens_dw(1,1)-ed_docc(1,1)
-    !           probabilities(4) = ed_docc(1,1)
-    !           ! Write to log 
-    !           do i=1,4**Nimp
-    !              write(*,*) probabilities(i), abs(probabilities(i)-cluster_density_matrix(i,i))
-    !           enddo
-    !           write(*,*) "----------------------------------------"
-    !        endif
-    !     endif
-    ! #endif
     !
     !
     !
@@ -1180,294 +1158,3 @@ END MODULE ED_OBSERVABLES
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-!   !+-------------------------------------------------------------------+
-!   !PURPOSE  : Build the impurity density matrices
-!   !+-------------------------------------------------------------------+
-!   subroutine density_matrix_impurity()
-!     integer                             :: istate
-!     integer                             :: iUP,iDW,jUP,jDW
-!     integer                             :: IimpUp,IimpDw,JimpUp,JimpDw
-!     integer                             :: IbathUp,IbathDw,bUP,bDW
-!     integer                             :: lenBATHup,lenBATHdw
-!     integer,allocatable                 :: BATHup(:),BATHdw(:)
-!     integer                             :: Nup, Ndw
-!     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws         ![1,Ns]-[Norb,1+Nbath]
-!     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws   ![1]-[Norb]
-!     integer,dimension(Ns)               :: IbUp,IbDw         ![Ns]
-!     type(sector_map)                    :: HUP,HDW
-!     type(sector_map),dimension(2*Ns_Ud) :: HI                ![2]-[2*Norb]
-!     integer,dimension(2*Ns_Ud)          :: Indices,Jndices   ![2]-[2*Norb]
-!     integer                             :: Nud(2,Ns),iud(2),jud(2),is,js,io,jo
-! #ifdef _DEBUG 
-!     !=================================================================
-!     complex(8),dimension(4**Nimp, 4**Nimp) :: diagonal_density_matrix
-!     !=================================================================
-! #endif
-!     !
-!     ! Here we build two different density matrices related to the impurity problem
-!     ! > The CLUSTER-Reduced density matrix: \rho_IMP = Tr_BATH(\rho) 
-!     ! > The SINGLE-PARTICLE-Reduced density matrix: \rho_sp = <C^+_a C_b> 
-!     !
-!     write(LOGfile,"(A)")"Get cluster density matrix:"
-!     !CLUSTER DENSITY MATRIX [\rho_IMP = Tr_BATH(\rho)]
-!     cluster_density_matrix=zero
-!     !Selecting a sector and loading the eigenspace
-!     if(MpiMaster) call start_timer()  
-!     do istate=1,state_list%size
-!        isector = es_return_sector(state_list,istate)
-!        Ei      = es_return_energy(state_list,istate)
-! #ifdef _DEBUG
-!        diagonal_density_matrix = zero
-!        if(ed_verbose>2)write(Logfile,"(A)")&
-!             "DEBUG cluster density matrix: get contribution from state:"//str(istate)
-! #endif
-! #ifdef _MPI
-!        if(MpiStatus)then
-!           state_cvec => es_return_cvector(MpiComm,state_list,istate)
-!        else
-!           state_cvec => es_return_cvector(state_list,istate)
-!        endif
-! #else
-!        state_cvec => es_return_cvector(state_list,istate)
-! #endif
-!        !Finite temperature weighting factor
-!        peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
-!        peso = peso/zeta_function
-!        !
-!        !Sector sizes (per spin)
-!        call get_DimUp(isector,iDimUps)
-!        call get_DimDw(isector,iDimDws)
-!        iDimUp = product(iDimUps)
-!        iDimDw = product(iDimDws)
-!        !
-!        if(MpiMaster)then
-!           !---------------------------------
-!           !Let's build the UP and DW sectors
-!           !---------------------------------
-! #ifdef _DEBUG
-!           if(ed_verbose>3)write(Logfile,"(A)")&
-!                "DEBUG cluster density matrix: building spin-resolved sector"
-! #endif
-!           call build_sector(isector,HUP,HDW)
-!           !
-!           do IimpUp=0,2**Nimp-1
-!              do JimpUp=0,2**Nimp-1
-! #ifdef _DEBUG
-!                 if(ed_verbose>3)then 
-!                    write(LOGfile,"(A)")&
-!                         "  DEBUG sparse map: computing UP intersection"
-!                    write(Logfile,"(A)")&
-!                         "  Iimp: "//str(IimpUp)//" | Jimp: "//str(JimpUp)
-!                 endif
-! #endif
-!                 !Finding the unique bath states connecting IimpUp and JimpUp -> BATHup(:)
-!                 call sp_return_intersection(HUP%sp,IimpUp,JimpUp,BATHup,lenBATHup)
-!                 if(lenBATHup==0)cycle  !there are not bath states intersecting IimpUp,JimpUp
-!                 do IimpDw=0,2**Nimp-1
-!                    do JimpDw=0,2**Nimp-1
-! #ifdef _DEBUG
-!                       if(ed_verbose>4)then 
-!                          write(LOGfile,"(A)")&
-!                               "     DEBUG sparse map: computing DW intersection"
-!                          write(Logfile,"(A)")&
-!                               "     Iimp: "//str(IimpDw)//" | Jimp: "//str(JimpDw)
-!                       endif
-! #endif
-!                       !Finding the unique bath states connecting IimpDw and JimpDw -> BATHdw(:)
-!                       call sp_return_intersection(HDW%sp,IimpDw,JimpDw,BATHdw,lenBATHdw)
-!                       if(lenBATHdw==0)cycle  !there are not bath states intersecting IimpDw,JimpDw
-!                       !------------------------------------------------------------------------------------
-!                       !Arrived here we have finally determined the {IbathUp,IbathDw} states to trace on.
-!                       !We shall use them to build back the Fock space states (IimpSIGMA,IbathSIGMA) and
-!                       !through those search the map to retrieve the formal labels i=(iUP,iDW), j=(jUP,jDW)
-!                       !------------------------------------------------------------------------------------
-!                       do bUP=1,lenBATHup !=== >>> THE TRACE <<< ===========================================
-!                          IbathUp = BATHup(bUP)
-!                          do bDW=1,lenBATHdw
-!                             IbathDw = BATHdw(bDW)
-!                             !-----------------------------------------------------
-!                             !Allowed spin Fock space Istates: 
-!                             !Iup = IimpUp +  2^Nimp * IbathUp
-!                             !Idw = IimpDw +  2^Nimp * IbathDw
-!                             !
-!                             !Corresponding sector indices per spin:
-!                             iUP= binary_search(HUP%map,IimpUp + 2**Nimp*IbathUp)
-!                             iDW= binary_search(HDW%map,IimpDw + 2**Nimp*IbathDw)
-!                             !
-!                             !Global sector index:
-!                             i  = iUP + (iDW-1)*iDimUp
-!                             !----------------------------------------------------- 
-!                             !Allowed spin Fock space Jstates: 
-!                             !Jup = JimpUp +  2^Nimp * IbathUp
-!                             !Jdw = JimpDw +  2^Nimp * IbathDw
-!                             !
-!                             !Corresponding sector jndices per spin:
-!                             jUP= binary_search(HUP%map,JimpUp + 2**Nimp*IbathUp)
-!                             jDW= binary_search(HDW%map,JimpDw + 2**Nimp*IbathDw)
-!                             !
-!                             !Global sector jndex:
-!                             j  = jUP + (jDW-1)*iDimUp
-!                             !-----------------------------------------------------
-!                             !Final Lin-Gubernatis composition:
-!                             io = (IimpUp + 2**Nimp*IimpDw) + 1 
-!                             jo = (JimpUp + 2**Nimp*JimpDw) + 1
-!                             !-----------------------------------------------------------------
-!                             !(i,j)_th contrinution to the (io,jo)_th element of \rho_IMP
-!                             cluster_density_matrix(io,jo) = cluster_density_matrix(io,jo) + &
-!                                  state_cvec(i)*conjg(state_cvec(j))*peso
-!                             !-----------------------------------------------------------------
-!                          enddo
-!                       enddo !=============================================================================
-!                       !
-!                    enddo
-!                 enddo
-!                 !
-!              enddo
-!           enddo
-!           !
-! #ifdef _DEBUG
-!           if(ed_verbose>3)write(Logfile,"(A)")&
-!                "DEBUG cluster density matrix: deleting spin-resolved sector"
-! #endif
-!           !
-!           call delete_sector(isector,HUP,HDW)       
-!        endif
-!        !
-!        !
-!        !
-!        !
-!        !
-! #ifdef _MPI
-!        if(MpiStatus)then
-!           if(associated(state_cvec))deallocate(state_cvec)
-!        else
-!           if(associated(state_cvec))nullify(state_cvec)
-!        endif
-! #else
-!        if(associated(state_cvec))nullify(state_cvec)
-! #endif
-!        !
-!     enddo
-!     if(MpiMaster) call stop_timer()
-!     !
-!     !
-!     !
-!     !
-!     !
-!     write(LOGfile,"(A)")"Get single-particle density matrix (no print)"
-!     !SINGLE PARTICLE DENSITY MATRIX [<C^+_a C_b>]
-!     do istate=1,state_list%size
-!        isector = es_return_sector(state_list,istate)
-!        Ei      = es_return_energy(state_list,istate)
-! #ifdef _MPI
-!        if(MpiStatus)then
-!           state_cvec => es_return_cvector(MpiComm,state_list,istate)
-!        else
-!           state_cvec => es_return_cvector(state_list,istate)
-!        endif
-! #else
-!        state_cvec => es_return_cvector(state_list,istate)
-! #endif
-!        !
-!        peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
-!        peso = peso/zeta_function
-!        !
-!        idim  = getdim(isector)
-!        call get_DimUp(isector,iDimUps)
-!        call get_DimDw(isector,iDimDws)
-!        iDimUp = product(iDimUps)
-!        iDimDw = product(iDimDws)
-!        !
-!        if(MpiMaster)then
-!           call build_sector(isector,HI)
-!           do i=1,iDim
-!              call state2indices(i,[iDimUps,iDimDws],Indices)
-!              do ii=1,Ns_Ud
-!                 mup = HI(ii)%map(Indices(ii))
-!                 mdw = HI(ii+Ns_Ud)%map(Indices(ii+Ns_ud))
-!                 Nups(ii,:) = Bdecomp(mup,Ns_Orb) ![Ns_Orb = Ns = Nlat*Norb*(Nbath+1) in CDMFT code]
-!                 Ndws(ii,:) = Bdecomp(mdw,Ns_Orb)
-!              enddo
-!              Nud(1,:) = Breorder(Nups) !Actually, they are already reordered in CDMFT code...
-!              Nud(2,:) = Breorder(Ndws) !...and breorder() corresponds to an identity: look in ED_SETUP!
-!              !
-!              !Diagonal densities
-!              do ilat=1,Nlat
-!                 do ispin=1,Nspin
-!                    do iorb=1,Norb
-!                       is = imp_state_index(ilat,iorb)
-!                       single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) = &
-!                            single_particle_density_matrix(ilat,ilat,ispin,ispin,iorb,iorb) + &
-!                            peso*nud(ispin,is)*conjg(state_cvec(i))*state_cvec(i)
-!                    enddo
-!                 enddo
-!              enddo
-!              !
-!              !Off-diagonal
-!              !if(ed_total_ud)then !!!! this is true by default in the CDMFT code
-!              do ispin=1,Nspin
-!                 do ilat=1,Nlat
-!                    do jlat=1,Nlat
-!                       do iorb=1,Norb
-!                          do jorb=1,Norb
-!                             is = imp_state_index(ilat,iorb)
-!                             js = imp_state_index(jlat,jorb)
-!                             if((Nud(ispin,js)==1).and.(Nud(ispin,is)==0))then
-!                                iud(1) = HI(1)%map(Indices(1))
-!                                iud(2) = HI(2)%map(Indices(2))
-!                                call c(js,iud(ispin),r,sgn1)
-!                                call cdg(is,r,k,sgn2)
-!                                Jndices = Indices
-!                                Jndices(1+(ispin-1)*Ns_Ud) = &
-!                                     binary_search(HI(1+(ispin-1)*Ns_Ud)%map,k)
-!                                call indices2state(Jndices,[iDimUps,iDimDws],j)
-!                                !
-!                                single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) = &
-!                                     single_particle_density_matrix(ilat,jlat,ispin,ispin,iorb,jorb) + &
-!                                     peso*sgn1*state_cvec(i)*sgn2*conjg(state_cvec(j))
-!                             endif
-!                          enddo
-!                       enddo
-!                    enddo
-!                 enddo
-!              enddo
-!              !endif
-!              !
-!              !
-!           enddo
-!           call delete_sector(isector,HI)         
-!        endif
-!        !
-! #ifdef _MPI
-!        if(MpiStatus)then
-!           if(associated(state_cvec))deallocate(state_cvec)
-!        else
-!           if(associated(state_cvec))nullify(state_cvec)
-!        endif
-! #else
-!        if(associated(state_cvec))nullify(state_cvec)
-! #endif
-!        !
-!     enddo
-!     ! 
-!     !
-!     !
-!     !
-!     !
-!     !
-!   end subroutine density_matrix_impurity
