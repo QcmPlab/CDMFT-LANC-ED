@@ -116,7 +116,7 @@ program cdn_hm_2dsquare
       call ed_get_sigma_realaxis(Sreal)
 
       !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
-      if(ed_get_dm.AND.master)then
+      if(dm_flag.AND.master)then
          do Ntr=0,Nlat-1 ! Ntr: number of cluster sites we want to trace out
             call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
             !

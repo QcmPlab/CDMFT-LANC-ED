@@ -217,11 +217,11 @@ contains
     call local_energy_impurity()                  !obtain the local energy of the effective impurity problem
     !
     !OPTIONAL (HEAVY) CALCULATIONS 
-    if(ed_get_dm) call density_matrix_impurity()  !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
+    if(dm_flag) call density_matrix_impurity()    !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
     !if(chiflag) call buildchi_impurity()         !build the local susceptibilities (todo)
     !
     !GET IMPURITY GFs and RELATED QUANTITIES
-    call buildgf_impurity()                       !build the one-particle impurity Green's functions & Self-energy
+    if(gf_flag) call buildgf_impurity()           !build the one-particle impurity Green's functions & Self-energy
     !
     call deallocate_dmft_bath()
     call es_delete_espace(state_list)
@@ -261,11 +261,11 @@ contains
     call local_energy_impurity()                  !obtain the local energy of the effective impurity problem
     !
     !OPTIONAL (HEAVY) CALCULATIONS 
-    if(ed_get_dm) call density_matrix_impurity()  !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
+    if(dm_flag) call density_matrix_impurity()    !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
     !if(chiflag) call buildchi_impurity()         !build the local susceptibilities (todo)
     !
     !GET IMPURITY GFs and RELATED QUANTITIES
-    call buildgf_impurity()                       !build the one-particle impurity Green's functions  & Self-energy
+    if(gf_flag) call buildgf_impurity()           !build the one-particle impurity Green's functions  & Self-energy
     !
     call deallocate_dmft_bath()
     call es_delete_espace(state_list)
