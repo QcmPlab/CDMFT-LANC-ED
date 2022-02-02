@@ -9,8 +9,6 @@ program cdn_hm_2dsquare
    implicit none
    integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
-   logical                                                                :: periodize
-   character(len=6)                                                       :: scheme
    real(8)                                                                :: ts,wmixing,delta
    !Bath:
    real(8),allocatable                                                    :: bath(:),bath_prev(:)
@@ -47,9 +45,6 @@ program cdn_hm_2dsquare
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ky point for BZ integration")
-   call parse_input_variable(periodize,"PERIODIZE",finput,default=.false.,comment="Periodization: T or F")
-   call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
-
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -176,11 +171,6 @@ program cdn_hm_2dsquare
       Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
    enddo
    call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
-   
-   !PERIODIZE
-   if(periodize)then
-      call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
-   endif
 
    call finalize_MPI()
 
@@ -262,25 +252,29 @@ contains
    !
    !
    !
-   function hk_periodized(kpoint,N) result(Hk)
-      real(8),dimension(:)                          :: kpoint
-      integer                                       :: Nlat_,Nx_,Ny_,N
-      complex(8),dimension(N,N)                     :: Hk
+   function indices2N(indices) result(N)
+      integer,dimension(2)         :: indices
+      integer                      :: N,i
       !
-      Nlat_=Nlat
-      Nx_=Nx
-      Ny_=Ny
-      Nlat=1
-      Nx=1
-      Ny=1
       !
-      Hk=hk_model(kpoint,Nspin*Norb)
+      N=Nx*(indices(2)-1)+indices(1)
+   end function indices2N
+   !
+   !
+   !
+   function N2indices(N) result(indices) 
+      integer,dimension(2)         :: indices
+      integer                      :: N,i
       !
-      Nlat=Nlat_
-      Nx=Nx_
-      Ny=Ny_
-      !
-   end function hk_periodized
+      indices(1)=mod(N,Nx)
+      if(indices(1)==0)then
+         indices(1)=Nx
+         indices(2)=(N-Nx)/Nx+1
+      else
+         indices(2)=N/Nx+1
+      endif
+   end function N2indices
+
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
@@ -406,322 +400,6 @@ contains
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
 
-
-
-   
-   !-------------------------------------------------------------------------------------------
-   !PURPOSE: periodization routines
-   !-------------------------------------------------------------------------------------------
-
-   !include "auxiliary_routines.f90" 
-   !--> NO, including here all this stuff is a nightmare and we don't really need to do so. 
-   !    Let's cherrypick what we need instead.
-
-   !--> USER-INTERFACE
-   subroutine print_periodized(Nkpts,func1,func2,scheme)
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)  :: gmats_periodized, Smats_periodized, Gloc_per_iw, Sloc_per_iw
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)  :: greal_periodized, Sreal_periodized, Gloc_per_rw, Sloc_per_rw
-      integer,dimension(:)                               :: nkpts
-      real(8),dimension(product(Nkpts),size(Nkpts))      :: kgrid
-      integer                                            :: i
-      character(len=6)                                   :: scheme
-      interface
-      function func1(x,N)
-         integer                   :: N
-         real(8),dimension(:)      :: x
-         complex(8),dimension(N,N) :: func1
-      end function func1
-      end interface
-      interface
-      function func2(x,N)
-         integer                   :: N
-         real(8),dimension(:)      :: x
-         complex(8),dimension(N,N) :: func2
-      end function func2
-      end interface
-      !
-      Gloc_per_iw=zero
-      Sloc_per_iw=zero
-      Gloc_per_rw=zero
-      Sloc_per_rw=zero
-      !
-      call TB_build_kgrid(nkpts,kgrid)
-      do i=1,size(Nkpts)
-         kgrid(:,i)=kgrid(:,i)/Nkpts(i)
-      enddo
-      !
-      if(ED_VERBOSE .ge. 1)write(LOGfile,*)"Computing periodized quantities using    ",scheme," scheme"
-      !
-      if(MASTER)call start_timer
-      do i=1,product(Nkpts)
-         if(scheme=="g") then
-            call build_sigma_g_scheme(kgrid(i,:),gmats_periodized,greal_periodized,smats_periodized,&
-               sreal_periodized,func1(kgrid(i,:),Nlat*Nspin*Norb),func2(kgrid(i,:),Nspin*Norb))
-         elseif(scheme=="sigma")then
-            call build_g_sigma_scheme(kgrid(i,:),gmats_periodized,greal_periodized,smats_periodized,&
-               sreal_periodized,func2(kgrid(i,:),Nspin*Norb))
-         else
-            STOP "Nonexistent periodization scheme"
-         endif
-         Gloc_per_iw=Gloc_per_iw+(gmats_periodized/product(Nkpts))
-         Sloc_per_iw=Sloc_per_iw+(smats_periodized/product(Nkpts))
-         Gloc_per_rw=Gloc_per_rw+(greal_periodized/product(Nkpts))
-         Sloc_per_rw=Sloc_per_rw+(sreal_periodized/product(Nkpts))
-         if(ED_VERBOSE .ge. 1)call eta(i,product(Nkpts))
-      enddo 
-      if(MASTER)call stop_timer
-      !
-      if(master)call dmft_print_gf_matsubara(gloc_per_iw,"Gloc_periodized",iprint=4)
-      if(master)call dmft_print_gf_matsubara(sloc_per_iw,"Sigma_periodized",iprint=4)
-      !
-      if(master)call dmft_print_gf_realaxis(gloc_per_rw,"Gloc_periodized",iprint=4)
-      if(master)call dmft_print_gf_realaxis(sloc_per_rw,"Sigma_periodized",iprint=4)
-      !
-   end subroutine print_periodized
- 
-   
-
-   !--> SIGMA-SCHEME
-   subroutine periodize_sigma_scheme(kpoint,smats_periodized,sreal_periodized)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: sreal_periodized
-      !
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      smats_periodized=zero
-      sreal_periodized=zero
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               smats_periodized(:,:,:,:,ii)=smats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Smats(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lreal   
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               sreal_periodized(:,:,:,:,ii)=sreal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Sreal(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      deallocate(ind1,ind2)
-      !   
-   end subroutine periodize_sigma_scheme
-   !
-   !
-   !
-   subroutine build_g_sigma_scheme(kpoint,gmats_periodized,greal_periodized,smats_periodized,sreal_periodized,Hk_per)
-      integer                                                     :: i,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      complex(8),dimension(Nspin*Norb,Nspin*Norb)                 :: Hk_per,tmpmat
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized, Smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized, Sreal_periodized
-      !
-      !
-      !Get Gimp^-1
-      call periodize_sigma_scheme(kpoint,smats_periodized,sreal_periodized)
-      !
-      do ii=1,Lmats
-         tmpmat=(xi*wm(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Smats_periodized(:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_periodized(:,:,:,:,ii)=so2nn(tmpmat)
-      enddo
-      !
-      do ii=1,Lreal
-         tmpmat=(wr(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Sreal_periodized(:,:,:,:,ii))
-         call inv(tmpmat)
-         greal_periodized(:,:,:,:,ii)=so2nn(tmpmat)
-      enddo
-      !
-   end subroutine build_g_sigma_scheme
-
-
-   
-   !--> G-SCHEME
-   subroutine periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,hk_unper)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat,Hk_unper
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats) :: gmats_unperiodized![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal) :: greal_unperiodized ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized
-      !
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      gmats_unperiodized=zero
-      greal_unperiodized=zero
-      gmats_periodized=zero
-      greal_periodized=zero
-      tmpmat=zero
-      !
-      !
-      do ii=1,Lmats
-         tmpmat=(xi*wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Smats(:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      do ii=1,Lreal
-         tmpmat=(wr(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Sreal(:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lreal   
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      deallocate(ind1,ind2)
-      !   
-   end subroutine periodize_g_scheme
-   !
-   !
-   ! 
-   subroutine build_sigma_g_scheme(kpoint,gmats_periodized,greal_periodized,smats_periodized,sreal_periodized,Hk_unper,Hk_per)
-      integer                                                     :: i,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: Hk_unper
-      complex(8),dimension(Nspin*Norb,Nspin*Norb)                 :: Hk_per
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lmats)           :: invG0mats,invGmats
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lreal)           :: invG0real,invGreal
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized, Smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized, Sreal_periodized
-      !
-      !
-      invG0mats = zero
-      invGmats  = zero
-      invG0real = zero
-      invGreal  = zero
-      Smats_periodized  = zero
-      Sreal_periodized  = zero
-      !
-      !Get G0^-1
-      do ii=1,Lmats
-         invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_per            
-      enddo
-      do ii=1,Lreal
-         invG0real(:,:,ii) = (wr(ii)+xmu)*eye(Nspin*Norb)   - Hk_per   
-      enddo
-      !
-      !Get Gimp^-1
-      call periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,Hk_unper)
-      !
-      do ii=1,Lmats
-         invGmats(:,:,ii) = nn2so(gmats_periodized(:,:,:,:,ii))
-         call inv(invGmats(:,:,ii))
-      enddo
-      do ii=1,Lreal
-         invGreal(:,:,ii) = nn2so(greal_periodized(:,:,:,:,ii))
-         call inv(invGreal(:,:,ii))
-      enddo
-      !
-      !Get Sigma functions: Sigma= G0^-1 - G^-1
-      Smats_periodized=zero
-      Sreal_periodized=zero
-      !
-      do ii=1,Lmats
-         Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
-      enddo
-      do ii=1,Lreal
-         Sreal_periodized(:,:,:,:,ii) = so2nn(invG0real(:,:,ii) - invGreal(:,:,ii))
-      enddo
-      !
-      !
-   end subroutine build_sigma_g_scheme
-    
-
-   !--> AUXILIARY-TO-PERIODIZATION
-   function indices2N(indices) result(N)
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      !
-      N=Nx*(indices(2)-1)+indices(1)
-   end function indices2N
-   !
-   function N2indices(N) result(indices) 
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      indices(1)=mod(N,Nx)
-      if(indices(1)==0)then
-         indices(1)=Nx
-         indices(2)=(N-Nx)/Nx+1
-      else
-         indices(2)=N/Nx+1
-      endif
-   end function N2indices
-   !
-   function so2nn(Hso) result(Hnn)
-      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-      integer                                     :: iorb,ispin,is
-      integer                                     :: jorb,jspin,js
-      Hnn=zero
-      do ispin=1,Nspin
-         do jspin=1,Nspin
-            do iorb=1,Norb
-               do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                  Hnn(ispin,jspin,iorb,jorb) = Hso(is,js)
-               enddo
-            enddo
-         enddo
-      enddo
-    end function so2nn
-    !
-    function nn2so(Hnn) result(Hso)
-      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-      integer                                     :: iorb,ispin,is
-      integer                                     :: jorb,jspin,js
-      Hso=zero
-      do ispin=1,Nspin
-         do jspin=1,Nspin
-            do iorb=1,Norb
-               do jorb=1,Norb
-                  is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                  Hso(is,js) = Hnn(ispin,jspin,iorb,jorb)
-               enddo
-            enddo
-         enddo
-      enddo
-    end function nn2so
-
     !+---------------------------------------------------------------------------+
     !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
     !+---------------------------------------------------------------------------+
@@ -788,8 +466,6 @@ contains
 
 
 end program cdn_hm_2dsquare
-
-
 
 
 
