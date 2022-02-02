@@ -90,10 +90,12 @@ program cdn_hm_2dsquare
    call generate_hk_hloc()
 
    !Build Hsym_basis and lambdasym_vector
-   allocate(lambdasym_vector(1))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
-   Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
-   lambdasym_vector=[-1.d0] !not propto TS, since TS is contained in Hloc
+   allocate(lambdasym_vector(2))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
+   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
+   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
+   lambdasym_vector(1) = sb_field !initializing to zero gives degeneracy problems
+   lambdasym_vector(2) = one      !not propto TS, since TS is contained in Hloc
    
    !SETUP BATH & SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
