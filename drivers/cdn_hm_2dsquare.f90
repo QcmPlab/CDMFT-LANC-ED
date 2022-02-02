@@ -76,7 +76,8 @@ program cdn_hm_2dsquare
    enddo
 
    if(ED_VERBOSE > 0)call naming_convention()
-   !Allocate Weiss Field:
+
+   !Allocate Fields:
    allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
@@ -116,8 +117,8 @@ program cdn_hm_2dsquare
             call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
             !
             !DIAGONALIZATION
-            write(*,*) " "
-            write(*,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
+            write(LOGfile,*) " "
+            write(LOGfile,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
             allocate(pure_prob(4**((Nlat-Ntr)*Norb)))
             pure_cvec = reduced_density_matrix
             call eigh(pure_cvec,pure_prob,jobz='V',uplo='U')
@@ -134,7 +135,7 @@ program cdn_hm_2dsquare
       endif
 
 
-      !Compute the local gfs:
+      !Compute the local gfs on the imaginary axis:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
       !
@@ -162,7 +163,7 @@ program cdn_hm_2dsquare
       if(master)call end_loop
    enddo
 
-   !Compute the local gfs:
+   !Compute the local gfs on the real axis:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
 
@@ -315,18 +316,6 @@ contains
    !PURPOSE: auxiliary reshape functions
    !-------------------------------------------------------------------------------------------
 
-   ! These two functions are totally equivalent to:
-   !
-   ! > function lso2nnn_reshape(Hlso,Nlat,Nspin,Norb) result(Hnnn)
-   !     --> from [Nlso][Nlso] to [Nlat][Nspin][Nspin][Norb][Norb]
-   ! > function nnn2lso_reshape(Hnnn,Nlat,Nspin,Norb) result(Hlso)
-   !     --> from [Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
-   !
-   ! which are included in CDMFT_ED (specifically ED_AUX_FUNX).
-   !
-   ! For some reason they are not retrieved ("no IMPLICIT type"),
-   ! so for now we keep these local copies. 
-
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
@@ -417,14 +406,14 @@ contains
       call ed_get_docc(docc)
       dens_up = 0.5d0*(dens + mag)
       dens_dw = 0.5d0*(dens - mag)
-      write(*,*)
-      write(*,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
-      write(*,*) "Semi-Analytical Estimate  |  Error"
-      write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
-      write(*,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
-      write(*,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
-      write(*,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
-      write(*,*)
+      write(LOGfile,*)
+      write(LOGfile,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
+      write(LOGfile,*) "Semi-Analytical Estimate  |  Error"
+      write(LOGfile,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
+      write(LOGfile,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
+      write(LOGfile,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
+      write(LOGfile,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
+      write(LOGfile,*)
       !
     end subroutine local_dm_benchmark
 
@@ -437,26 +426,26 @@ contains
       integer                                   :: Nsites
       integer                                   :: unit      
       !
-      if(ed_verbose>3) write(*,*) "> PURE-STATE probabilities:"
+      if(ed_verbose>1) write(LOGfile,*) "> PURE-STATE probabilities:"
       unit = free_unit()
       foutput = "probabilities_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>3) write(*,"(90(F15.5,1X))") abs(pure_prob(iii))
+         if(ed_verbose>1) write(LOGfile,"(90(F15.5,1X))") abs(pure_prob(iii))
          write(unit,*) abs(pure_prob(iii)) !Machine zero could be negative.
       enddo
       close(unit)
       !
-      if(ed_verbose>4) write(*,*) "> PURE-STATE components:"
+      if(ed_verbose>3) write(LOGfile,*) "> PURE-STATE components:"
       unit = free_unit()
       foutput = "pure-states_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>4) write(*,"(90(F15.5,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
+         if(ed_verbose>3) write(LOGfile,"(90(F15.5,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
          write(unit,*) (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb)) !Our states should be real.
       enddo
       close(unit)
-      write(*,*) " "
+      write(LOGfile,*) " "
       !
     end subroutine print_pure_states
 
