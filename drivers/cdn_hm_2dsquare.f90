@@ -22,6 +22,8 @@ program cdn_hm_2dsquare
    complex(8),allocatable,dimension(:,:)                                  :: reduced_density_matrix
    complex(8),allocatable,dimension(:,:)                                  :: pure_cvec
    real(8),allocatable,dimension(:)                                       :: pure_prob
+   !Luttinger invariants:
+   real(8),allocatable,dimension(:,:,:)                                   :: luttinger
    !SYMMETRY BASIS for BATH:
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -166,6 +168,14 @@ program cdn_hm_2dsquare
    !Compute the local gfs on the real axis:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+
+   !Compute the Luttinger invariant:
+   if(master)then
+      allocate(luttinger(Nlat,Nspin,Norb))
+      call luttinger_integral(luttinger,Greal,Sreal)
+      call print_luttinger(luttinger)
+      deallocate(luttinger)
+   endif
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
@@ -449,15 +459,75 @@ contains
       !
     end subroutine print_pure_states
 
+    !+---------------------------------------------------------------------------+
+    !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
+    !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
+    ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken 
+    !     before the mu->0 limit, and here we apparently invert the order of the 
+    !     limits because of the numerical discretization on the imaginary axis. 
+    !     > Look at [53] (report of a private communication) in the Phys. Rev. B
+    !+---------------------------------------------------------------------------+
+    subroutine luttinger_integral(IL,Glso,Slso)
+      real(8),allocatable,dimension(:,:,:),intent(out)            :: IL
+      complex(8),allocatable,dimension(:,:,:,:,:,:,:),intent(in)  :: Glso,Slso
+      real(8),dimension(Lreal)                                    :: dSreal,dSimag,integrand
+      integer                                                     :: ilat,ispin,iorb,i
+      !
+      if(.not.allocated(IL)) allocate(IL(Nlat,Nspin,Norb))
+      !
+      do ilat=1,Nlat
+         do iorb=1,Norb
+            do ispin=1,Nspin
+               dSreal(:) = deriv(dreal(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !No need to include 1/dw if
+               dSimag(:) = deriv(dimag(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !we are integrating in dw...
+               integrand = dimag(Glso(ilat,ilat,ispin,ispin,iorb,iorb,:)*cmplx(dSreal,dSimag))
+               IL(ilat,ispin,iorb) = sum(integrand) !Naive Riemann-sum (no need of trapezoidal-sums with typical Lreal)
+               IL(ilat,ispin,iorb) = 1/pi * abs(IL(ilat,ispin,iorb)) !The theoretical sign is determined by sign(mu)...
+            enddo
+         enddo
+      enddo
+      !
+    end subroutine luttinger_integral
+
+    !+---------------------------------------------------------------------------+
+    !PURPOSE : print to file (and stdout) the Luttinger invariants IL(:,:,:)
+    !+---------------------------------------------------------------------------+
+    subroutine print_luttinger(IL)
+      real(8),allocatable,dimension(:,:,:),intent(in)  :: IL
+      integer                                          :: ilat,ispin,iorb
+      integer                                          :: unit
+      !
+      if(ed_verbose>0)then
+         write(LOGfile,*) " "
+         write(LOGfile,*) "Luttinger invariants:"
+      endif
+      !
+      do ilat=1,Nlat
+         do iorb=1,Norb
+            do ispin=1,Nspin
+               if(ed_verbose>0) write(LOGfile,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               unit = free_unit()
+               foutput = "luttinger_site00"//str(ilat)//"_l"//str(iorb)//"_s"//str(ispin)//".dat"
+               open(unit,file=foutput,action="write",position="rewind",status='unknown')
+               write(unit,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               close(unit)
+            enddo
+         enddo
+      enddo
+      !
+      if(ed_verbose>0)then
+         write(LOGfile,*) "          ilat        iorb        ispin"
+         if(Nlat>1) write(LOGfile,*) "WARNING: not currently reliable for Nlat>1"
+         write(LOGfile,*) " "
+      endif
+      !
+    end subroutine print_luttinger
 
 
 
 
 
 end program cdn_hm_2dsquare
-
-
-
 
 
 
