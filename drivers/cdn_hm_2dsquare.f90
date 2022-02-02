@@ -61,10 +61,11 @@ program cdn_hm_2dsquare
    call add_ctrl_var(eps,"eps")
 
    !set global variables
-   !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
-   !Ny=Nx:w
-
-   !Nky=Nkx
+   if(Nlat.NE.Nx*Ny)then
+      write(LOGfile,*) " "
+      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> it will be overwritten"
+      write(LOGfile,*) " "
+   endif
    Nlat=Nx*Ny
    Nso=Nspin*Norb
    Nlo=Nlat*Norb
@@ -192,7 +193,8 @@ contains
    !-------------------------------------------------------------------------------------------
    !PURPOSE:  Hk model for the 2d square lattice
    !-------------------------------------------------------------------------------------------
-   
+   !
+   !> Hloc = H_{hop_intra_cluster}
    function hloc_model(N) result (hloc)
       integer                                               :: ilat,jlat,ispin,iorb,ind1,ind2,N
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
@@ -202,28 +204,30 @@ contains
       !
       do ispin=1,Nspin
          do iorb=1,Norb
+            !
             do ilat=1,Nx
                do jlat=1,Ny
                   ind1=indices2N([ilat,jlat])
                   hopping_matrix(ind1,ind1,ispin,ispin,iorb,iorb)= 0.d0!-mu_var
-                  if(ilat<Nx)then
+                  if(ilat<Nx)then !Avoid x higher outbound
                      ind2=indices2N([ilat+1,jlat])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(ilat>1)then
+                  if(ilat>1)then !Avoid x lower outbound
                      ind2=indices2N([ilat-1,jlat])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(jlat<Ny)then
+                  if(jlat<Ny)then !Avoid y higher outbound
                      ind2=indices2N([ilat,jlat+1])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(jlat>1)then
+                  if(jlat>1)then !Avoid y lower outbound
                      ind2=indices2N([ilat,jlat-1])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
                enddo
             enddo
+            !
          enddo
       enddo
       !
@@ -232,45 +236,58 @@ contains
    end function hloc_model
    !
    !
-   !
+   !> Hk = H_{hop_inter_cluster} + Hloc
    function hk_model(kpoint,N) result(hk)
-      integer                                               :: n,ilat,ispin,iorb,ind1,ind2
+      integer                                               :: N,ilat,ispin,iorb,ind1,ind2
       real(8),dimension(:)                                  :: kpoint
+      real(8)                                               :: kx,ky
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
-      complex(8),dimension(N,N)                             :: hk
+      complex(8),dimension(N,N)                             :: Hk
       !
       hopping_matrix=zero
+      kx=kpoint(1)
+      ky=kpoint(2)
       !
       do ispin=1,Nspin
          do iorb=1,Norb
-            do ilat=1,Nx
+            !
+            do ilat=1,Nx                  !Supercell bravais vector along y
                ind1=indices2N([ilat,1])
                ind2=indices2N([ilat,Ny])
-               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) -ts*exp(xi*kpoint(2)*Ny)
-               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) -ts*exp(-xi*kpoint(2)*Ny)
+               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) - ts*exp(xi*ky*Ny)
+               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) - ts*exp(-xi*ky*Ny)
             enddo
-            do ilat=1,Ny
+            !
+            do ilat=1,Ny                  !Supercell bravais vector along x
                ind1=indices2N([1,ilat])
                ind2=indices2N([Nx,ilat])
-               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) -ts*exp(xi*kpoint(1)*Nx)
-               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) -ts*exp(-xi*kpoint(1)*Nx)
+               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) - ts*exp(xi*kx*Nx)
+               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) - ts*exp(-xi*kx*Nx)
             enddo
+            !
          enddo
       enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N)
    end function hk_model
-   !
-   !
-   !
+   
+
+   !-------------------------------------------------------------------------------------------
+   !PURPOSE:  Conventional indices for the cluster sites:
+   !             y ^
+   !             3 |    007 008 009
+   !             2 |    004 005 006
+   !             1 |    001 002 003
+   !             0 |___ ___ ___ ___ ___ >
+   !                 0   1   2   3   4  x
+   !-------------------------------------------------------------------------------------------
    function indices2N(indices) result(N)
       integer,dimension(2)         :: indices
       integer                      :: N,i
       !
-      !
       N=Nx*(indices(2)-1)+indices(1)
+      !
    end function indices2N
-   !
    !
    !
    function N2indices(N) result(indices) 
@@ -284,13 +301,13 @@ contains
       else
          indices(2)=N/Nx+1
       endif
+      !
    end function N2indices
 
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
    !-------------------------------------------------------------------------------------------
-
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
@@ -325,7 +342,6 @@ contains
    !-------------------------------------------------------------------------------------------
    !PURPOSE: auxiliary reshape functions
    !-------------------------------------------------------------------------------------------
-
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
@@ -378,9 +394,8 @@ contains
    end function nnn2lso
 
    !-------------------------------------------------------------------------------------------
-   !PURPOSE: managing verbose LOG files
+   !PURPOSE: explicitate the cluster-indices convention in LOG files
    !-------------------------------------------------------------------------------------------
-
    subroutine naming_convention()
       integer                       :: i,j
       integer,dimension(Nx,Ny)      :: matrix
@@ -399,10 +414,10 @@ contains
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
 
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
-    !+---------------------------------------------------------------------------+
-    subroutine local_dm_benchmark()
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
+   !+---------------------------------------------------------------------------+
+   subroutine local_dm_benchmark()
       complex(8),allocatable,dimension(:,:)  :: local_density_matrix
       real(8),allocatable,dimension(:,:)     :: dens,dens_up,dens_dw,docc,mag
       !
@@ -425,12 +440,12 @@ contains
       write(LOGfile,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
       write(LOGfile,*)
       !
-    end subroutine local_dm_benchmark
+   end subroutine local_dm_benchmark
 
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
-    !+---------------------------------------------------------------------------+
-    subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
+   !+---------------------------------------------------------------------------+
+   subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
       complex(8),allocatable,dimension(:,:)     :: pure_cvec
       real(8),allocatable,dimension(:)          :: pure_prob
       integer                                   :: Nsites
@@ -457,17 +472,17 @@ contains
       close(unit)
       write(LOGfile,*) " "
       !
-    end subroutine print_pure_states
+   end subroutine print_pure_states
 
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
-    !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
-    ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken 
-    !     before the mu->0 limit, and here we apparently invert the order of the 
-    !     limits because of the numerical discretization on the imaginary axis. 
-    !     > Look at [53] (report of a private communication) in the Phys. Rev. B
-    !+---------------------------------------------------------------------------+
-    subroutine luttinger_integral(IL,Glso,Slso)
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
+   !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
+   ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken 
+   !     before the mu->0 limit, and here we apparently invert the order of the 
+   !     limits because of the numerical discretization on the imaginary axis. 
+   !     > Look at [53] (report of a private communication) in the Phys. Rev. B
+   !+---------------------------------------------------------------------------+
+   subroutine luttinger_integral(IL,Glso,Slso)
       real(8),allocatable,dimension(:,:,:),intent(out)            :: IL
       complex(8),allocatable,dimension(:,:,:,:,:,:,:),intent(in)  :: Glso,Slso
       real(8),dimension(Lreal)                                    :: dSreal,dSimag,integrand
@@ -487,12 +502,12 @@ contains
          enddo
       enddo
       !
-    end subroutine luttinger_integral
+   end subroutine luttinger_integral
 
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : print to file (and stdout) the Luttinger invariants IL(:,:,:)
-    !+---------------------------------------------------------------------------+
-    subroutine print_luttinger(IL)
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the Luttinger invariants IL(:,:,:)
+   !+---------------------------------------------------------------------------+
+   subroutine print_luttinger(IL)
       real(8),allocatable,dimension(:,:,:),intent(in)  :: IL
       integer                                          :: ilat,ispin,iorb
       integer                                          :: unit
@@ -521,7 +536,7 @@ contains
          write(LOGfile,*) " "
       endif
       !
-    end subroutine print_luttinger
+   end subroutine print_luttinger
 
 
 
