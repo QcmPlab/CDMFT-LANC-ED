@@ -7,9 +7,10 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,Ntr
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing,delta
+   real(8)                                                                :: ts,wmixing,delta,dens_average
+   real(8),allocatable,dimension(:)                                       :: dens_mats
    !Bath:
    real(8),allocatable                                                    :: bath(:),bath_prev(:)
    !The local hybridization function:
@@ -159,6 +160,18 @@ program cdn_hm_2dsquare
          !
          !Check convergence (if required change chemical potential)
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+         if(nread/=0.d0)then
+            allocate(dens_mats(Nlat))
+            do ilat=1,Nlat
+               !tot_density = density(up) + density(dw)
+               dens_mats(ilat) = fft_get_density(Gmats(ilat,ilat,1,1,1,1,:),beta)+fft_get_density(Gmats(ilat,ilat,2,2,1,1,:),beta)
+            enddo
+            dens_average = sum(dens_mats)/Nlat
+            write(LOGfile,*)" "
+            write(LOGfile,*)"Average FFT-density:", dens_average
+            call search_chemical_potential(xmu,dens_average,converged)
+            deallocate(dens_mats)
+         endif
       endif
       !
       call Bcast_MPI(comm,bath)
