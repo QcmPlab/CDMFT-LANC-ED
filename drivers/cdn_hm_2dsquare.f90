@@ -11,6 +11,7 @@ program cdn_hm_2dsquare
    logical                                                                :: converged
    real(8)                                                                :: ts,wmixing,delta,dens_average
    real(8),allocatable,dimension(:)                                       :: dens_mats
+   real(8),allocatable,dimension(:,:)                                     :: dens_ed
    !Bath:
    real(8),allocatable                                                    :: bath(:),bath_prev(:)
    !The local hybridization function:
@@ -162,6 +163,11 @@ program cdn_hm_2dsquare
          converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
          if(nread/=0.d0)then
             allocate(dens_mats(Nlat))
+            allocate(dens_ed(Nlat,Norb))
+            call ed_get_dens(dens_ed)
+            dens_average = sum(dens_ed)/Nlo
+            write(LOGfile,*)" "
+            write(LOGfile,*)"Average ED-density:", dens_average
             do ilat=1,Nlat
                !tot_density = density(up) + density(dw)
                dens_mats(ilat) = fft_get_density(Gmats(ilat,ilat,1,1,1,1,:),beta)+fft_get_density(Gmats(ilat,ilat,2,2,1,1,:),beta)
@@ -171,6 +177,7 @@ program cdn_hm_2dsquare
             write(LOGfile,*)"Average FFT-density:", dens_average
             call search_chemical_potential(xmu,dens_average,converged)
             deallocate(dens_mats)
+            deallocate(dens_ed)
          endif
       endif
       !
