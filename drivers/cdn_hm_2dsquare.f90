@@ -7,11 +7,11 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,Ntr
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
-   logical                                                                :: periodize
-   character(len=6)                                                       :: scheme
-   real(8)                                                                :: ts,wmixing,delta
+   real(8)                                                                :: ts,wmixing,delta,dens_average
+   real(8),allocatable,dimension(:)                                       :: dens_mats
+   real(8),allocatable,dimension(:,:)                                     :: dens_ed
    !Bath:
    real(8),allocatable                                                    :: bath(:),bath_prev(:)
    !The local hybridization function:
@@ -24,6 +24,8 @@ program cdn_hm_2dsquare
    complex(8),allocatable,dimension(:,:)                                  :: reduced_density_matrix
    complex(8),allocatable,dimension(:,:)                                  :: pure_cvec
    real(8),allocatable,dimension(:)                                       :: pure_prob
+   !Luttinger invariants:
+   real(8),allocatable,dimension(:,:,:)                                   :: luttinger
    !SYMMETRY BASIS for BATH:
    real(8),dimension(:),allocatable                                       :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
@@ -37,8 +39,6 @@ program cdn_hm_2dsquare
    rank   = get_Rank_MPI(comm)
    master = get_Master_MPI(comm)
 
-   !
-
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputHM2D.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
@@ -47,14 +47,10 @@ program cdn_hm_2dsquare
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
    call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ky point for BZ integration")
-   call parse_input_variable(periodize,"PERIODIZE",finput,default=.false.,comment="Periodization: T or F")
-   call parse_input_variable(scheme,"SCHEME",finput,default="g",comment="Periodization scheme: possible g or sigma")
-
    !
    call ed_read_input(trim(finput),comm)
    !
    !Add dmft control variables
-   !
    call add_ctrl_var(beta,"BETA")
    call add_ctrl_var(Norb,"Norb")
    call add_ctrl_var(Nspin,"Nspin")
@@ -63,11 +59,12 @@ program cdn_hm_2dsquare
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
 
-   !set global variables
-   !if (Nspin/=1.or.Norb/=1) stop "You are using too many spin-orbitals"
-   !Ny=Nx:w
-
-   !Nky=Nkx
+   !Set global variables
+   if(Nlat.NE.Nx*Ny)then
+      write(LOGfile,*) " "
+      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> it will be overwritten"
+      write(LOGfile,*) " "
+   endif
    Nlat=Nx*Ny
    Nso=Nspin*Norb
    Nlo=Nlat*Norb
@@ -81,7 +78,8 @@ program cdn_hm_2dsquare
    enddo
 
    if(ED_VERBOSE > 0)call naming_convention()
-   !Allocate Weiss Field:
+
+   !Allocate Fields:
    allocate(Weiss(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats))
    allocate(Gmats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Greal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
    allocate(Smats(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats),Sreal(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal))
@@ -91,10 +89,12 @@ program cdn_hm_2dsquare
    call generate_hk_hloc()
 
    !Build Hsym_basis and lambdasym_vector
-   allocate(lambdasym_vector(1))
-   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,1))
-   Hsym_basis(:,:,:,:,:,:,1)=abs(lso2nnn(Hloc))
-   lambdasym_vector=[-1.d0] !not propto TS, since TS is contained in Hloc
+   allocate(lambdasym_vector(2))
+   allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
+   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
+   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
+   lambdasym_vector(1) = sb_field !initializing to zero gives degeneracy problems
+   lambdasym_vector(2) = one      !not propto TS, since TS is contained in Hloc
    
    !SETUP BATH & SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
@@ -121,14 +121,15 @@ program cdn_hm_2dsquare
             call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
             !
             !DIAGONALIZATION
-            write(*,*) " "
-            write(*,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
+            write(LOGfile,*) " "
+            write(LOGfile,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
             allocate(pure_prob(4**((Nlat-Ntr)*Norb)))
             pure_cvec = reduced_density_matrix
             call eigh(pure_cvec,pure_prob,jobz='V',uplo='U')
             !
             !PRINT-TO-FILE (and log)
             call print_pure_states(pure_cvec,pure_prob,Nlat-Ntr)
+            call print_entropy(pure_prob,Nlat-Ntr)
             !
             deallocate(pure_cvec,pure_prob,reduced_density_matrix)
          enddo
@@ -139,7 +140,7 @@ program cdn_hm_2dsquare
       endif
 
 
-      !Compute the local gfs:
+      !Compute the local gfs on the imaginary axis:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
       !
@@ -149,15 +150,33 @@ program cdn_hm_2dsquare
       !
       !
       !Perform the SELF-CONSISTENCY by fitting the new bath
-      if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
-         !
-         !MIXING:
-         if(iloop>1)bath = wmixing*bath + (1.d0-wmixing)*bath_prev
-         bath_prev=bath
-         !
-         !Check convergence (if required change chemical potential)
-         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+      call ed_chi2_fitgf(Weiss,bath)
+      !
+      !MIXING:
+      if(iloop>1)bath = wmixing*bath + (1.d0-wmixing)*bath_prev
+      bath_prev=bath
+      !
+      !Check convergence (if required change chemical potential)
+      converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+      if(nread/=0.d0)then
+         allocate(dens_mats(Nlat))
+         allocate(dens_ed(Nlat,Norb))
+         call ed_get_dens(dens_ed)
+         dens_average = sum(dens_ed)/Nlo
+         write(LOGfile,*)" "
+         write(LOGfile,*)"Average ED-density:", dens_average
+         dens_mats = zero
+         do ilat=1,Nlat
+            !tot_density = density(up) + density(dw)
+            dens_mats(ilat) = dens_mats(ilat) + fft_get_density(Gmats(ilat,ilat,1,1,1,1,:),beta)
+            dens_mats(ilat) = dens_mats(ilat) + fft_get_density(Gmats(ilat,ilat,2,2,1,1,:),beta)
+         enddo
+         dens_average = sum(dens_mats)/Nlat
+         write(LOGfile,*)" "
+         write(LOGfile,*)"Average FFT-density:", dens_average
+         call search_chemical_potential(xmu,dens_average,converged)
+         deallocate(dens_mats)
+         deallocate(dens_ed)
       endif
       !
       call Bcast_MPI(comm,bath)
@@ -167,20 +186,23 @@ program cdn_hm_2dsquare
       if(master)call end_loop
    enddo
 
-   !Compute the local gfs:
+   !Compute the local gfs on the real axis:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+
+   !Compute the Luttinger invariant:
+   if(master)then
+      allocate(luttinger(Nlat,Nspin,Norb))
+      call luttinger_integral(luttinger,Greal,Sreal)
+      call print_luttinger(luttinger)
+      deallocate(luttinger)
+   endif
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
       Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
    enddo
    call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
-   
-   !PERIODIZE
-   if(periodize)then
-      call print_periodized([Nkx,Nky],hk_model,hk_periodized,scheme)
-   endif
 
    call finalize_MPI()
 
@@ -191,7 +213,8 @@ contains
    !-------------------------------------------------------------------------------------------
    !PURPOSE:  Hk model for the 2d square lattice
    !-------------------------------------------------------------------------------------------
-   
+   !
+   !> Hloc = H_{hop_intra_cluster}
    function hloc_model(N) result (hloc)
       integer                                               :: ilat,jlat,ispin,iorb,ind1,ind2,N
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
@@ -201,28 +224,30 @@ contains
       !
       do ispin=1,Nspin
          do iorb=1,Norb
+            !
             do ilat=1,Nx
                do jlat=1,Ny
                   ind1=indices2N([ilat,jlat])
                   hopping_matrix(ind1,ind1,ispin,ispin,iorb,iorb)= 0.d0!-mu_var
-                  if(ilat<Nx)then
+                  if(ilat<Nx)then !Avoid x higher outbound
                      ind2=indices2N([ilat+1,jlat])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(ilat>1)then
+                  if(ilat>1)then !Avoid x lower outbound
                      ind2=indices2N([ilat-1,jlat])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(jlat<Ny)then
+                  if(jlat<Ny)then !Avoid y higher outbound
                      ind2=indices2N([ilat,jlat+1])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
-                  if(jlat>1)then
+                  if(jlat>1)then !Avoid y lower outbound
                      ind2=indices2N([ilat,jlat-1])
                      hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)= -ts
                   endif
                enddo
             enddo
+            !
          enddo
       enddo
       !
@@ -231,61 +256,78 @@ contains
    end function hloc_model
    !
    !
-   !
+   !> Hk = H_{hop_inter_cluster} + Hloc
    function hk_model(kpoint,N) result(hk)
-      integer                                               :: n,ilat,ispin,iorb,ind1,ind2
+      integer                                               :: N,ilat,ispin,iorb,ind1,ind2
       real(8),dimension(:)                                  :: kpoint
+      real(8)                                               :: kx,ky
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: hopping_matrix
-      complex(8),dimension(N,N)                             :: hk
+      complex(8),dimension(N,N)                             :: Hk
       !
       hopping_matrix=zero
+      kx=kpoint(1)
+      ky=kpoint(2)
       !
       do ispin=1,Nspin
          do iorb=1,Norb
-            do ilat=1,Nx
+            !
+            do ilat=1,Nx                  !Supercell bravais vector along y
                ind1=indices2N([ilat,1])
                ind2=indices2N([ilat,Ny])
-               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) -ts*exp(xi*kpoint(2)*Ny)
-               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) -ts*exp(-xi*kpoint(2)*Ny)
+               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) - ts*exp(xi*ky*Ny)
+               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) - ts*exp(-xi*ky*Ny)
             enddo
-            do ilat=1,Ny
+            !
+            do ilat=1,Ny                  !Supercell bravais vector along x
                ind1=indices2N([1,ilat])
                ind2=indices2N([Nx,ilat])
-               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) -ts*exp(xi*kpoint(1)*Nx)
-               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) -ts*exp(-xi*kpoint(1)*Nx)
+               hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb)=hopping_matrix(ind1,ind2,ispin,ispin,iorb,iorb) - ts*exp(xi*kx*Nx)
+               hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb)=hopping_matrix(ind2,ind1,ispin,ispin,iorb,iorb) - ts*exp(-xi*kx*Nx)
             enddo
+            !
          enddo
       enddo
       !
       Hk=nnn2lso(hopping_matrix)+hloc_model(N)
    end function hk_model
+   
+
+   !-------------------------------------------------------------------------------------------
+   !PURPOSE:  Conventional indices for the cluster sites:
+   !             y ^
+   !             3 |    007 008 009
+   !             2 |    004 005 006
+   !             1 |    001 002 003
+   !             0 |___ ___ ___ ___ ___ >
+   !                 0   1   2   3   4  x
+   !-------------------------------------------------------------------------------------------
+   function indices2N(indices) result(N)
+      integer,dimension(2)         :: indices
+      integer                      :: N,i
+      !
+      N=Nx*(indices(2)-1)+indices(1)
+      !
+   end function indices2N
    !
    !
-   !
-   function hk_periodized(kpoint,N) result(Hk)
-      real(8),dimension(:)                          :: kpoint
-      integer                                       :: Nlat_,Nx_,Ny_,N
-      complex(8),dimension(N,N)                     :: Hk
+   function N2indices(N) result(indices) 
+      integer,dimension(2)         :: indices
+      integer                      :: N,i
       !
-      Nlat_=Nlat
-      Nx_=Nx
-      Ny_=Ny
-      Nlat=1
-      Nx=1
-      Ny=1
+      indices(1)=mod(N,Nx)
+      if(indices(1)==0)then
+         indices(1)=Nx
+         indices(2)=(N-Nx)/Nx+1
+      else
+         indices(2)=N/Nx+1
+      endif
       !
-      Hk=hk_model(kpoint,Nspin*Norb)
-      !
-      Nlat=Nlat_
-      Nx=Nx_
-      Ny=Ny_
-      !
-   end function hk_periodized
+   end function N2indices
+
 
    !-------------------------------------------------------------------------------------------
    !PURPOSE: generate Hloc and Hk
    !-------------------------------------------------------------------------------------------
-
    subroutine generate_hk_hloc()
       integer                                     :: ik
       real(8),dimension(Nkx*Nky,2)                :: kgrid
@@ -320,19 +362,6 @@ contains
    !-------------------------------------------------------------------------------------------
    !PURPOSE: auxiliary reshape functions
    !-------------------------------------------------------------------------------------------
-
-   ! These two functions are totally equivalent to:
-   !
-   ! > function lso2nnn_reshape(Hlso,Nlat,Nspin,Norb) result(Hnnn)
-   !     --> from [Nlso][Nlso] to [Nlat][Nspin][Nspin][Norb][Norb]
-   ! > function nnn2lso_reshape(Hnnn,Nlat,Nspin,Norb) result(Hlso)
-   !     --> from [Nlat][Nspin][Nspin][Norb][Norb] to [Nlso][Nlso]
-   !
-   ! which are included in CDMFT_ED (specifically ED_AUX_FUNX).
-   !
-   ! For some reason they are not retrieved ("no IMPLICIT type"),
-   ! so for now we keep these local copies. 
-
    function lso2nnn(Hlso) result(Hnnn)
       complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb) :: Hlso
       complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hnnn
@@ -385,9 +414,8 @@ contains
    end function nnn2lso
 
    !-------------------------------------------------------------------------------------------
-   !PURPOSE: managing verbose LOG files
+   !PURPOSE: explicitate the cluster-indices convention in LOG files
    !-------------------------------------------------------------------------------------------
-
    subroutine naming_convention()
       integer                       :: i,j
       integer,dimension(Nx,Ny)      :: matrix
@@ -406,326 +434,10 @@ contains
       write(LOGfile,"(A)")" "
    end subroutine naming_convention
 
-
-
-   
-   !-------------------------------------------------------------------------------------------
-   !PURPOSE: periodization routines
-   !-------------------------------------------------------------------------------------------
-
-   !include "auxiliary_routines.f90" 
-   !--> NO, including here all this stuff is a nightmare and we don't really need to do so. 
-   !    Let's cherrypick what we need instead.
-
-   !--> USER-INTERFACE
-   subroutine print_periodized(Nkpts,func1,func2,scheme)
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)  :: gmats_periodized, Smats_periodized, Gloc_per_iw, Sloc_per_iw
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)  :: greal_periodized, Sreal_periodized, Gloc_per_rw, Sloc_per_rw
-      integer,dimension(:)                               :: nkpts
-      real(8),dimension(product(Nkpts),size(Nkpts))      :: kgrid
-      integer                                            :: i
-      character(len=6)                                   :: scheme
-      interface
-      function func1(x,N)
-         integer                   :: N
-         real(8),dimension(:)      :: x
-         complex(8),dimension(N,N) :: func1
-      end function func1
-      end interface
-      interface
-      function func2(x,N)
-         integer                   :: N
-         real(8),dimension(:)      :: x
-         complex(8),dimension(N,N) :: func2
-      end function func2
-      end interface
-      !
-      Gloc_per_iw=zero
-      Sloc_per_iw=zero
-      Gloc_per_rw=zero
-      Sloc_per_rw=zero
-      !
-      call TB_build_kgrid(nkpts,kgrid)
-      do i=1,size(Nkpts)
-         kgrid(:,i)=kgrid(:,i)/Nkpts(i)
-      enddo
-      !
-      if(ED_VERBOSE .ge. 1)write(LOGfile,*)"Computing periodized quantities using    ",scheme," scheme"
-      !
-      if(MASTER)call start_timer
-      do i=1,product(Nkpts)
-         if(scheme=="g") then
-            call build_sigma_g_scheme(kgrid(i,:),gmats_periodized,greal_periodized,smats_periodized,&
-               sreal_periodized,func1(kgrid(i,:),Nlat*Nspin*Norb),func2(kgrid(i,:),Nspin*Norb))
-         elseif(scheme=="sigma")then
-            call build_g_sigma_scheme(kgrid(i,:),gmats_periodized,greal_periodized,smats_periodized,&
-               sreal_periodized,func2(kgrid(i,:),Nspin*Norb))
-         else
-            STOP "Nonexistent periodization scheme"
-         endif
-         Gloc_per_iw=Gloc_per_iw+(gmats_periodized/product(Nkpts))
-         Sloc_per_iw=Sloc_per_iw+(smats_periodized/product(Nkpts))
-         Gloc_per_rw=Gloc_per_rw+(greal_periodized/product(Nkpts))
-         Sloc_per_rw=Sloc_per_rw+(sreal_periodized/product(Nkpts))
-         if(ED_VERBOSE .ge. 1)call eta(i,product(Nkpts))
-      enddo 
-      if(MASTER)call stop_timer
-      !
-      if(master)call dmft_print_gf_matsubara(gloc_per_iw,"Gloc_periodized",iprint=4)
-      if(master)call dmft_print_gf_matsubara(sloc_per_iw,"Sigma_periodized",iprint=4)
-      !
-      if(master)call dmft_print_gf_realaxis(gloc_per_rw,"Gloc_periodized",iprint=4)
-      if(master)call dmft_print_gf_realaxis(sloc_per_rw,"Sigma_periodized",iprint=4)
-      !
-   end subroutine print_periodized
- 
-   
-
-   !--> SIGMA-SCHEME
-   subroutine periodize_sigma_scheme(kpoint,smats_periodized,sreal_periodized)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: sreal_periodized
-      !
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      smats_periodized=zero
-      sreal_periodized=zero
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               smats_periodized(:,:,:,:,ii)=smats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Smats(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lreal   
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               sreal_periodized(:,:,:,:,ii)=sreal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*Sreal(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      deallocate(ind1,ind2)
-      !   
-   end subroutine periodize_sigma_scheme
-   !
-   !
-   !
-   subroutine build_g_sigma_scheme(kpoint,gmats_periodized,greal_periodized,smats_periodized,sreal_periodized,Hk_per)
-      integer                                                     :: i,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      complex(8),dimension(Nspin*Norb,Nspin*Norb)                 :: Hk_per,tmpmat
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized, Smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized, Sreal_periodized
-      !
-      !
-      !Get Gimp^-1
-      call periodize_sigma_scheme(kpoint,smats_periodized,sreal_periodized)
-      !
-      do ii=1,Lmats
-         tmpmat=(xi*wm(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Smats_periodized(:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_periodized(:,:,:,:,ii)=so2nn(tmpmat)
-      enddo
-      !
-      do ii=1,Lreal
-         tmpmat=(wr(ii)+xmu)*eye(Nspin*Norb) - hk_per - nn2so(Sreal_periodized(:,:,:,:,ii))
-         call inv(tmpmat)
-         greal_periodized(:,:,:,:,ii)=so2nn(tmpmat)
-      enddo
-      !
-   end subroutine build_g_sigma_scheme
-
-
-   
-   !--> G-SCHEME
-   subroutine periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,hk_unper)
-      integer                                                     :: ilat,jlat,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      integer,dimension(:),allocatable                            :: ind1,ind2
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: tmpmat,Hk_unper
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lmats) :: gmats_unperiodized![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-      complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Lreal) :: greal_unperiodized ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lreal]
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized
-      !
-      !
-      if(.not.allocated(ind1))allocate(ind1(size(kpoint)))
-      if(.not.allocated(ind2))allocate(ind2(size(kpoint)))
-      !
-      gmats_unperiodized=zero
-      greal_unperiodized=zero
-      gmats_periodized=zero
-      greal_periodized=zero
-      tmpmat=zero
-      !
-      !
-      do ii=1,Lmats
-         tmpmat=(xi*wm(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Smats(:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         gmats_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      do ii=1,Lreal
-         tmpmat=(wr(ii)+xmu)*eye(Nlat*Nspin*Norb) - hk_unper - nnn2lso(Sreal(:,:,:,:,:,:,ii))
-         call inv(tmpmat)
-         greal_unperiodized(:,:,:,:,:,:,ii)=lso2nnn(tmpmat)
-      enddo
-      !
-      do ii=1,Lmats
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               gmats_periodized(:,:,:,:,ii)=gmats_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*gmats_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      do ii=1,Lreal   
-         do ilat=1,Nlat
-            ind1=N2indices(ilat)        
-            do jlat=1,Nlat
-               ind2=N2indices(jlat)
-               greal_periodized(:,:,:,:,ii)=greal_periodized(:,:,:,:,ii)+exp(-xi*dot_product(kpoint,ind1-ind2))*greal_unperiodized(ilat,jlat,:,:,:,:,ii)/Nlat
-            enddo
-         enddo
-      enddo
-      !
-      deallocate(ind1,ind2)
-      !   
-   end subroutine periodize_g_scheme
-   !
-   !
-   ! 
-   subroutine build_sigma_g_scheme(kpoint,gmats_periodized,greal_periodized,smats_periodized,sreal_periodized,Hk_unper,Hk_per)
-      integer                                                     :: i,ispin,iorb,ii
-      real(8),dimension(:)                                        :: kpoint
-      complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)       :: Hk_unper
-      complex(8),dimension(Nspin*Norb,Nspin*Norb)                 :: Hk_per
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lmats)           :: invG0mats,invGmats
-      complex(8),dimension(Nspin*Norb,Nspin*Norb,Lreal)           :: invG0real,invGreal
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lmats)           :: gmats_periodized, Smats_periodized
-      complex(8),dimension(Nspin,Nspin,Norb,Norb,Lreal)           :: greal_periodized, Sreal_periodized
-      !
-      !
-      invG0mats = zero
-      invGmats  = zero
-      invG0real = zero
-      invGreal  = zero
-      Smats_periodized  = zero
-      Sreal_periodized  = zero
-      !
-      !Get G0^-1
-      do ii=1,Lmats
-         invG0mats(:,:,ii) = (xi*wm(ii)+xmu)*eye(Nspin*Norb)  - Hk_per            
-      enddo
-      do ii=1,Lreal
-         invG0real(:,:,ii) = (wr(ii)+xmu)*eye(Nspin*Norb)   - Hk_per   
-      enddo
-      !
-      !Get Gimp^-1
-      call periodize_g_scheme(kpoint,gmats_periodized,greal_periodized,Hk_unper)
-      !
-      do ii=1,Lmats
-         invGmats(:,:,ii) = nn2so(gmats_periodized(:,:,:,:,ii))
-         call inv(invGmats(:,:,ii))
-      enddo
-      do ii=1,Lreal
-         invGreal(:,:,ii) = nn2so(greal_periodized(:,:,:,:,ii))
-         call inv(invGreal(:,:,ii))
-      enddo
-      !
-      !Get Sigma functions: Sigma= G0^-1 - G^-1
-      Smats_periodized=zero
-      Sreal_periodized=zero
-      !
-      do ii=1,Lmats
-         Smats_periodized(:,:,:,:,ii) = so2nn(invG0mats(:,:,ii) - invGmats(:,:,ii))
-      enddo
-      do ii=1,Lreal
-         Sreal_periodized(:,:,:,:,ii) = so2nn(invG0real(:,:,ii) - invGreal(:,:,ii))
-      enddo
-      !
-      !
-   end subroutine build_sigma_g_scheme
-    
-
-   !--> AUXILIARY-TO-PERIODIZATION
-   function indices2N(indices) result(N)
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      !
-      N=Nx*(indices(2)-1)+indices(1)
-   end function indices2N
-   !
-   function N2indices(N) result(indices) 
-      integer,dimension(2)         :: indices
-      integer                      :: N,i
-      !
-      indices(1)=mod(N,Nx)
-      if(indices(1)==0)then
-         indices(1)=Nx
-         indices(2)=(N-Nx)/Nx+1
-      else
-         indices(2)=N/Nx+1
-      endif
-   end function N2indices
-   !
-   function so2nn(Hso) result(Hnn)
-      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-      integer                                     :: iorb,ispin,is
-      integer                                     :: jorb,jspin,js
-      Hnn=zero
-      do ispin=1,Nspin
-         do jspin=1,Nspin
-            do iorb=1,Norb
-               do jorb=1,Norb
-                   is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                  Hnn(ispin,jspin,iorb,jorb) = Hso(is,js)
-               enddo
-            enddo
-         enddo
-      enddo
-    end function so2nn
-    !
-    function nn2so(Hnn) result(Hso)
-      complex(8),dimension(Nspin,Nspin,Norb,Norb) :: Hnn
-      complex(8),dimension(Nspin*Norb,Nspin*Norb) :: Hso
-      integer                                     :: iorb,ispin,is
-      integer                                     :: jorb,jspin,js
-      Hso=zero
-      do ispin=1,Nspin
-         do jspin=1,Nspin
-            do iorb=1,Norb
-               do jorb=1,Norb
-                  is = iorb + (ispin-1)*Norb  !spin-orbit stride
-                  js = jorb + (jspin-1)*Norb  !spin-orbit stride
-                  Hso(is,js) = Hnn(ispin,jspin,iorb,jorb)
-               enddo
-            enddo
-         enddo
-      enddo
-    end function nn2so
-
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
-    !+---------------------------------------------------------------------------+
-    subroutine local_dm_benchmark()
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
+   !+---------------------------------------------------------------------------+
+   subroutine local_dm_benchmark()
       complex(8),allocatable,dimension(:,:)  :: local_density_matrix
       real(8),allocatable,dimension(:,:)     :: dens,dens_up,dens_dw,docc,mag
       !
@@ -739,55 +451,144 @@ contains
       call ed_get_docc(docc)
       dens_up = 0.5d0*(dens + mag)
       dens_dw = 0.5d0*(dens - mag)
-      write(*,*)
-      write(*,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
-      write(*,*) "Semi-Analytical Estimate  |  Error"
-      write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
-      write(*,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
-      write(*,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
-      write(*,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
-      write(*,*)
+      write(LOGfile,*)
+      write(LOGfile,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
+      write(LOGfile,*) "Semi-Analytical Estimate  |  Error"
+      write(LOGfile,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
+      write(LOGfile,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
+      write(LOGfile,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
+      write(LOGfile,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
+      write(LOGfile,*)
       !
-    end subroutine local_dm_benchmark
+   end subroutine local_dm_benchmark
 
-    !+---------------------------------------------------------------------------+
-    !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
-    !+---------------------------------------------------------------------------+
-    subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
+   !+---------------------------------------------------------------------------+
+   subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
       complex(8),allocatable,dimension(:,:)     :: pure_cvec
       real(8),allocatable,dimension(:)          :: pure_prob
       integer                                   :: Nsites
       integer                                   :: unit      
       !
-      if(ed_verbose>3) write(*,*) "> PURE-STATE probabilities:"
+      if(ed_verbose>1) write(LOGfile,*) "> PURE-STATE probabilities:"
       unit = free_unit()
       foutput = "probabilities_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>3) write(*,"(90(F15.5,1X))") abs(pure_prob(iii))
+         if(ed_verbose>1) write(LOGfile,"(90(F15.5,1X))") abs(pure_prob(iii))
          write(unit,*) abs(pure_prob(iii)) !Machine zero could be negative.
       enddo
       close(unit)
       !
-      if(ed_verbose>4) write(*,*) "> PURE-STATE components:"
+      if(ed_verbose>3) write(LOGfile,*) "> PURE-STATE components:"
       unit = free_unit()
       foutput = "pure-states_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>4) write(*,"(90(F15.5,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
+         if(ed_verbose>3) write(LOGfile,"(90(F15.5,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
          write(unit,*) (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb)) !Our states should be real.
       enddo
       close(unit)
-      write(*,*) " "
+      write(LOGfile,*) " "
       !
-    end subroutine print_pure_states
+   end subroutine print_pure_states
 
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the reduced entanglement entropy
+   !+---------------------------------------------------------------------------+
+   subroutine print_entropy(pure_prob,Nsites)
+      real(8),allocatable,dimension(:)          :: pure_prob
+      real(8)                                   :: entropy,p
+      integer                                   :: Nsites
+      integer                                   :: unit      
+      !
+      if(ed_verbose>0) write(LOGfile,*) "> ENTANGLEMENT ENTROPY:"
+      entropy = zero
+      unit = free_unit()
+      foutput = "eentropy_"//str(Nsites)//"sites"//".dat"
+      open(unit,file=foutput,action="write",position="rewind",status='unknown')
+      do iii=1,4**(Nsites*Norb)
+         p = abs(pure_prob(iii)) !Machine zero could be negative.
+         entropy = entropy - p*log(p)/log(2d0)
+      enddo
+      if(ed_verbose>0) write(LOGfile,"(90(F15.5,1X))") entropy
+         write(unit,*) entropy
+      close(unit)
+      !
+   end subroutine print_entropy
+
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
+   !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
+   ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken 
+   !     before the mu->0 limit, and here we apparently invert the order of the 
+   !     limits because of the numerical discretization on the imaginary axis. 
+   !     > Look at [53] (report of a private communication) in the Phys. Rev. B
+   !+---------------------------------------------------------------------------+
+   subroutine luttinger_integral(IL,Glso,Slso)
+      real(8),allocatable,dimension(:,:,:),intent(out)            :: IL
+      complex(8),allocatable,dimension(:,:,:,:,:,:,:),intent(in)  :: Glso,Slso
+      real(8),dimension(Lreal)                                    :: dSreal,dSimag,integrand
+      integer                                                     :: ilat,ispin,iorb,i
+      !
+      if(.not.allocated(IL)) allocate(IL(Nlat,Nspin,Norb))
+      !
+      do ilat=1,Nlat
+         do iorb=1,Norb
+            do ispin=1,Nspin
+               dSreal(:) = deriv(dreal(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !No need to include 1/dw if
+               dSimag(:) = deriv(dimag(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !we are integrating in dw...
+               integrand = dimag(Glso(ilat,ilat,ispin,ispin,iorb,iorb,:)*cmplx(dSreal,dSimag))
+               IL(ilat,ispin,iorb) = sum(integrand) !Naive Riemann-sum (no need of trapezoidal-sums with typical Lreal)
+               IL(ilat,ispin,iorb) = 1/pi * abs(IL(ilat,ispin,iorb)) !The theoretical sign is determined by sign(mu)...
+            enddo
+         enddo
+      enddo
+      !
+   end subroutine luttinger_integral
+
+   !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the Luttinger invariants IL(:,:,:)
+   !+---------------------------------------------------------------------------+
+   subroutine print_luttinger(IL)
+      real(8),allocatable,dimension(:,:,:),intent(in)  :: IL
+      integer                                          :: ilat,ispin,iorb
+      integer                                          :: unit
+      !
+      if(ed_verbose>0)then
+         write(LOGfile,*) " "
+         write(LOGfile,*) "Luttinger invariants:"
+      endif
+      !
+      do ilat=1,Nlat
+         do iorb=1,Norb
+            do ispin=1,Nspin
+               if(ed_verbose>0) write(LOGfile,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               unit = free_unit()
+               foutput = "luttinger_site00"//str(ilat)//"_l"//str(iorb)//"_s"//str(ispin)//".dat"
+               open(unit,file=foutput,action="write",position="rewind",status='unknown')
+               write(unit,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               close(unit)
+            enddo
+         enddo
+      enddo
+      !
+      if(ed_verbose>0)then
+         write(LOGfile,*) "          ilat        iorb        ispin"
+         if(Nlat>1) write(LOGfile,*) "WARNING: not currently reliable for Nlat>1"
+         write(LOGfile,*) " "
+      endif
+      !
+   end subroutine print_luttinger
 
 
 
 
 
 end program cdn_hm_2dsquare
+
+
 
 
 
