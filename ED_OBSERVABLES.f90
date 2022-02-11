@@ -62,7 +62,7 @@ MODULE ED_OBSERVABLES
   integer                                         :: isector,jsector
   integer                                         :: idim,idimUP,idimDW
   !
-  complex(8),dimension(:),pointer                 :: state_cvec
+  complex(8),dimension(:),allocatable             :: state_cvec
   logical                                         :: Jcondition
   !
 
@@ -122,12 +122,12 @@ contains
        !
 #ifdef _MPI
        if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+          call es_return_cvector(MpiComm,state_list,istate,state_cvec)
        else
-          state_cvec => es_return_cvector(state_list,istate)
+          call es_return_cvector(state_list,istate,state_cvec)
        endif
 #else
-       state_cvec => es_return_cvector(state_list,istate)
+       call es_return_cvector(state_list,istate,state_cvec)
 #endif
        !
        !
@@ -199,15 +199,7 @@ contains
        endif
        !
        !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
+       if(allocated(state_cvec))deallocate(state_cvec)
        !
     enddo
     !
@@ -274,12 +266,12 @@ contains
        Ei      = es_return_energy(state_list,istate)
 #ifdef _MPI
        if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+          call es_return_cvector(MpiComm,state_list,istate,state_cvec)
        else
-          state_cvec => es_return_cvector(state_list,istate)
+          call es_return_cvector(state_list,istate,state_cvec)
        endif
 #else
-       state_cvec => es_return_cvector(state_list,istate)
+       call es_return_cvector(state_list,istate,state_cvec)
 #endif
        !
        iDim  = getdim(isector)
@@ -424,15 +416,7 @@ contains
           call delete_sector(isector,H)         
        endif
        !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
+       if(allocated(state_cvec))deallocate(state_cvec)
        !
     enddo
     !
@@ -507,12 +491,12 @@ contains
        Ei      = es_return_energy(state_list,istate)
 #ifdef _MPI
        if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+          call es_return_cvector(MpiComm,state_list,istate,state_cvec)
        else
-          state_cvec => es_return_cvector(state_list,istate)
+          call es_return_cvector(state_list,istate,state_cvec)
        endif
 #else
-       state_cvec => es_return_cvector(state_list,istate)
+       call es_return_cvector(state_list,istate,state_cvec)
 #endif
        !Finite temperature weighting factor
        peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
@@ -593,15 +577,7 @@ contains
           call delete_sector(isector,HI)       
        endif
        !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
+       if(allocated(state_cvec))deallocate(state_cvec)
        !
     enddo
     if(MpiMaster) call stop_timer()
@@ -622,12 +598,12 @@ contains
        Ei      = es_return_energy(state_list,istate)
 #ifdef _MPI
        if(MpiStatus)then
-          state_cvec => es_return_cvector(MpiComm,state_list,istate)
+          call es_return_cvector(MpiComm,state_list,istate,state_cvec)
        else
-          state_cvec => es_return_cvector(state_list,istate)
+          call es_return_cvector(state_list,istate,state_cvec)
        endif
 #else
-       state_cvec => es_return_cvector(state_list,istate)
+       call es_return_cvector(state_list,istate,state_cvec)
 #endif
        !
        peso = 1.d0 ; if(finiteT)peso=exp(-beta*(Ei-Egs))
@@ -698,15 +674,7 @@ contains
           call delete_sector(isector,HI)         
        endif
        !
-#ifdef _MPI
-       if(MpiStatus)then
-          if(associated(state_cvec))deallocate(state_cvec)
-       else
-          if(associated(state_cvec))nullify(state_cvec)
-       endif
-#else
-       if(associated(state_cvec))nullify(state_cvec)
-#endif
+       if(allocated(state_cvec))deallocate(state_cvec)
        !
     enddo
     ! 

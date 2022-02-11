@@ -20,17 +20,17 @@ MODULE ED_GF_SHARED
 
   !Lanczos shared variables
   !=========================================================
-  complex(8),dimension(:),pointer                :: state_cvec
-  real(8)                                        :: state_e
+  complex(8),dimension(:),allocatable   :: state_cvec
+  real(8)                               :: state_e
 
   !Frequency and time arrays:
   !=========================================================
-  real(8),dimension(:),allocatable            :: wm,tau,wr,vm
+  real(8),dimension(:),allocatable      :: wm,tau,wr,vm
 
 
   !AUX GF
   !=========================================================
-  complex(8),allocatable,dimension(:,:)       :: auxGmats,auxGreal
+  complex(8),allocatable,dimension(:,:) :: auxGmats,auxGreal
 
 
 
