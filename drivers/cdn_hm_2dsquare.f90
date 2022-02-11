@@ -39,8 +39,6 @@ program cdn_hm_2dsquare
    rank   = get_Rank_MPI(comm)
    master = get_Master_MPI(comm)
 
-   !
-
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputHM2D.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
@@ -53,7 +51,6 @@ program cdn_hm_2dsquare
    call ed_read_input(trim(finput),comm)
    !
    !Add dmft control variables
-   !
    call add_ctrl_var(beta,"BETA")
    call add_ctrl_var(Norb,"Norb")
    call add_ctrl_var(Nspin,"Nspin")
@@ -62,7 +59,7 @@ program cdn_hm_2dsquare
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
 
-   !set global variables
+   !Set global variables
    if(Nlat.NE.Nx*Ny)then
       write(LOGfile,*) " "
       write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> it will be overwritten"
@@ -132,6 +129,7 @@ program cdn_hm_2dsquare
             !
             !PRINT-TO-FILE (and log)
             call print_pure_states(pure_cvec,pure_prob,Nlat-Ntr)
+            call print_entropy(pure_prob,Nlat-Ntr)
             !
             deallocate(pure_cvec,pure_prob,reduced_density_matrix)
          enddo
@@ -152,33 +150,33 @@ program cdn_hm_2dsquare
       !
       !
       !Perform the SELF-CONSISTENCY by fitting the new bath
-      if(master)then
-         call ed_chi2_fitgf(Weiss,bath)
-         !
-         !MIXING:
-         if(iloop>1)bath = wmixing*bath + (1.d0-wmixing)*bath_prev
-         bath_prev=bath
-         !
-         !Check convergence (if required change chemical potential)
-         converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
-         if(nread/=0.d0)then
-            allocate(dens_mats(Nlat))
-            allocate(dens_ed(Nlat,Norb))
-            call ed_get_dens(dens_ed)
-            dens_average = sum(dens_ed)/Nlo
-            write(LOGfile,*)" "
-            write(LOGfile,*)"Average ED-density:", dens_average
-            do ilat=1,Nlat
-               !tot_density = density(up) + density(dw)
-               dens_mats(ilat) = fft_get_density(Gmats(ilat,ilat,1,1,1,1,:),beta)+fft_get_density(Gmats(ilat,ilat,2,2,1,1,:),beta)
-            enddo
-            dens_average = sum(dens_mats)/Nlat
-            write(LOGfile,*)" "
-            write(LOGfile,*)"Average FFT-density:", dens_average
-            call search_chemical_potential(xmu,dens_average,converged)
-            deallocate(dens_mats)
-            deallocate(dens_ed)
-         endif
+      call ed_chi2_fitgf(Weiss,bath)
+      !
+      !MIXING:
+      if(iloop>1)bath = wmixing*bath + (1.d0-wmixing)*bath_prev
+      bath_prev=bath
+      !
+      !Check convergence (if required change chemical potential)
+      converged = check_convergence(Weiss(:,:,1,1,1,1,:),dmft_error,nsuccess,nloop)
+      if(nread/=0.d0)then
+         allocate(dens_mats(Nlat))
+         allocate(dens_ed(Nlat,Norb))
+         call ed_get_dens(dens_ed)
+         dens_average = sum(dens_ed)/Nlo
+         write(LOGfile,*)" "
+         write(LOGfile,*)"Average ED-density:", dens_average
+         dens_mats = zero
+         do ilat=1,Nlat
+            !tot_density = density(up) + density(dw)
+            dens_mats(ilat) = dens_mats(ilat) + fft_get_density(Gmats(ilat,ilat,1,1,1,1,:),beta)
+            dens_mats(ilat) = dens_mats(ilat) + fft_get_density(Gmats(ilat,ilat,2,2,1,1,:),beta)
+         enddo
+         dens_average = sum(dens_mats)/Nlat
+         write(LOGfile,*)" "
+         write(LOGfile,*)"Average FFT-density:", dens_average
+         call search_chemical_potential(xmu,dens_average,converged)
+         deallocate(dens_mats)
+         deallocate(dens_ed)
       endif
       !
       call Bcast_MPI(comm,bath)
@@ -497,6 +495,30 @@ contains
    end subroutine print_pure_states
 
    !+---------------------------------------------------------------------------+
+   !PURPOSE : print to file (and stdout) the reduced entanglement entropy
+   !+---------------------------------------------------------------------------+
+   subroutine print_entropy(pure_prob,Nsites)
+      real(8),allocatable,dimension(:)          :: pure_prob
+      real(8)                                   :: entropy,p
+      integer                                   :: Nsites
+      integer                                   :: unit      
+      !
+      if(ed_verbose>0) write(LOGfile,*) "> ENTANGLEMENT ENTROPY:"
+      entropy = zero
+      unit = free_unit()
+      foutput = "eentropy_"//str(Nsites)//"sites"//".dat"
+      open(unit,file=foutput,action="write",position="rewind",status='unknown')
+      do iii=1,4**(Nsites*Norb)
+         p = abs(pure_prob(iii)) !Machine zero could be negative.
+         entropy = entropy - p*log(p)/log(2d0)
+      enddo
+      if(ed_verbose>0) write(LOGfile,"(90(F15.5,1X))") entropy
+         write(unit,*) entropy
+      close(unit)
+      !
+   end subroutine print_entropy
+
+   !+---------------------------------------------------------------------------+
    !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
    !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
    ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken 
@@ -565,6 +587,13 @@ contains
 
 
 end program cdn_hm_2dsquare
+
+
+
+
+
+
+
 
 
 
