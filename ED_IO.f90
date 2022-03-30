@@ -469,10 +469,12 @@ contains
    enddo
    write(unit,*)
    !
-   do io=1,N
-      write(unit,"(90(F15.9,1X))") (dimag(dm(io,jo)),jo=1,N)
-   enddo
-   write(unit,*)
+   if(any(dimag(dm)/=0d0))then
+      do io=1,N
+         write(unit,"(90(F15.9,1X))") (dimag(dm(io,jo)),jo=1,N)
+      enddo
+      write(unit,*)
+   endif
    !
    close(unit)
    !
