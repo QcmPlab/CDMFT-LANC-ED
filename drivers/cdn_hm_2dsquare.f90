@@ -42,7 +42,7 @@ program cdn_hm_2dsquare
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputHM2D.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
-   call parse_input_variable(ts,"TS",finput,default=1.d0,comment="hopping parameter")
+   call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
    call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
@@ -62,7 +62,7 @@ program cdn_hm_2dsquare
    !Set global variables
    if(Nlat.NE.Nx*Ny)then
       write(LOGfile,*) " "
-      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> it will be overwritten"
+      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> Nlat will be overwritten"
       write(LOGfile,*) " "
    endif
    Nlat=Nx*Ny
@@ -571,7 +571,7 @@ contains
                unit = free_unit()
                foutput = "luttinger_site00"//str(ilat)//"_l"//str(iorb)//"_s"//str(ispin)//".dat"
                open(unit,file=foutput,action="write",position="rewind",status='unknown')
-               write(unit,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               write(unit,*) IL(ilat,ispin,iorb)
                close(unit)
             enddo
          enddo
