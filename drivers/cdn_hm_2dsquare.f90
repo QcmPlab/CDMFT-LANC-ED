@@ -7,7 +7,7 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,iw,iii,jjj,kkk,Ntr
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,irepl,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
    real(8)                                                                :: ts,wmixing,delta,dens_average
    real(8),allocatable,dimension(:)                                       :: dens_mats
@@ -27,7 +27,7 @@ program cdn_hm_2dsquare
    !Luttinger invariants:
    real(8),allocatable,dimension(:,:,:)                                   :: luttinger
    !SYMMETRY BASIS for BATH:
-   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   real(8),dimension(:,:),allocatable                                     :: lambdasym_vector
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
@@ -89,12 +89,15 @@ program cdn_hm_2dsquare
    call generate_hk_hloc()
 
    !Build Hsym_basis and lambdasym_vector
-   allocate(lambdasym_vector(2))
+   allocate(lambdasym_vector(Nbath,2))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
    Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
    Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
-   lambdasym_vector(1) = sb_field !initializing to zero gives degeneracy problems
-   lambdasym_vector(2) = one      !not propto TS, since TS is contained in Hloc
+   do irepl=1,Nbath
+      iii = irepl - 1 - (Nbath-1)/2 ![-(Nbath-1)/2:(Nbath-1)/2]
+      lambdasym_vector(irepl,1) = iii * sb_field !P-H symmetric discretization
+      lambdasym_vector(irepl,2) = one !Recall that TS is contained in Hloc
+   enddo
    
    !SETUP BATH & SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
