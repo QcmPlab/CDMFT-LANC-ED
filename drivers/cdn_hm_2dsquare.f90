@@ -58,6 +58,7 @@ program cdn_hm_2dsquare
    call add_ctrl_var(wini,"wini")
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
+   call add_ctrl_var(hwband,"hwband")
 
    !Set global variables
    if(Nlat.NE.Nx*Ny)then
@@ -93,10 +94,11 @@ program cdn_hm_2dsquare
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
    Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
    Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
+   write(*,*) "HWBAND="//str(hwband)
    do irepl=1,Nbath
       onsite = irepl - 1 - (Nbath-1)/2d0    ![-(Nbath-1)/2:(Nbath-1)/2]
-      write(*,*) "REPLICA #"//str(irepl)//": onsite="//str(onsite)
-      lambdasym_vector(irepl,1) = onsite    !P-H symmetric discretization
+      onsite = onsite * 2*HWBAND/(Nbath-1)  !P-H symmetric band, -HWBAND:HWBAND
+      lambdasym_vector(irepl,1) = onsite    !Multiplies the suitable identity 
       lambdasym_vector(irepl,2) = one       !Recall that TS is contained in Hloc
    enddo
    

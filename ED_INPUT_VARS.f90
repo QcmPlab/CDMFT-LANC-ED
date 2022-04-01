@@ -33,7 +33,7 @@ MODULE ED_INPUT_VARS
   real(8)              :: gs_threshold        !Energy threshold for ground state degeneracy loop up
   real(8)              :: dmft_error          !dmft convergence threshold
   real(8)              :: sb_field            !symmetry breaking field
-  real(8)              :: hwband              !half-bandwidth for the bath initialization: flat in -hwband:hwband
+  real(8)              :: hwband              !half-bandwidth for the bath initialization (diagonal part in Hreplica)
   !
   integer              :: ed_verbose          !
   logical              :: ed_sparse_H         !flag to select  storage of sparse matrix H (mem--, cpu++) if TRUE, or direct on-the-fly H*v product (mem++, cpu--
@@ -161,7 +161,7 @@ contains
     call parse_input_variable(eps,"EPS",INPUTunit,default=0.01d0,comment="Broadening on the real-axis.")
     call parse_input_variable(cutoff,"CUTOFF",INPUTunit,default=1.d-9,comment="Spectrum cut-off, used to determine the number states to be retained.")
     call parse_input_variable(gs_threshold,"GS_THRESHOLD",INPUTunit,default=1.d-9,comment="Energy threshold for ground state degeneracy loop up")
-    call parse_input_variable(hwband,"HWBAND",INPUTunit,default=2d0,comment="half-bandwidth for the bath initialization: flat in -hwband:hwband")
+    call parse_input_variable(hwband,"HWBAND",INPUTunit,default=2d0,comment="half-bandwidth for the bath initialization (diagonal part in Hreplica)")
     !    
     call parse_input_variable(lanc_method,"LANC_METHOD",INPUTunit,default="arpack",comment="select the lanczos method to be used in the determination of the spectrum. ARPACK (default), LANCZOS (T=0 only), DVDSON (no MPI)")
     call parse_input_variable(lanc_nstates_sector,"LANC_NSTATES_SECTOR",INPUTunit,default=2,comment="Initial number of states per sector to be determined.")
