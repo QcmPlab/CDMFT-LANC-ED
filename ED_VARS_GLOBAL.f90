@@ -10,11 +10,11 @@ MODULE ED_VARS_GLOBAL
   implicit none
   !-------------------- H EXPANSION STRUCTURE ----------------------!
   type H_operator
-     complex(8),dimension(:,:,:,:,:,:),allocatable   :: O          !Replica hamilt
+     complex(8),dimension(:,:,:,:,:,:),allocatable   :: O  !Replica hamiltonian
   end type H_operator
 
-  type(H_operator),dimension(:),allocatable             :: Hreplica_basis
-  real(8),dimension(:),allocatable                      :: Hreplica_lambda
+  type(H_operator),dimension(:),allocatable             :: Hreplica_basis  ![Nsym]
+  real(8),dimension(:,:),allocatable                    :: Hreplica_lambda ![Nbath,Nsym]
   logical                                               :: Hreplica_status=.false.
   
 
@@ -268,7 +268,7 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
   !real(8),dimension(:,:,:,:),allocatable,save       :: phisc_ineq
   real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
-  real(8),dimension(:,:),allocatable                 :: Hreplica_lambda_ineq
+  real(8),dimension(:,:,:),allocatable               :: Hreplica_lambda_ineq ![Nsites,Nbath,Nsym]
 #endif
 
 

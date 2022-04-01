@@ -1,6 +1,6 @@
 MODULE ED_BATH
   USE SF_CONSTANTS, only: zero
-  USE SF_IOTOOLS, only:free_unit,reg,file_length,txtfy
+  USE SF_IOTOOLS, only:free_unit,reg,file_length,str
   USE SF_LINALG, only: eye,inv,trace
   USE SF_MISC, only: assert_shape
   USE SF_ARRAYS, only: linspace

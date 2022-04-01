@@ -34,7 +34,7 @@ subroutine allocate_dmft_bath()
    !   if(is_identity(Hreplica_basis(isym)%O)) Nsym=Nsym-1
    !   exit
    !enddo
-   Nsym=size(Hreplica_lambda)
+   Nsym=size(Hreplica_lambda(Nbath,:))
    !
    !ALLOCATE coefficients vectors
    !
@@ -63,11 +63,13 @@ subroutine init_dmft_bath()
    !  
    if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
    !
-   if(Nbath>1)then
-      rescale=linspace(HWBAND/Nbath,HWBAND,Nbath)
-   else
-      rescale(1)=0.d0
-   endif
+   !if(Nbath>1)then
+   !BREAKING CHANGE, TO BE HANDLED BETTER
+      !rescale=linspace(HWBAND/Nbath,HWBAND,Nbath)
+      !rescale=one
+   !else
+   !   rescale(1)=0.d0
+   !endif
    !
    !BATH V INITIALIZATION
    do ibath=1,Nbath
@@ -78,11 +80,12 @@ subroutine init_dmft_bath()
    do ibath=1,Nbath
      Nsym = dmft_bath%item(ibath)%N_dec
      do isym=1,Nsym
-        if(is_diagonal(Hreplica_basis(isym)%O))then
-            dmft_bath%item(ibath)%lambda(isym)=rescale(ibath)*Hreplica_lambda(isym)
-        else
-            dmft_bath%item(ibath)%lambda(isym) =  Hreplica_lambda(isym)
-        endif
+      !BREAKING CHANGE, TO BE HANDLED BETTER
+        !if(is_diagonal(Hreplica_basis(isym)%O))then
+        !    dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hreplica_lambda(ibath,isym)
+        !else
+            dmft_bath%item(ibath)%lambda(isym) = Hreplica_lambda(ibath,isym)
+        !endif
      enddo
    enddo
    !
@@ -91,7 +94,7 @@ subroutine init_dmft_bath()
    if(IOfile)then
       write(LOGfile,"(A)")"Reading bath from file "//trim(Hfile)//trim(ed_file_suffix)//".restart"
       unit = free_unit()
-      flen = file_length(trim(Hfile)//trim(ed_file_suffix)//".restart")
+      flen = file_length(trim(Hfile)//trim(ed_file_suffix)//".restart") !why?
       !
       open(unit,file=trim(Hfile)//trim(ed_file_suffix)//".restart")
       !
