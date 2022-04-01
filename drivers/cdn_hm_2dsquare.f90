@@ -9,7 +9,7 @@ program cdn_hm_2dsquare
    implicit none
    integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,irepl,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing,delta,dens_average
+   real(8)                                                                :: ts,wmixing,delta,dens_average,onsite
    real(8),allocatable,dimension(:)                                       :: dens_mats
    real(8),allocatable,dimension(:,:)                                     :: dens_ed
    !Bath:
@@ -94,9 +94,10 @@ program cdn_hm_2dsquare
    Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
    Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
    do irepl=1,Nbath
-      iii = irepl - 1 - (Nbath-1)/2 ![-(Nbath-1)/2:(Nbath-1)/2]
-      lambdasym_vector(irepl,1) = iii * sb_field !P-H symmetric discretization
-      lambdasym_vector(irepl,2) = one !Recall that TS is contained in Hloc
+      onsite = irepl - 1 - (Nbath-1)/2      ![-(Nbath-1)/2:(Nbath-1)/2]
+      write(*,*) "REPLICA #"//str(irepl)//": onsite="//str(onsite)
+      lambdasym_vector(irepl,1) = onsite    !P-H symmetric discretization
+      lambdasym_vector(irepl,2) = one       !Recall that TS is contained in Hloc
    enddo
    
    !SETUP BATH & SOLVER
