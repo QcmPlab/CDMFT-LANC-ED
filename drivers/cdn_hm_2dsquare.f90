@@ -45,8 +45,8 @@ program cdn_hm_2dsquare
    call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
-   call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
-   call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ky point for BZ integration")
+   call parse_input_variable(Nkx,"Nkx",finput,default=100,comment="Number of kx point for BZ integration")
+   call parse_input_variable(Nky,"Nky",finput,default=100,comment="Number of ky point for BZ integration")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -101,6 +101,10 @@ program cdn_hm_2dsquare
       lambdasym_vector(irepl,1) = onsite    !Multiplies the suitable identity 
       lambdasym_vector(irepl,2) = one       !Recall that TS is contained in Hloc
    enddo
+   if(mod(Nbath,2)==0)then
+      lambdasym_vector(Nbath/2,1) = -1.d-1     !Much needed small energies around
+      lambdasym_vector(Nbath/2 + 1,1) = 1.d-1  !the fermi level. (for even Nbath)
+   endif
    
    !SETUP BATH & SOLVER
    call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
@@ -593,14 +597,4 @@ contains
 
 
 end program cdn_hm_2dsquare
-
-
-
-
-
-
-
-
-
-
 
