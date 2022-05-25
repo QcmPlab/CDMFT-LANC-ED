@@ -1,5 +1,6 @@
 MODULE ED_GF_NORMAL
   USE ED_GF_SHARED
+  USE SF_IOTOOLS
   USE ED_AUX_FUNX
   USE ED_BATH, only:Hreplica_mask
   implicit none
@@ -152,6 +153,8 @@ contains
 #else
        call es_return_cvector(state_list,istate,state_cvec) 
 #endif
+       call save_array('rstate'//str(istate),dreal(state_cvec))
+       call save_array('istate'//str(istate),dimag(state_cvec))
        !
        idim  = getdim(isector)
        call get_DimUp(isector,iDimUps)
@@ -959,6 +962,8 @@ contains
        de = diag(j)-Ei
        if (de>max_exc)max_exc=de
        peso = pesoBZ*Z(1,j)*Z(1,j)
+       write(105,*)isign*de,dreal(peso)
+       write(106,*)alanc(j),blanc(j)
        !
        impGmatrix(ilat,jlat,ispin,ispin,iorb,jorb)%state(istate)%channel(ichan)%weight(j) = peso
        impGmatrix(ilat,jlat,ispin,ispin,iorb,jorb)%state(istate)%channel(ichan)%poles(j)  = isign*de

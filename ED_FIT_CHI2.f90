@@ -422,6 +422,7 @@ contains
     !
     chi2 =  sum( Chi2_freq**cg_pow/Wdelta )
     chi2 =  chi2/Ldelta
+    write(107,*)chi2
     !
   end function chi2_weiss_replica
   
