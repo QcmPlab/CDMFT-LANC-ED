@@ -53,23 +53,22 @@ end subroutine allocate_dmft_bath
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
    real(8)                  :: re,im
-   integer                  :: i,ibath,isym,unit,flen,Nh,Nsym
+   integer                  :: i,ibath,isym,unit,Nh,Nsym
    integer,dimension(Nbath) :: Nlambdas
    integer                  :: io,jo,iorb,ispin,jorb,jspin
-   logical                  :: IOfile
+   logical                  :: IOfile,diagonal_hsym,all_are_equal
    real(8)                  :: de
    real(8)                  :: rescale(Nbath),offset_b(Nbath)
+   real(8),dimension(Nbath) :: one_lambdaval
    character(len=21)        :: space
    !  
    if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
    !
-   !if(Nbath>1)then
-   !BREAKING CHANGE, TO BE HANDLED BETTER
-      !rescale=linspace(HWBAND/Nbath,HWBAND,Nbath)
-      !rescale=one
-   !else
-   !   rescale(1)=0.d0
-   !endif
+   if(Nbath>1)then
+      rescale = linspace(HWBAND/Nbath,HWBAND,Nbath)
+   else
+      rescale = 0.d0
+   endif
    !
    !BATH V INITIALIZATION
    do ibath=1,Nbath
@@ -80,12 +79,29 @@ subroutine init_dmft_bath()
    do ibath=1,Nbath
      Nsym = dmft_bath%item(ibath)%N_dec
      do isym=1,Nsym
-      !BREAKING CHANGE, TO BE HANDLED BETTER
-        !if(is_diagonal(Hreplica_basis(isym)%O))then
-        !    dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hreplica_lambda(ibath,isym)
-        !else
+        diagonal_hsym = is_diagonal(Hreplica_basis(isym)%O)
+        one_lambdaval = Hreplica_lambda(ibath,isym)
+        all_are_equal = all(Hreplica_lambda(:,isym)==one_lambdaval)
+        if(diagonal_hsym.AND.all_are_equal)then
+         !> BACK-COMPATIBILITY PATCH: Nbath /degenerate/ lambdas, rescaled internally
+            dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hreplica_lambda(ibath,isym)
+            write(*,*) "                                                                    "
+            write(*,*) "WARNING: some of your lambdasym values have been internally changed "
+            write(*,*) "         while calling ed_init_solver. This happens whenever the    "
+            write(*,*) "         corresponding Hsym is diagonal and all the replicas receive"
+            write(*,*) "         the same initial lambda value, due to the deprecated legacy"
+            write(*,*) "         practice of defining a unique lambda vector forall replicas"
+            write(*,*) "         and let the solver decide how to handle these degeneracies."
+            write(*,*) "         >>> If you really intend to have a degenerate diagonal term"
+            write(*,*) "             in the bath you can define a suitable restart file.    "
+            write(*,*) "         >>> If instead this is what you expected please consider to"
+            write(*,*) "             move the desired rescaling in your driver, since this  "
+            write(*,*) "             funcionality might be removed in a future update.      "
+            write(*,*) "                                                                    "
+        else
+         !> NEW INTENDED BEHAVIOR: Nbath /different/ lambdas passed to dmft_bath
             dmft_bath%item(ibath)%lambda(isym) = Hreplica_lambda(ibath,isym)
-        !endif
+        endif
      enddo
    enddo
    !
@@ -94,7 +110,6 @@ subroutine init_dmft_bath()
    if(IOfile)then
       write(LOGfile,"(A)")"Reading bath from file "//trim(Hfile)//trim(ed_file_suffix)//".restart"
       unit = free_unit()
-      flen = file_length(trim(Hfile)//trim(ed_file_suffix)//".restart") !why?
       !
       open(unit,file=trim(Hfile)//trim(ed_file_suffix)//".restart")
       !

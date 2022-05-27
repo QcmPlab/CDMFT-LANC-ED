@@ -42,6 +42,7 @@ MODULE ED_BATH
      module procedure init_Hreplica_direct_lso
      module procedure init_Hreplica_direct_nnn
      module procedure init_Hreplica_symmetries_site
+     module procedure init_Hreplica_symmetries_LEGACY ! (deprecation-cycle)
 #if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure init_Hreplica_symmetries_lattice
 #endif
