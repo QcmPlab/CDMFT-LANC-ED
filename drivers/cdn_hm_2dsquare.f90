@@ -7,9 +7,9 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,iw,iii,jjj,kkk,Ntr
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,irepl,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
-   real(8)                                                                :: ts,wmixing,delta,dens_average
+   real(8)                                                                :: ts,wmixing,delta,dens_average,onsite
    real(8),allocatable,dimension(:)                                       :: dens_mats
    real(8),allocatable,dimension(:,:)                                     :: dens_ed
    !Bath:
@@ -27,7 +27,7 @@ program cdn_hm_2dsquare
    !Luttinger invariants:
    real(8),allocatable,dimension(:,:,:)                                   :: luttinger
    !SYMMETRY BASIS for BATH:
-   real(8),dimension(:),allocatable                                       :: lambdasym_vector
+   real(8),dimension(:,:),allocatable                                     :: lambdasym_vectors
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
@@ -42,11 +42,11 @@ program cdn_hm_2dsquare
    !Parse input variables
    call parse_cmd_variable(finput,"FINPUT",default='inputHM2D.conf')
    call parse_input_variable(wmixing,"wmixing",finput,default=1.d0,comment="Mixing bath parameter")
-   call parse_input_variable(ts,"TS",finput,default=1.d0,comment="hopping parameter")
+   call parse_input_variable(ts,"TS",finput,default=0.25d0,comment="hopping parameter")
    call parse_input_variable(Nx,"Nx",finput,default=2,comment="Number of cluster sites in x direction")
    call parse_input_variable(Ny,"Ny",finput,default=2,comment="Number of cluster sites in y direction")
-   call parse_input_variable(Nkx,"Nkx",finput,default=10,comment="Number of kx point for BZ integration")
-   call parse_input_variable(Nky,"Nky",finput,default=10,comment="Number of ky point for BZ integration")
+   call parse_input_variable(Nkx,"Nkx",finput,default=100,comment="Number of kx point for BZ integration")
+   call parse_input_variable(Nky,"Nky",finput,default=100,comment="Number of ky point for BZ integration")
    !
    call ed_read_input(trim(finput),comm)
    !
@@ -58,12 +58,13 @@ program cdn_hm_2dsquare
    call add_ctrl_var(wini,"wini")
    call add_ctrl_var(wfin,"wfin")
    call add_ctrl_var(eps,"eps")
+   call add_ctrl_var(hwband,"hwband")
 
    !Set global variables
    if(Nlat.NE.Nx*Ny)then
-      write(LOGfile,*) " "
-      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> it will be overwritten"
-      write(LOGfile,*) " "
+      write(LOGfile,*) "                                                   "
+      write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> Nlat will be overwritten"
+      write(LOGfile,*) "                                                   "
    endif
    Nlat=Nx*Ny
    Nso=Nspin*Norb
@@ -88,16 +89,25 @@ program cdn_hm_2dsquare
    !Build Hk and Hloc
    call generate_hk_hloc()
 
-   !Build Hsym_basis and lambdasym_vector
-   allocate(lambdasym_vector(2))
+   !Build Hsym_basis and lambdasym_vectors
+   allocate(lambdasym_vectors(Nbath,2))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
-   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
-   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
-   lambdasym_vector(1) = sb_field !initializing to zero gives degeneracy problems
-   lambdasym_vector(2) = one      !not propto TS, since TS is contained in Hloc
+   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Replica onsite energies
+   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Replica hopping amplitudes
+   write(*,*) "HWBAND="//str(hwband)
+   do irepl=1,Nbath
+      onsite = irepl - 1 - (Nbath-1)/2d0      ![-(Nbath-1)/2:(Nbath-1)/2]
+      onsite = onsite * 2*HWBAND/(Nbath-1)    !P-H symmetric band, -HWBAND:HWBAND
+      lambdasym_vectors(irepl,1) = onsite     !Multiplies the suitable identity 
+      lambdasym_vectors(irepl,2) = 1d0        !Recall that TS is contained in Hloc
+   enddo
+   if(mod(Nbath,2)==0)then
+      lambdasym_vectors(Nbath/2,1) = -1d-1    !Much needed small energies around
+      lambdasym_vectors(Nbath/2 + 1,1) = 1d-1 !the fermi level. (for even Nbath)
+   endif
    
    !SETUP BATH & SOLVER
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vectors)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))
@@ -568,7 +578,7 @@ contains
                unit = free_unit()
                foutput = "luttinger_site00"//str(ilat)//"_l"//str(iorb)//"_s"//str(ispin)//".dat"
                open(unit,file=foutput,action="write",position="rewind",status='unknown')
-               write(unit,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
+               write(unit,*) IL(ilat,ispin,iorb)
                close(unit)
             enddo
          enddo
@@ -587,14 +597,4 @@ contains
 
 
 end program cdn_hm_2dsquare
-
-
-
-
-
-
-
-
-
-
 

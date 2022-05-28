@@ -2,15 +2,15 @@
 ! PURPOSE: INITIALIZE INTERNAL Hreplica STRUCTURES
 !-------------------------------------------------------------------!
 
-   subroutine allocate_hreplica(N)
-      integer              :: N,isym
+   subroutine allocate_hreplica(Nsym)
+      integer              :: Nsym,isym
       !
-      allocate(hreplica_basis(N))
-      allocate(Hreplica_lambda(N))
-      do isym=1,N
-         allocate(hreplica_basis(isym)%O(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-         hreplica_basis(isym)%O=zero
-         Hreplica_lambda(isym)=0.d0
+      allocate(Hreplica_basis(Nsym))
+      allocate(Hreplica_lambda(Nbath,Nsym))
+      do isym=1,Nsym
+         allocate(Hreplica_basis(isym)%O(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+         Hreplica_basis(isym)%O=zero
+         Hreplica_lambda(:,isym)=zero
       enddo
    end subroutine allocate_hreplica
 
@@ -18,10 +18,11 @@
    subroutine deallocate_hreplica()
       integer              :: isym
       !
-      do isym=1,size(hreplica_basis)
-         deallocate(hreplica_basis(isym)%O)
+      do isym=1,size(Hreplica_basis)
+         deallocate(Hreplica_basis(isym)%O)
       enddo
-      deallocate(hreplica_basis)
+      deallocate(Hreplica_basis)
+      deallocate(Hreplica_lambda)
    end subroutine deallocate_hreplica
 
 
@@ -73,16 +74,16 @@
                         if((Hloc(ilat,jlat,ispin,jspin,iorb,jorb).ne.zero).and.(io.le.jo))then
                            if(DREAL(Hloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
                               counter=counter+1
-                              hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
-                              hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
-                              Hreplica_lambda(counter)=DREAL(Hloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                              Hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                              Hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                              Hreplica_lambda(:,counter)=DREAL(Hloc(ilat,jlat,ispin,ispin,iorb,jorb))
                            endif
                            !
                            if(DIMAG(Hloc(ilat,jlat,ispin,jspin,iorb,jorb)).ne.0.d0)then
                               counter=counter+1
-                              hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
-                              hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
-                              Hreplica_lambda(counter)=DIMAG(Hloc(ilat,jlat,ispin,ispin,iorb,jorb))
+                              Hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
+                              Hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
+                              Hreplica_lambda(:,counter)=DIMAG(Hloc(ilat,jlat,ispin,ispin,iorb,jorb))
                            endif
                         endif
                      enddo
@@ -137,16 +138,16 @@
                         if((Hloc(io,jo).ne.zero).and.(io.le.jo))then
                            if(DREAL(Hloc(io,jo)).ne.0.d0)then
                               counter=counter+1
-                              hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
-                              hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
-                              Hreplica_lambda(counter)=DREAL(Hloc(io,jo))
+                              Hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=one
+                              Hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=one
+                              Hreplica_lambda(:,counter)=DREAL(Hloc(io,jo))
                            endif
                            !
                            if(DIMAG(Hloc(io,jo)).ne.0.d0)then
                               counter=counter+1
-                              hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
-                              hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
-                              Hreplica_lambda(counter)=DIMAG(Hloc(io,jo))
+                              Hreplica_basis(counter)%O(ilat,jlat,ispin,jspin,iorb,jorb)=dcmplx(0.d0,1.d0)
+                              Hreplica_basis(counter)%O(jlat,ilat,ispin,jspin,jorb,iorb)=dcmplx(0.d0,1.d0)
+                              Hreplica_lambda(:,counter)=DIMAG(Hloc(io,jo))
                            endif
                         endif
                      enddo
@@ -159,24 +160,77 @@
 
 
 
-subroutine init_Hreplica_symmetries_site(Hvec,lambdavec)
-  complex(8),dimension(:,:,:,:,:,:,:) :: Hvec
-  real(8),dimension(:)                :: lambdavec
-  integer                             :: isym,N
+subroutine init_Hreplica_symmetries_site(Hvec,lambdavecs)
+  complex(8),dimension(:,:,:,:,:,:,:) :: Hvec       ![size(Hloc),Nsym]
+  real(8),dimension(:,:)              :: lambdavecs ![Nbath,Nsym]
+  integer                             :: isym,Nsym,ibath
   !
-  N=size(lambdavec)
-  call assert_shape(Hvec,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,N],"init_Hreplica_symmetries","Hvec")
+  if(size(lambdavecs(:,1))/=Nbath)then
+      write(*,*) "                                                                               "
+      write(*,*) "ERROR: if you are trying to init Hreplica for inequivalent clusters please note"
+      write(*,*) "       that the lambdasym array /MUST/ have [Nineq]x[Nbath]x[Nsym] shape.      "
+      write(*,*) "       The legacy [Nineq]x[Nsym] is not supported anymore, for it would shadow "
+      write(*,*) "       the new recommended [Nbath]x[Nsym] shape for the single cluster case.   "
+      write(*,*) "                                                                               "
+      stop ! This unfortunately still leaves room for nasty problems if Nbath==Nineq, but that's it...
+  else
+      Nsym=size(lambdavecs(Nbath,:))
+  endif
   !
-  call allocate_hreplica(N)
+  call assert_shape(Hvec,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nsym],"init_Hreplica_symmetries","Hvec")
   !
-  do isym=1,N
-     Hreplica_lambda(isym)  = lambdavec(isym)
-     Hreplica_basis(isym)%O = Hvec(:,:,:,:,:,:,isym)
+  call allocate_hreplica(Nsym)
+  !
+  do isym=1,Nsym
+     Hreplica_lambda(:,isym) = lambdavecs(:,isym)
+     Hreplica_basis(isym)%O  = Hvec(:,:,:,:,:,:,isym)
   enddo
   !
-  if(ed_verbose>2)call print_hloc(Hreplica_build(Hreplica_lambda))
+  if(ed_verbose>2)then
+   do ibath=1,Nbath
+      write(*,*) "Hreplica #"//str(ibath)//":"
+      call print_hloc(Hreplica_build(Hreplica_lambda(ibath,:)))
+   enddo
+  endif
+  !
 end subroutine init_Hreplica_symmetries_site
 
+subroutine init_Hreplica_symmetries_LEGACY(Hvec,lambdavec)
+   complex(8),dimension(:,:,:,:,:,:,:) :: Hvec      ![size(Hloc),Nsym]
+   real(8),dimension(:)                :: lambdavec ![Nsym]
+   integer                             :: isym,Nsym,ibath
+   !
+   Nsym=size(lambdavec)
+   call assert_shape(Hvec,[Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nsym],"init_Hreplica_symmetries","Hvec")
+   !
+   call allocate_hreplica(Nsym)
+   !
+   do isym=1,Nsym
+      do ibath=1,Nbath
+      !> BACK-COMPATIBILITY PATCH (cfr. init_dmft_bath in dmft_aux.f90)
+         Hreplica_lambda(ibath,isym) = lambdavec(isym)
+      enddo
+      Hreplica_basis(isym)%O = Hvec(:,:,:,:,:,:,isym)
+   enddo
+   !
+   ! PRINT DEPRECATION MESSAGE TO LOG
+   write(*,*) "                                                                               "
+   write(*,*) "WARNING: Passing a single lambdasym vector to ed_set_Hreplica is /deprecated/. "
+   write(*,*) "         You should instead define a different lambda for each bath component, "
+   write(*,*) "         namely passing a [Nbath]x[Nsym] array instead of a [Nsym] vector.     "
+   write(*,*) "         Your single lambda vector has been internally copied into the required"
+   write(*,*) "         higher-rank array, so giving each replica the same set of lambdas.    "
+   write(*,*) "         >>> This back-compatibility patch might be removed in a future update."
+   write(*,*) "                                                                               "
+   !
+   if(ed_verbose>2)then
+    do ibath=1,Nbath
+       write(*,*) "Hreplica #"//str(ibath)//":"
+       call print_hloc(Hreplica_build(Hreplica_lambda(ibath,:)))
+    enddo
+   endif
+   !
+ end subroutine init_Hreplica_symmetries_LEGACY
 
 !+-------------------------------------------------------------------+
 !PURPOSE  : Reconstruct H_replica from symmetry vector+matrices
@@ -184,14 +238,14 @@ end subroutine init_Hreplica_symmetries_site
 
 
  function Hreplica_build(lambdavec) result (H)
-    real(8),dimension(:)                                         :: lambdavec
+    real(8),dimension(:)                                         :: lambdavec ![Nsym]
     integer                                                      :: isym
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)        :: H
     !
-    if(size(lambdavec).ne.size(hreplica_basis)) STOP "H_from_sym: Wrong coefficient vector size"
+    if(size(lambdavec).ne.size(Hreplica_basis)) STOP "H_from_sym: Wrong coefficient vector size"
     H=zero
     do isym=1,size(lambdavec)
-       H=H+lambdavec(isym)*hreplica_basis(isym)%O
+       H=H+lambdavec(isym)*Hreplica_basis(isym)%O
     enddo
  end function Hreplica_build
 
@@ -211,7 +265,7 @@ function Hreplica_mask(wdiag,uplo) result(Hmask)
     wdiag_=.false.;if(present(wdiag))wdiag_=wdiag
     uplo_ =.false.;if(present(uplo))  uplo_=uplo
     !
-    Hloc = Hreplica_build(Hreplica_lambda)
+    Hloc = Hreplica_build(Hreplica_lambda(Nbath,:)) !The mask should be replica-independent
     Hmask=.false.
     where(abs(Hloc)>1d-6)Hmask=.true.
     !

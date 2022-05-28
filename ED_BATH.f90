@@ -1,6 +1,6 @@
 MODULE ED_BATH
   USE SF_CONSTANTS, only: zero
-  USE SF_IOTOOLS, only:free_unit,reg,file_length,txtfy
+  USE SF_IOTOOLS, only:free_unit,reg,file_length,str
   USE SF_LINALG, only: eye,inv,trace
   USE SF_MISC, only: assert_shape
   USE SF_ARRAYS, only: linspace
@@ -42,6 +42,7 @@ MODULE ED_BATH
      module procedure init_Hreplica_direct_lso
      module procedure init_Hreplica_direct_nnn
      module procedure init_Hreplica_symmetries_site
+     module procedure init_Hreplica_symmetries_LEGACY ! (deprecation-cycle)
 #if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure init_Hreplica_symmetries_lattice
 #endif
