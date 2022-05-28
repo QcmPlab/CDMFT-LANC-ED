@@ -4,19 +4,20 @@ A Lanczos based solver for the **Cluster** Dynamical Mean-Field Theory using the
 
 The code is based on:  
 
-* SciFortran [https://github.com/aamaricci/SciFortran](https://github.com/aamaricci/SciFortran)  
+* [SciFortran](https://github.com/QcmPlab/SciFortran)  
 
-* DMFT_Tools [https://github.com/aamaricci/DMFTtools](https://github.com/aamaricci/DMFTtools) [For the driver part, see below]
+* [DMFTtools](https://github.com/QcmPlab/DMFTtools)
 
 The code structure is as follow:  
 
 * The set of modules compile into a top layer named `CDMFT_ED.f90`  
 * The actual implementation of the DMFT equations is case by case performed in a driver program, usually placed in the directory `drivers`. 
-* In the driver code the user must includes the `CDMFT_ED` module and call the necessary procedures to solve the DMFT equations.
+* In the driver code the user must includes the `CDMFT_ED`, `SCIFOR` and `DMFT_TOOLS` modules and call the necessary procedures to solve the DMFT equations.
 
- The only bath type implemented to date is the 'replica' one, in which the bath consits of multiple copies of the original cluster hamiltonian. 
- The bath can be initialized in two ways: one can pass the hamiltonian of the cluster as a matrix or as a structure consisting of an array of bath parameters and an array of basis matrices coupling to each of the formers. This second way makes easier to adhere to the symmetries of the model.
- An example, solving the Hubbard model on the one-dimensional Hubbard chain, is contained in the file `drivers/cdn_hm_1dchain.f90`.
+ The only bath type implemented to date is the 'replica' one, in which the bath consits of multiple, noninteracting copies of the original interacting cluster. 
+ The bath can be initialized in two ways, through the unified `ed_set_Hreplica` interface: one can directly pass the local hamiltonian of the cluster (going with strict semantics for 'replicas') or a symmetry-informed expansion in the form $H^\mathrm{replica} = \sum \lambda^\mathrm{sym}H^\mathrm{sym}$, where the $H^\mathrm{sym}$ terms are arrays isomorphic with $H^\mathrm{loc}$, describing a well defined symmetry of the model, and the $\lambda^\mathrm{sym}$ coefficients are contained in a `([Nineq])x[Nbath]x[Nsym]`-sized array, so to allow each replica to have a different expansion on the same unique basis.    
+
+ > An example, solving the Hubbard model on the square lattice, is contained in the file `drivers/cdn_hm_2dsquare.f90`.
 
 ## DEVELOPMENT
 
@@ -36,14 +37,18 @@ The code structure is as follow:
 ### MILESTONE 3
 
 - [x] Add real-space CDMFT case for finite systems
-- [x] Test Kane-Mele model with real-space CDMFT
-- [x] Add cluster density matrix (CDM) computation
-- [x] Test and benchmark CDM computation
-- [x] Build smaller-rank reduced DMs from CDM
-- [x] Check local reduced DM against semi-analytical build (at least Norb=1 case) 
+- [ ] Test Kane-Mele model with real-space CDMFT
 - [ ] Test 3d BHZ model for non spin-coupling choices of cluster
 - [ ] Rewrite the code for the general spin-coupled case
 
+### MILESTONE 4
+
+- [x] Add cluster density matrix (CDM) computation
+- [x] Test and benchmark CDM computation
+- [x] Build smaller-rank reduced DMs from CDM
+- [x] Check _local_ RDM against semi-analytical build (Norb=1) 
+- [x] Replicate the single-site results in [Su, Dai,Tong 2013](https://doi.org/10.1142/S0217984913500346).
+- [ ] Replicate the 2x2 results in [C. Walsh et al. 2019](https://doi.org/10.1103/PhysRevLett.122.067203).
 
 --
 
