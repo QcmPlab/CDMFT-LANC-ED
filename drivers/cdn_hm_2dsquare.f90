@@ -27,7 +27,7 @@ program cdn_hm_2dsquare
    !Luttinger invariants:
    real(8),allocatable,dimension(:,:,:)                                   :: luttinger
    !SYMMETRY BASIS for BATH:
-   real(8),dimension(:,:),allocatable                                     :: lambdasym_vector
+   real(8),dimension(:,:),allocatable                                     :: lambdasym_vectors
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    !MPI VARIABLES (local use -> ED code has its own set of MPI variables)
    integer                                                                :: comm
@@ -62,9 +62,9 @@ program cdn_hm_2dsquare
 
    !Set global variables
    if(Nlat.NE.Nx*Ny)then
-      write(LOGfile,*) " "
+      write(LOGfile,*) "                                                   "
       write(LOGfile,*) "WARNING: Nlat ≠ Nx * Ny -> Nlat will be overwritten"
-      write(LOGfile,*) " "
+      write(LOGfile,*) "                                                   "
    endif
    Nlat=Nx*Ny
    Nso=Nspin*Norb
@@ -89,25 +89,25 @@ program cdn_hm_2dsquare
    !Build Hk and Hloc
    call generate_hk_hloc()
 
-   !Build Hsym_basis and lambdasym_vector
-   allocate(lambdasym_vector(Nbath,2))
+   !Build Hsym_basis and lambdasym_vectors
+   allocate(lambdasym_vectors(Nbath,2))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,2))
-   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Role homologue to "Ek"
-   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Role ~(dual)~  to "Vk"
+   Hsym_basis(:,:,:,:,:,:,1) = lso2nnn(zeye(Nlso)) !Replica onsite energies
+   Hsym_basis(:,:,:,:,:,:,2) = abs(lso2nnn(Hloc))  !Replica hopping amplitudes
    write(*,*) "HWBAND="//str(hwband)
    do irepl=1,Nbath
-      onsite = irepl - 1 - (Nbath-1)/2d0    ![-(Nbath-1)/2:(Nbath-1)/2]
-      onsite = onsite * 2*HWBAND/(Nbath-1)  !P-H symmetric band, -HWBAND:HWBAND
-      lambdasym_vector(irepl,1) = onsite    !Multiplies the suitable identity 
-      lambdasym_vector(irepl,2) = one       !Recall that TS is contained in Hloc
+      onsite = irepl - 1 - (Nbath-1)/2d0      ![-(Nbath-1)/2:(Nbath-1)/2]
+      onsite = onsite * 2*HWBAND/(Nbath-1)    !P-H symmetric band, -HWBAND:HWBAND
+      lambdasym_vectors(irepl,1) = onsite     !Multiplies the suitable identity 
+      lambdasym_vectors(irepl,2) = 1d0        !Recall that TS is contained in Hloc
    enddo
    if(mod(Nbath,2)==0)then
-      lambdasym_vector(Nbath/2,1) = -1.d-1     !Much needed small energies around
-      lambdasym_vector(Nbath/2 + 1,1) = 1.d-1  !the fermi level. (for even Nbath)
+      lambdasym_vectors(Nbath/2,1) = -1d-1    !Much needed small energies around
+      lambdasym_vectors(Nbath/2 + 1,1) = 1d-1 !the fermi level. (for even Nbath)
    endif
    
    !SETUP BATH & SOLVER
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vectors)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))

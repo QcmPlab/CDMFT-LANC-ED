@@ -26,7 +26,7 @@ program cdn_bhz_postprocessing_edge
    complex(8),allocatable                                                 :: wm(:)
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !SYMMETRIES TEST
-   real(8),dimension(:,:),allocatable                                     :: lambdasym_vector
+   real(8),dimension(:,:,:),allocatable                                   :: lambdasym_vectors
    complex(8),dimension(:,:,:,:,:,:,:),allocatable                        :: Hsym_basis
    character(len=6)                                                       :: scheme
    type(finter_type)                                                      :: finter_func
@@ -118,26 +118,26 @@ program cdn_bhz_postprocessing_edge
    enddo
    
    !SETUP SYMMETRIE
-   allocate(lambdasym_vector(Nineq,3))
+   allocate(lambdasym_vectors(Nineq,Nbath,3))
    allocate(Hsym_basis(Nlat,Nlat,Nspin,Nspin,Norb,Norb,3))
    !
    do icounter=1,Nineq
-    lambdasym_vector(icounter,1)=Mh
+    lambdasym_vectors(icounter,:,1)=Mh
    enddo
    Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(zeye(Nlso))
    !
    do icounter=1,Nineq
-    lambdasym_vector(icounter,2)=ts
+    lambdasym_vectors(icounter,:,2)=ts
    enddo
    Hsym_basis(:,:,:,:,:,:,2)=lso2nnn(zeye(Nlso))
    !
    do icounter=1,Nineq
-    lambdasym_vector(icounter,3)=lambda
+    lambdasym_vectors(icounter,:,3)=lambda
    enddo
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(zeye(Nlso))
    !
    !setup solver
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vectors)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nineq,Nb))
    allocate(bath_prev(Nineq,Nb))
