@@ -1,8 +1,8 @@
 MODULE ED_FIT_CHI2
   USE SF_CONSTANTS
   USE SF_OPTIMIZE, only:fmin_cg,fmin_cgminimize
-  USE SF_LINALG,   only:eye,zeye,inv,inv_her,trace,operator(.x.)
-  USE SF_IOTOOLS,  only:reg,free_unit,txtfy
+  USE SF_LINALG,   only:eye,zeye,inv,inv_her,trace,operator(.x.) !BLAS xgemm operator overloading
+  USE SF_IOTOOLS,  only:reg,free_unit,str
   USE SF_ARRAYS,   only:arange
   USE SF_MISC,     only:assert_shape 
   USE ED_INPUT_VARS
@@ -17,8 +17,8 @@ MODULE ED_FIT_CHI2
 
   interface ed_chi2_fitgf
      module procedure chi2_fitgf_generic_normal
+#if __GFORTRAN__ &&  __GNUC__ > 8  
      !RDMFT_WRAPPER
-#if __GFORTRAN__ &&  __GNUC__ > 8     
      module procedure chi2_fitgf_lattice_normal
 #endif
   end interface ed_chi2_fitgf
@@ -27,19 +27,20 @@ MODULE ED_FIT_CHI2
   public :: ed_chi2_fitgf
 
 
-  integer                                        :: Ldelta
-  complex(8),dimension(:,:,:,:,:,:,:),allocatable:: FGmatrix
-  complex(8),dimension(:,:),allocatable          :: Fdelta
-  real(8),dimension(:),allocatable               :: Xdelta,Wdelta
-  integer                                        :: totNorb,totNspin
-  integer,dimension(:),allocatable               :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
-  integer                                        :: Orb_indx,Spin_indx,Spin_mask
-  integer,dimension(:),allocatable               :: Nlambdas
+  integer                                               :: Ldelta
+  complex(8),dimension(:,:,:,:,:,:,:),allocatable       :: FGmatrix
+  logical(8),dimension(:,:,:,:,:,:),allocatable         :: Hmask
+  complex(8),dimension(:,:),allocatable                 :: Fdelta
+  real(8),dimension(:),allocatable                      :: Xdelta,Wdelta
+  integer                                               :: totNorb,totNspin
+  integer,dimension(:),allocatable                      :: getIorb,getJorb,getIspin,getJspin,getIlat,getJlat
+  integer                                               :: Orb_indx,Spin_indx,Spin_mask
+  integer,dimension(:),allocatable                      :: Nlambdas
   !location of the maximum of the chisquare over Nlso.
-  integer                                        :: maxchi_loc
+  integer                                               :: maxchi_loc
   !
   type nsymm_vector
-     real(8),dimension(:),allocatable    :: element          
+     real(8),dimension(:),allocatable                   :: element          
   end type nsymm_vector
   !
 
@@ -123,19 +124,26 @@ contains
 
 
   !+-------------------------------------------------------------+
-  !PURPOSE  : Chi^2 interface for
+  !PURPOSE  : Chi^2 interface for REPLICA BATH
   !+-------------------------------------------------------------+
   subroutine chi2_fitgf_replica(fg,bath_)
     complex(8),dimension(:,:,:,:,:,:,:)                   :: fg ![Nlat][Nlat][Nspin][Nspin][Norb][Norb][Lmats]
-    logical(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb) :: Hmask
     real(8),dimension(:),intent(inout)                    :: bath_
     real(8),dimension(:),allocatable                      :: array_bath
     integer                                               :: i,j,ilat,jlat,iorb,jorb,ispin,jspin,ibath,io,jo
     integer                                               :: iter,stride,counter,Asize
     real(8)                                               :: chi
     logical                                               :: check
+    logical                                               :: ed_all_g ! TO BE MOVED TO INPUT VARS (or pruned)
     character(len=256)                                    :: suffix
     integer                                               :: unit
+    !
+    if(size(fg,1)/=Nlat) stop "chi2_fitgf_replica error: size[fg,1]!=Nlat"
+    if(size(fg,2)/=Nlat) stop "chi2_fitgf_replica error: size[fg,2]!=Nlat"
+    if(size(fg,3)/=Nspin)stop "chi2_fitgf_replica error: size[fg,3]!=Nspin"
+    if(size(fg,4)/=Nspin)stop "chi2_fitgf_replica error: size[fg,4]!=Nspin"
+    if(size(fg,5)/=Norb) stop "chi2_fitgf_replica error: size[fg,5]!=Norb"
+    if(size(fg,6)/=Norb) stop "chi2_fitgf_replica error: size[fg,6]!=Norb"
     !
     check= check_bath_dimension(bath_)
     if(.not.check)stop "chi2_fitgf_replica error: wrong bath dimensions"
@@ -153,8 +161,8 @@ contains
     Ldelta = Lfit ; if(Ldelta>size(fg,7))Ldelta=size(fg,7)
     !
     !
-    !
     allocate(FGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta))
+    allocate(Hmask(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
     allocate(Xdelta(Ldelta))
     allocate(Wdelta(Ldelta))
     !
@@ -169,8 +177,26 @@ contains
        Wdelta=Xdelta
     end select
     !
+    !
+    !----------------------------------------------------------------------------------------
+    !BORROWED FROM LIB_DMFT_ED
+    !> https://github.com/QcmPlab/LIB_DMFT_ED/commit/0e5c272b45eda6b7ff652e2473b9ecda09e5ba8b
+    ed_all_g = .true. !(dummy, we assume ed_all_g always set here, for now)
+    if(ed_all_g)then
+      Hmask=.true.
+      ! Aren't we sure about hermiticity?
+      ! -> Hmask=Hreplica_mask(wdiag=.false.,uplo=.true.)
+    else
+      Hmask=Hreplica_mask(wdiag=.true.,uplo=.false.)
+    endif 
+    ! For now I'd say that we'd better dump everything inside the \chi^2, hence Hmask=.true.,
+    ! but we might want to consider exploiting hermiticity at least (probably not looking at
+    ! Hreplica though: who guarantees zeros therein imply zeros here?). Discussion needed...
+    !----------------------------------------------------------------------------------------
+    !
+    !
     FGmatrix = fg
-
+    !
     !
     select case(cg_method)     !0=NR-CG[default]; 1=CG-MINIMIZE
     case default
@@ -229,6 +255,12 @@ contains
        endif
        !
     case (1)
+       if(cg_grad==0)then
+         write(*,*) "                                                                                "
+         write(*,*) "WARNING: analytic gradient not available with cg-method=1 (minimize f77 routine)"
+         write(*,*) "         > we will force cg_grad=1 (so let the routine estimate the gradient)   "
+         write(*,*) "                                                                                "
+       endif
        select case (cg_scheme)
        case ("weiss")
           call fmin_cgminimize(array_bath,chi2_weiss_replica,&
@@ -263,13 +295,13 @@ contains
     close(unit)
     !
     bath_(Nbath+1:size(bath_))=array_bath
-    call set_dmft_bath(bath_)           ! *** bath_ --> dmft_bath ***    (per write fit result)
+    call set_dmft_bath(bath_)               ! *** bath_ --> dmft_bath ***    (per write fit result)
     call write_dmft_bath(LOGfile)
     call save_dmft_bath()
     !
     call write_fit_result()
     !
-    call get_dmft_bath(bath_)                ! ***  dmft_bath --> bath_ ***    (bath in output)
+    call get_dmft_bath(bath_)               ! ***  dmft_bath --> bath_ ***    (bath in output)
     call deallocate_dmft_bath()
     deallocate(FGmatrix,Xdelta,Wdelta)
     deallocate(array_bath)
@@ -292,12 +324,12 @@ contains
             do jspin=1,Nspin
               do iorb=1,Norb
                 do jorb=1,Norb
-                  suffix="_i"//reg(txtfy(ilat))//&
-                       "_j"//reg(txtfy(jlat))//&
-                       "_l"//reg(txtfy(iorb))//&
-                       "_m"//reg(txtfy(jorb))//&
-                       "_s"//reg(txtfy(ispin))//&
-                       "_r"//reg(txtfy(jspin))//reg(ed_file_suffix)
+                  suffix="_i"//reg(str(ilat))//&
+                       "_j"//reg(str(jlat))//&
+                       "_l"//reg(str(iorb))//&
+                       "_m"//reg(str(jorb))//&
+                       "_s"//reg(str(ispin))//&
+                       "_r"//reg(str(jspin))//reg(ed_file_suffix)
                   unit=free_unit()
                   if(cg_scheme=='weiss')then
                      open(unit,file="fit_weiss"//reg(suffix)//".ed")
@@ -322,20 +354,105 @@ contains
   end subroutine chi2_fitgf_replica
 
 
-  !##################################################################
-  ! THESE PROCEDURES EVALUATES THE \chi^2 FUNCTIONS TO MINIMIZE. 
-  !##################################################################
-  !+-------------------------------------------------------------+
-  !PURPOSE: Evaluate the \chi^2 distance of \Delta_Anderson function.
-  !+-------------------------------------------------------------+
 
+
+
+
+
+
+
+
+
+
+  !##################################################################
+  ! THESE PROCEDURES EVALUATE THE \chi^2 FUNCTIONS TO MINIMIZE. 
+  !##################################################################
+  !
+  !
+  !+-----------------------------------------------------------------+
+  !PURPOSE: Evaluate the \chi^2 distance of \Delta_Anderson function.
+  !+-----------------------------------------------------------------+
   function chi2_delta_replica(a) result(chi2)
+    real(8),dimension(:)                                         :: a
+    real(8)                                                      :: chi2
+    !
+    select case(cg_norm)
+    case ("elemental")
+      chi2 = chi2_delta_replica_elemental(a)
+    case ("frobenius")
+      chi2 = chi2_delta_replica_frobenius(a)
+    case default
+      stop "chi2_fitgf_replica error: cg_norm != [elemental,frobenius]"
+    end select
+    !
+  end function chi2_delta_replica
+  !
+  !
+  !> ELEMENTAL NORM: weighted sum over i\omega for each matrix element, then weighted sum over elements
+  function chi2_delta_replica_elemental(a) result(chi2)
+    real(8),dimension(:)                                          :: a
+    real(8)                                                       :: chi2
+    real(8),dimension(Ldelta)                                     :: chi2_freq
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)            :: chi2_mtrx,Wmat
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)  :: Delta
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG chi2_delta_replica_elemental. a:",a
+#endif
+    !
+    Delta = delta_replica(a)
+    !
+    do ilat=1,Nlat
+      do jlat=1,Nlat 
+        do ispin=1,Nspin 
+          do jspin=1,Nspin 
+            do iorb=1,Norb 
+              do jorb=1,Norb
+                  chi2_freq = abs(Delta(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta))
+                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta)
+                  select case(cg_matrix)
+                  case(0) !FLAT (all matrix elements weighted equal)
+                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 0.25d0 !needs to depend on the hopping I think (\Delta=t^2/4Gloc…)
+                  case(1) !SPECTRAL (normalization through A(iw), element by element)
+                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta 
+#ifdef _DEBUG
+                     if(ed_verbose>4)then
+                        print*, "ilat: "//str(ilat)//" ispin: "//str(ispin)//" iorb: "//str(iorb)
+                        print*, "jlat: "//str(jlat)//" jspin: "//str(jspin)//" jorb: "//str(jorb)
+                        print*, "> Wmat: ", Wmat(ilat,jlat,ispin,jspin,iorb,jorb)/0.25d0
+                     endif
+#endif
+                  end select
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+    !
+    chi2 = sum(chi2_mtrx / Wmat, Hmask) !Weighted sum over matrix elements
+    chi2 = chi2 / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
+    !
+#ifdef _DEBUG
+    if(ed_verbose>3)write(Logfile,"(A,ES10.2)")"DEBUG chi2_delta_replica_elemental. chi2:",chi2
+#endif
+    !
+  end function chi2_delta_replica_elemental
+  !
+  !
+  !> FROBENIUS NORM: global \chi^2 for all components, only i\omega are weighted
+  function chi2_delta_replica_frobenius(a) result(chi2)
     real(8),dimension(:)                                         :: a
     real(8)                                                      :: chi2
     real(8),dimension(Ldelta)                                    :: chi2_freq
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: Delta
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)        :: Delta_lso
     integer                                                      :: l
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG chi2_delta_replica_frobenius. a:",a
+#endif
     !
     Delta = delta_replica(a)
     !
@@ -344,16 +461,132 @@ contains
        chi2_freq(l) =  sqrt(trace(matmul(Delta_lso,conjg(transpose(Delta_lso)))))
     enddo
     !
-    chi2 =  sum( Chi2_freq**cg_pow/Wdelta )
-    chi2 =  chi2/Ldelta
+    chi2 = sum(chi2_freq**cg_pow/Wdelta) !Weighted sum over matsubara frqs
+    chi2 = chi2/Ldelta/(Nlat*Nspin*Norb) !Normalization over {iw} and Nlso
     !
-  end function chi2_delta_replica
+#ifdef _DEBUG
+    if(ed_verbose>3)write(Logfile,"(A,ES10.2)")"DEBUG chi2_delta_replica_frobenius. chi2:",chi2
+#endif
+    !
+  end function chi2_delta_replica_frobenius
+  !
+  !
+  !+-------------------------------------------------------------+
+  !PURPOSE: Evaluate the \chi^2 distance of G0_Anderson function. 
+  !+-------------------------------------------------------------+
+  function chi2_weiss_replica(a) result(chi2)
+    real(8),dimension(:)                                         :: a
+    real(8)                                                      :: chi2
+    !
+    select case(cg_norm)
+    case ("elemental")
+      chi2 = chi2_weiss_replica_elemental(a)
+    case ("frobenius")
+      chi2 = chi2_weiss_replica_frobenius(a)
+    case default
+      stop "chi2_fitgf_replica error: cg_norm != [elemental,frobenius]"
+    end select
+    !
+  end function chi2_weiss_replica
+  !
+  !
+  !> ELEMENTAL NORM: weighted sum over i\omega for each matrix element, then weighted sum over elements
+  function chi2_weiss_replica_elemental(a) result(chi2)
+    real(8),dimension(:)                                          :: a
+    real(8)                                                       :: chi2
+    real(8),dimension(Ldelta)                                     :: chi2_freq
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)            :: chi2_mtrx,Wmat
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)  :: g0and
+    integer                                                       :: ilat,jlat,iorb,jorb,ispin,jspin
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG chi2_weiss_replica_elemental. a:",a
+#endif
+    !
+    g0and = g0and_replica(a)
+    !
+    do ilat=1,Nlat
+      do jlat=1,Nlat 
+        do ispin=1,Nspin 
+          do jspin=1,Nspin 
+            do iorb=1,Norb 
+              do jorb=1,Norb
+                  chi2_freq = abs(g0and(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta))
+                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta)
+                  select case(cg_matrix)
+                  case(0) !FLAT (all matrix elements weighted equal)
+                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0
+                  case(1) !SPECTRAL (normalization through A(iw), element by element)
+                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta 
+#ifdef _DEBUG
+                     if(ed_verbose>4)then
+                        print*, "ilat: "//str(ilat)//"ispin: "//str(ispin)//"iorb: "//str(iorb)
+                        print*, "jlat: "//str(jlat)//"jspin: "//str(jspin)//"jorb: "//str(jorb)
+                        print*, "> Wmat = ", Wmat(ilat,jlat,ispin,jspin,iorb,jorb)
+                     endif
+#endif
+                  end select
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+    !
+    chi2 = sum(chi2_mtrx / Wmat, Hmask) !Weighted sum over matrix elements
+    chi2 = chi2 / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
+    !
+#ifdef _DEBUG
+    if(ed_verbose>3)write(Logfile,"(A,ES10.2)")"DEBUG chi2_weiss_replica_elemental. chi2:",chi2
+#endif
+    !
+   end function chi2_weiss_replica_elemental
+  !
+  !
+  !> FROBENIUS NORM: global \chi^2 for all components, only i\omega are weighted
+  function chi2_weiss_replica_frobenius(a) result(chi2)
+    real(8),dimension(:)                                         :: a
+    real(8)                                                      :: chi2
+    real(8),dimension(Ldelta)                                    :: chi2_freq
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: g0and
+    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)        :: Delta_lso
+    integer                                                      :: l
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG chi2_weiss_replica_frobenius. a:",a
+#endif
+    !
+    g0and = g0and_replica(a)
+    !
+    do l=1,Ldelta
+       Delta_lso    =  nnn2lso_reshape(g0and(:,:,:,:,:,:,l) - FGmatrix(:,:,:,:,:,:,l),Nlat,Nspin,Norb)
+       chi2_freq(l) =  sqrt(trace(matmul(Delta_lso,conjg(transpose(Delta_lso)))))
+    enddo
+    !
+    chi2 = sum(chi2_freq**cg_pow/Wdelta) !Weighted sum over matsubara frqs
+    chi2 = chi2/Ldelta/(Nlat*Nspin*Norb) !Normalization over {iw} and Nlso
+    !
+#ifdef _DEBUG
+    if(ed_verbose>3)write(Logfile,"(A,ES10.2)")"DEBUG chi2_weiss_replica_frobenius. chi2:",chi2
+#endif
+    !
+  end function chi2_weiss_replica_frobenius
 
+  
+
+
+
+
+
+  !######################################################################
+  ! THESE PROCEDURES EVALUATE THE >GRADIENTS< OF THE \chi^2 TO MINIMIZE. 
+  !######################################################################
+  !
+  !
 #if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
-  !+-------------------------------------------------------------+
-  !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
-  ! \Delta_Anderson function.
-  !+-------------------------------------------------------------+
+  !+----------------------------------------------------------------------+
+  !PURPOSE: Evaluate the gradient \Grad\chi^2 of \Delta_Anderson function.
+  !+----------------------------------------------------------------------+
   function grad_chi2_delta_replica(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
@@ -395,42 +628,14 @@ contains
       dchi_freq(idelta,:) = Ftmp(idelta)*df(idelta,:)
     enddo
     !
-    dchi2 = sum(dchi_freq,1)/Ldelta
+    dchi2 = sum(dchi_freq,1)/Ldelta/(Nlat*Nspin*Norb)
     !
   end function grad_chi2_delta_replica
-#endif
-
-  !+-------------------------------------------------------------+
-  !PURPOSE: Evaluate the \chi^2 distance of G_0_Anderson function 
-  ! The Gradient is not evaluated, so the minimization requires 
-  ! a numerical estimate of the gradient. 
-  !+-------------------------------------------------------------+
-  function chi2_weiss_replica(a) result(chi2)
-    real(8),dimension(:)                                         :: a
-    real(8)                                                      :: chi2
-    real(8),dimension(Ldelta)                                    :: chi2_freq
-    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: g0and
-    complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)        :: Delta_lso
-    integer                                                      :: l
-    !
-    g0and = g0and_replica(a)
-    !
-    do l=1,Ldelta
-       Delta_lso    =  nnn2lso_reshape(g0and(:,:,:,:,:,:,l) - FGmatrix(:,:,:,:,:,:,l),Nlat,Nspin,Norb)
-       chi2_freq(l) =  sqrt(trace(matmul(Delta_lso,conjg(transpose(Delta_lso)))))
-    enddo
-    !
-    chi2 =  sum( Chi2_freq**cg_pow/Wdelta )
-    chi2 =  chi2/Ldelta
-    !
-  end function chi2_weiss_replica
-  
-
-#if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
-  !+-------------------------------------------------------------+
-  !PURPOSE: Evaluate the gradient \Grad\chi^2 of 
-  ! \Delta_Anderson function.
-  !+-------------------------------------------------------------+
+  !
+  !
+  !+------------------------------------------------------------------+
+  !PURPOSE: Evaluate the gradient \Grad\chi^2 of G0_Anderson function.
+  !+------------------------------------------------------------------+
   function grad_chi2_weiss_replica(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
@@ -440,6 +645,16 @@ contains
     complex(8),dimension(Ldelta)                                         :: Ftmp
     real(8),dimension(Ldelta,size(a))                                    :: dChi_freq
     integer                                                              :: i,j,idelta,ilat,jlat,iorb,jorb,ispin,jspin
+    !
+    !
+    print*, "                                                                     "
+    print*, "WARNING: the analytic gradient of the Weiss field Frobenius distance "
+    print*, "         has been found giving /QUALITATIVELY WRONG/ fitted spectra! "
+    print*, "         > the issue has emerged in some Nlat=Nspin=Norb=1 test runs "
+    print*, "         > while the bug is investigated please switch cg_scheme to  "
+    print*, "           'delta' or cg_norm to 'elemental' (or give up analytic cg)"
+    print*, "                                                                     "
+    !
     !
     g0and  = g0and_replica(a)
     dg0and = grad_g0and_replica(a)
@@ -472,16 +687,26 @@ contains
       dchi_freq(idelta,:)=Ftmp(idelta)*df(idelta,:)
     enddo
     !
-    dchi2 = sum(dchi_freq,1)/Ldelta
+    dchi2 = sum(dchi_freq,1)/Ldelta/(Nlat*Nspin*Norb)
     !
   end function grad_chi2_weiss_replica
 #endif
 
-!##################################################################
-  ! THESE PROCEDURES EVALUATE THE 
-  ! - \delta
-  ! - g0
-  ! FUNCTIONS. 
+
+
+
+
+
+
+
+
+
+
+
+  !##################################################################
+  ! THESE PROCEDURES EVALUATE THE ANDERSON FUNCTIONS:
+  ! - \Delta (hybridization)
+  ! - g0     (weiss field)
   !##################################################################
   function delta_replica(a) result(Delta)
     real(8),dimension(:)                                          :: a
@@ -527,7 +752,7 @@ contains
     enddo
     !
   end function delta_replica
-
+  !
   function g0and_replica(a) result(G0and)
     real(8),dimension(:)                                         :: a
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta) :: G0and,Delta
@@ -547,15 +772,18 @@ contains
     enddo
     !
   end function g0and_replica
-
+  !
+  !
+  !
+  !
+  !
+  !
 #if __GNUC__ >= 8 || __INTEL_COMPILER >= 1500
   !##################################################################
-  ! THESE PROCEDURES EVALUATE GRADIENT OF THE 
-  ! - \delta
-  ! - g0
-  ! FUNCTIONS. 
+  ! THESE PROCEDURES EVALUATE THE GRADIENT OF ANDERSON FUNCTIONS:
+  ! - \Delta (hybridization)
+  ! - g0     (weiss field)
   !##################################################################
-
   function grad_delta_replica(a) result(dDelta)
     real(8),dimension(:)                                                 :: a
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dDelta
@@ -623,8 +851,8 @@ contains
       if(allocated(dummy_lambda(ibath)%element))deallocate(dummy_lambda(ibath)%element)
     enddo
   end function grad_delta_replica
-
-
+  !
+  !
   function grad_g0and_replica(a) result(dG0and)
     real(8),dimension(:)                                                 :: a
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a)) :: dG0and,dDelta
