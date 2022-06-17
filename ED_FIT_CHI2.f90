@@ -410,10 +410,10 @@ contains
             do iorb=1,Norb 
               do jorb=1,Norb
                   chi2_freq = abs(Delta(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta))
-                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta)
+                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta) !Weighted sum over matsubara frqs
                   select case(cg_matrix)
                   case(0) !FLAT (all matrix elements weighted equal)
-                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 0.25d0 !needs to depend on the hopping I think (\Delta=t^2/4Gloc…)
+                     Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0!0.25d0 !needs to depend on the hopping I think (\Delta=(D/2)^2*Gloc…)
                   case(1) !SPECTRAL (normalization through A(iw), element by element)
                      Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta 
 #ifdef _DEBUG
@@ -512,7 +512,7 @@ contains
             do iorb=1,Norb 
               do jorb=1,Norb
                   chi2_freq = abs(g0and(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta))
-                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta)
+                  chi2_mtrx(ilat,jlat,ispin,jspin,iorb,jorb) = sum(chi2_freq**cg_pow/Wdelta) !Weighted sum over matsubara frqs
                   select case(cg_matrix)
                   case(0) !FLAT (all matrix elements weighted equal)
                      Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0
@@ -588,6 +588,80 @@ contains
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of \Delta_Anderson function.
   !+----------------------------------------------------------------------+
   function grad_chi2_delta_replica(a) result(dchi2)
+    real(8),dimension(:)                                         :: a
+    real(8),dimension(size(a))                                   :: dchi2
+    !
+    select case(cg_norm)
+    case ("elemental")
+      dchi2 = grad_chi2_delta_replica_elemental(a)
+    case ("frobenius")
+      dchi2 = grad_chi2_delta_replica_frobenius(a)
+    case default
+      stop "chi2_fitgf_replica error: cg_norm != [elemental,frobenius]"
+    end select
+    !
+  end function grad_chi2_delta_replica
+  !
+  !
+  !> ELEMENTAL NORM: weighted sum over i\omega for each matrix element, then weighted sum over elements
+  function grad_chi2_delta_replica_elemental(a) result(dchi2)
+    real(8),dimension(:)                                                  :: a
+    real(8),dimension(size(a))                                            :: dchi2
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(a))            :: df
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                    :: Wmat
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)          :: Delta
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a))  :: dDelta
+    complex(8),dimension(Ldelta)                                          :: Ftmp
+    real(8),dimension(Ldelta)                                             :: Ctmp
+    integer                                                               :: ia,ilat,jlat,iorb,jorb,ispin,jspin
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_delta_replica_elemental. a:",a
+#endif
+    !
+    Delta  = delta_replica(a)
+    dDelta = grad_delta_replica(a)
+    !
+    do ilat=1,Nlat
+      do jlat=1,Nlat 
+        do ispin=1,Nspin 
+          do jspin=1,Nspin 
+            do iorb=1,Norb 
+              do jorb=1,Norb
+                Ftmp = delta(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta)
+                Ctmp = abs(Ftmp)**(cg_pow-2)
+                do ia = 1,size(a)
+                  df(ilat,jlat,ispin,jspin,iorb,jorb,ia) = & !Weighted sum over matsubara frqs
+                      sum( dreal(Ftmp) * dreal(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,ia)) * Ctmp/Wdelta ) + &
+                      sum( dimag(Ftmp) * dimag(dDelta(ilat,jlat,ispin,jspin,iorb,jorb,:,ia)) * Ctmp/Wdelta )
+                enddo
+                select case(cg_matrix)
+                case(0) !FLAT (all matrix elements weighted equal)
+                  Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0!0.25d0 !needs to depend on the hopping I think (\Delta=(D/2)^2*Gloc…)
+                case(1) !SPECTRAL (normalization through A(iw), element by element)
+                  Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta 
+                end select
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+    !   
+    do ia=1,size(a)
+      dchi2(ia) = - cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
+      dchi2(ia) = dchi2(ia) / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
+    enddo
+    !
+#ifdef _DEBUG
+    if(ed_verbose>4)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_delta_replica_elemental. dChi2:",dchi2
+#endif
+    !
+  end function grad_chi2_delta_replica_elemental
+  !
+  !
+  !> FROBENIUS NORM: global \chi^2 for all components, only i\omega are weighted
+  function grad_chi2_delta_replica_frobenius(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
     real(8),dimension(Ldelta,size(a))                                    :: df
@@ -624,19 +698,97 @@ contains
           enddo
         enddo
       enddo
-      Ftmp(idelta) = cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
-      dchi_freq(idelta,:) = Ftmp(idelta)*df(idelta,:)
+      Ftmp(idelta) = cg_pow * (sqrt(Ftmp(idelta))**(cg_pow-2)) / Wdelta(idelta)
+      dchi_freq(idelta,:) = Ftmp(idelta) * df(idelta,:)
     enddo
     !
     dchi2 = sum(dchi_freq,1)/Ldelta/(Nlat*Nspin*Norb)
     !
-  end function grad_chi2_delta_replica
+#ifdef _DEBUG
+    if(ed_verbose>4)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_delta_replica_frobenius. dChi2:",dchi2
+#endif
+    !
+  end function grad_chi2_delta_replica_frobenius
   !
   !
   !+------------------------------------------------------------------+
   !PURPOSE: Evaluate the gradient \Grad\chi^2 of G0_Anderson function.
   !+------------------------------------------------------------------+
   function grad_chi2_weiss_replica(a) result(dchi2)
+    real(8),dimension(:)                                         :: a
+    real(8),dimension(size(a))                                   :: dchi2
+    !
+    select case(cg_norm)
+    case ("elemental")
+      dchi2 = grad_chi2_weiss_replica_elemental(a)
+    case ("frobenius")
+      dchi2 = grad_chi2_weiss_replica_frobenius(a)
+    case default
+      stop "chi2_fitgf_replica error: cg_norm != [elemental,frobenius]"
+    end select
+    !
+  end function grad_chi2_weiss_replica
+  !
+  !
+  !> ELEMENTAL NORM: weighted sum over i\omega for each matrix element, then weighted sum over elements
+  function grad_chi2_weiss_replica_elemental(a) result(dchi2)
+    real(8),dimension(:)                                                  :: a
+    real(8),dimension(size(a))                                            :: dchi2
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(a))            :: df
+    real(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)                    :: Wmat
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)          :: g0and
+    complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta,size(a))  :: dg0and
+    complex(8),dimension(Ldelta)                                          :: Ftmp
+    real(8),dimension(Ldelta)                                             :: Ctmp
+    integer                                                               :: ia,ilat,jlat,iorb,jorb,ispin,jspin
+    !
+#ifdef _DEBUG
+    if(ed_verbose>5)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_weiss_replica_elemental. a:",a
+#endif
+    !
+    g0and  = g0and_replica(a)
+    dg0and = grad_g0and_replica(a)
+    !
+    do ilat=1,Nlat
+      do jlat=1,Nlat 
+        do ispin=1,Nspin 
+          do jspin=1,Nspin 
+            do iorb=1,Norb 
+              do jorb=1,Norb
+                Ftmp = g0and(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Ldelta)
+                Ctmp = abs(Ftmp)**(cg_pow-2)
+                do ia = 1,size(a)
+                  df(ilat,jlat,ispin,jspin,iorb,jorb,ia) = & !Weighted sum over matsubara frqs
+                      sum( dreal(Ftmp) * dreal(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,ia)) * Ctmp/Wdelta ) + &
+                      sum( dimag(Ftmp) * dimag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,:,ia)) * Ctmp/Wdelta )
+                enddo
+                select case(cg_matrix)
+                case(0) !FLAT (all matrix elements weighted equal)
+                  Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0
+                case(1) !SPECTRAL (normalization through A(iw), element by element)
+                  Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta 
+                end select
+              enddo
+            enddo
+          enddo
+        enddo
+      enddo
+    enddo
+    !   
+    do ia=1,size(a)
+      dchi2(ia) = - cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
+      dchi2(ia) = dchi2(ia) / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
+    enddo
+    !
+#ifdef _DEBUG
+    if(ed_verbose>4)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_weiss_replica_elemental. dChi2:",dchi2
+#endif
+    !
+  end function grad_chi2_weiss_replica_elemental
+  !
+  !
+  !> FROBENIUS NORM: global \chi^2 for all components, only i\omega are weighted
+  function grad_chi2_weiss_replica_frobenius(a) result(dchi2)
     real(8),dimension(:)                                                 :: a
     real(8),dimension(size(a))                                           :: dchi2
     real(8),dimension(Ldelta,size(a))                                    :: df
@@ -683,13 +835,17 @@ contains
           enddo
         enddo
       enddo
-      Ftmp(idelta)=cg_pow*(sqrt(Ftmp(idelta))**(cg_pow-2))/Wdelta(idelta)
-      dchi_freq(idelta,:)=Ftmp(idelta)*df(idelta,:)
+      Ftmp(idelta) = cg_pow * (sqrt(Ftmp(idelta))**(cg_pow-2)) / Wdelta(idelta)
+      dchi_freq(idelta,:) = Ftmp(idelta) * df(idelta,:)
     enddo
     !
     dchi2 = sum(dchi_freq,1)/Ldelta/(Nlat*Nspin*Norb)
     !
-  end function grad_chi2_weiss_replica
+#ifdef _DEBUG
+    if(ed_verbose>4)write(Logfile,"(A,"//str(size(a))//"ES10.2)")"DEBUG grad_chi2_weiss_replica_frobenius. dChi2:",dchi2
+#endif
+    !
+  end function grad_chi2_weiss_replica_frobenius
 #endif
 
 
