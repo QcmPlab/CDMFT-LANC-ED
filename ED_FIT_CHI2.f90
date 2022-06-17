@@ -649,7 +649,7 @@ contains
     enddo
     !   
     do ia=1,size(a)
-      dchi2(ia) = - cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
+      dchi2(ia) = + cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
       dchi2(ia) = dchi2(ia) / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
     enddo
     !
@@ -776,7 +776,7 @@ contains
     enddo
     !   
     do ia=1,size(a)
-      dchi2(ia) = - cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
+      dchi2(ia) = + cg_pow * sum( df(:,:,:,:,:,:,ia) / Wmat, Hmask) !Weighted sum over matrix elements
       dchi2(ia) = dchi2(ia) / Ldelta / count(Hmask) !Normalization over {iw} and Hmask
     enddo
     !
@@ -824,9 +824,9 @@ contains
                   Ftmp(idelta) = Ftmp(idelta) + abs(g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)-FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta))**2
                   do j=1,size(a)
                      df(idelta,j) = df(idelta,j) + &
-                                    real(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    real(g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
                                     real(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j)) + &
-                                    imag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
+                                    imag(g0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta) - FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,idelta)) * &
                                     imag(dg0and(ilat,jlat,ispin,jspin,iorb,jorb,idelta,j))
                   enddo
                 enddo
@@ -948,7 +948,7 @@ contains
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb)                :: H_reconstructed, Htmp,Hbasis_lso
     complex(8),dimension(Nlat*Nspin*Norb,Nlat*Nspin*Norb,Ldelta)         :: Haux
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Ldelta)         :: invH_knn
-    real(8),dimension(1,Nbath)                                           :: dummy_Vbath !FIXME: TO EXTEND: 1->NSPIN
+    real(8),dimension(1,Nbath)                                           :: dummy_Vbath !TODO) to extend to Vup != Vdw: 1->NSPIN
     type(nsymm_vector),dimension(Nbath)                                  :: dummy_lambda
     !
     !
@@ -958,11 +958,11 @@ contains
        if(allocated(dummy_lambda(ibath)%element))deallocate(dummy_lambda(ibath)%element)
        allocate(dummy_lambda(ibath)%element(Nlambdas(ibath)))
        !
-       ! TODO: to extend to Vup != Vdw uncomment Nspin and 1->NSPIN
-       !do ispin=1,Nspin
        counter = counter + 1
-       dummy_vbath(1,ibath) = a(counter)
-       !enddo
+       do ispin=1,Nspin
+        dummy_vbath(1,ibath) = a(counter)
+        !           ^ TODO) to extend to Vup != Vdw: 1->NSPIN
+       enddo
        !
        dummy_lambda(ibath)%element=a(counter+1:counter+Nlambdas(ibath))
        counter=counter+Nlambdas(ibath)
@@ -979,22 +979,13 @@ contains
           invH_knn(:,:,:,:,:,:,l) = lso2nnn_reshape(Haux(:,:,l),Nlat,Nspin,Norb)
        enddo
        !Derivate_Vp
-       counter=counter+1 !  TODO: to extend to Vup != Vdw, remove this and uncomment the one below 
+       counter=counter+1 
        do ispin=1,Nspin
-          !counter = counter + 1  TODO: to extend to Vup != Vdw, uncomment this
-          do ilat=1,Nlat
-             do jlat=1,Nlat
-                do iorb=1,Norb
-                   do jorb=1,Norb
-                      ! TODO: to extend to Vup != Vdw, 1->ISPIN
-                      dDelta(ilat,jlat,ispin,ispin,iorb,jorb,:,counter)=2d0*dummy_Vbath(1,ibath)*invH_knn(ilat,jlat,ispin,ispin,iorb,jorb,:)
-                   enddo
-                enddo
-             enddo
-          enddo
+        dDelta(:,:,ispin,ispin,:,:,:,counter)=2d0*dummy_Vbath(1,ibath)*invH_knn(:,:,ispin,ispin,:,:,:) 
+        !                                                     ^ TODO) to extend to Vup != Vdw: 1->ispin
        enddo
        !Derivate_lambda_p
-       do k=1,size(dummy_lambda(ibath)%element)
+       do k=1,Nlambdas(ibath)
           counter = counter + 1
           Hbasis_lso=nnn2lso_reshape(Hreplica_basis(k)%O,Nlat,Nspin,Norb)
           do l=1,Ldelta
@@ -1003,9 +994,11 @@ contains
           enddo
        enddo
     enddo
+    !
     do ibath=1,Nbath
       if(allocated(dummy_lambda(ibath)%element))deallocate(dummy_lambda(ibath)%element)
     enddo
+    !
   end function grad_delta_replica
   !
   !
