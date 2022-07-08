@@ -164,7 +164,7 @@ contains
     integer                                                      :: N,ispin
     real(8),dimension(:)                                         :: kpoint
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb)        :: hopping_matrix
-    complex(8),dimension(N,N)                                    :: hk,hktest
+    complex(8),dimension(N,N)                                    :: hk!,hktest
     !
     hopping_matrix=zero
     !
@@ -223,9 +223,9 @@ contains
     !
     Hk=nnn2lso(hopping_matrix)+hloc_model(N,ts)
     !
-    hktest=conjg(transpose(Hk))-Hk
-    if(any(abs(Real(hktest)).ge.0.00001))STOP "Not Hermitian (Re)"
-    if(any(abs(Imag(hktest)).ge.0.00001))STOP "Not Hermitian (Im)"
+    !hktest=conjg(transpose(Hk))-Hk
+    !if(any(abs(Real(hktest)).ge.0.00001))STOP "Not Hermitian (Re)"
+    !if(any(abs(Imag(hktest)).ge.0.00001))STOP "Not Hermitian (Im)"
     !
   end function hk_model
   
@@ -237,6 +237,8 @@ contains
     real(8),dimension(Nk**3,3)                  :: kgrid
     real(8),dimension(3)                        :: e1,e2,e3,bk1,bk2,bk3
     real(8)                                     :: bklen
+    !integer                                     :: il,jl,is,js,io,jo
+    !complex(8),allocatable                      :: htest(:,:),htest_nnn(:,:,:,:,:,:)
     !
     e1 = [2d0, 0d0, 0d0]
     e2 = [0d0, 1d0, 0d0]
@@ -245,11 +247,10 @@ contains
     bklen=2d0*pi
     bk1=bklen*[0.5d0, 0d0, 0d0]
     bk2=bklen*[0d0, 1d0, 0d0]
-    bk2=bklen*[0d0, 0d0, 1d0]
+    bk3=bklen*[0d0, 0d0, 1d0]
     call TB_set_bk(bkx=bk1,bky=bk2,bkz=bk3)
     !
     call TB_build_kgrid([Nk,Nk,Nk],kgrid)
-    kgrid(:,1)=kgrid(:,1)/Nx
     !
     if(allocated(hk))deallocate(hk)
     if(allocated(hloc))deallocate(Hloc)
@@ -260,6 +261,23 @@ contains
     !
     call TB_build_model(Hk,hk_model,Nlso,kgrid)
     Hloc=hloc_model(Nlso,ts)
+    !
+    !allocate(htest(Nlso,Nlso))
+    !allocate(htest_nnn(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
+    !htest=sum(Hk(:,:,:),dim=3)/(Nk**3) - hloc
+    !htest_nnn=lso2nnn(htest)
+    !
+    !do il=1,Nlat
+    !  do jl=1,Nlat
+    !    do io=1,Norb
+    !     do jo=1,Norb
+    !            print*,il,jl,io,jo
+    !            print*,real(htest_nnn(il,jl,1,1,io,jo))," +i",imag(htest_nnn(il,jl,1,1,io,jo))
+    !      enddo
+    !    enddo
+    !  enddo
+    !enddo
+    !STOP
     !
   end subroutine generate_hk_hloc
   
