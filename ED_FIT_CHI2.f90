@@ -303,7 +303,7 @@ contains
       !
       call get_dmft_bath(bath_)               ! ***  dmft_bath --> bath_ ***    (bath in output)
       call deallocate_dmft_bath()
-      deallocate(FGmatrix,Xdelta,Wdelta)
+      deallocate(FGmatrix,Hmask,Xdelta,Wdelta)
       deallocate(array_bath)
       !
    contains
