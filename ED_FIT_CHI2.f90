@@ -415,7 +415,7 @@ contains
                          case(0) !FLAT (all matrix elements weighted equal)
                            Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0!0.25d0 !needs to depend on the hopping I think (\Delta=(D/2)^2*Gloc…)
                          case(1) !SPECTRAL (normalization through A(iw), element by element)
-                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
+                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = abs(sum(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
 #ifdef _DEBUG
                            if(ed_verbose>4)then
                               print*, "ilat: "//str(ilat)//" ispin: "//str(ispin)//" iorb: "//str(iorb)
@@ -517,7 +517,7 @@ contains
                          case(0) !FLAT (all matrix elements weighted equal)
                            Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0
                          case(1) !SPECTRAL (normalization through A(iw), element by element)
-                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
+                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = abs(sum(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
 #ifdef _DEBUG
                            if(ed_verbose>4)then
                               print*, "ilat: "//str(ilat)//"ispin: "//str(ispin)//"iorb: "//str(iorb)
@@ -639,7 +639,7 @@ contains
                          case(0) !FLAT (all matrix elements weighted equal)
                            Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0!0.25d0 !needs to depend on the hopping I think (\Delta=(D/2)^2*Gloc…)
                          case(1) !SPECTRAL (normalization through A(iw), element by element)
-                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
+                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = abs(sum(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
                         end select
                      enddo
                   enddo
@@ -766,7 +766,7 @@ contains
                          case(0) !FLAT (all matrix elements weighted equal)
                            Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = 1d0
                          case(1) !SPECTRAL (normalization through A(iw), element by element)
-                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = -sum(dimag(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
+                           Wmat(ilat,jlat,ispin,jspin,iorb,jorb) = abs(sum(FGmatrix(ilat,jlat,ispin,jspin,iorb,jorb,1:Lmats)))/beta
                         end select
                      enddo
                   enddo
