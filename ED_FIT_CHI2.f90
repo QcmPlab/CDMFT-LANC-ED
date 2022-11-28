@@ -134,7 +134,6 @@ contains
       integer                                               :: iter,stride,counter,Asize
       real(8)                                               :: chi
       logical                                               :: check
-      logical                                               :: ed_all_g ! TO BE MOVED TO INPUT VARS (or pruned)
       character(len=256)                                    :: suffix
       integer                                               :: unit
       !
@@ -179,16 +178,17 @@ contains
       !
       !
       !----------------------------------------------------------------------------------------
-      !BORROWED FROM LIB_DMFT_ED
-      !> https://github.com/QcmPlab/LIB_DMFT_ED/commit/0e5c272b45eda6b7ff652e2473b9ecda09e5ba8b
-      ed_all_g = .true. !(dummy, we assume ed_all_g always set here, for now)
-      if(ed_all_g)then
-         Hmask=.true.
-         ! Aren't we sure about hermiticity?
-         ! -> Hmask=Hreplica_mask(wdiag=.false.,uplo=.true.)
-      else
-         Hmask=Hreplica_mask(wdiag=.true.,uplo=.false.)
-      endif
+      !POSSIBLY TO BE USED AT SOME POINT (but beware that is meaningless for `FROBENIUS` norm)
+      Hmask=.true.
+      ! Aren't we sure about FG_ij = FG_ji, coming from Hreplica being hermitian?
+      !
+      ! -> Hmask=Hreplica_mask(wdiag=.false.,uplo=.true.) NO, this does more than
+      !    that, putting .FALSE. where Hreplica is zero, which may lead to tricky
+      !    wrong fits: I have data showing this for a trimer, where at ~ 6.30d-10 
+      !    dmft error, hence a very well converged point, we have a nonnegligible
+      !    Im(Weiss) component for ilat=1, jlat=3, despite Hmask(1,3) = Hmask(3,1) 
+      !    would result .FALSE. if computed with the Hreplica_mask call above.
+      !
       ! For now I'd say that we'd better dump everything inside the \chi^2, hence Hmask=.true.,
       ! but we might want to consider exploiting hermiticity at least (probably not looking at
       ! Hreplica though: who guarantees zeros therein imply zeros here?). Discussion needed...
