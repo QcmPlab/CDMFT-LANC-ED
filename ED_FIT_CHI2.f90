@@ -897,7 +897,7 @@ contains
          do ibath=1,Nbath
             invH_knnn  = Hreplica_build(dummy_lambda(ibath)%element)
             Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
-            call inv(Haux) !GUARDA MAIL: FORSE BASTA INVERTIRE UNA VOLTA -> U(iwI-D)U†
+            call inv(Haux)
             invH_knnn = lso2nnn_reshape(Haux,Nlat,Nspin,Norb)
             Delta(:,:,:,:,:,:,i)=Delta(:,:,:,:,:,:,i)+ dummy_Vbath(ibath)*invH_knnn(:,:,:,:,:,:)*dummy_Vbath(ibath)
          enddo
