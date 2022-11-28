@@ -486,7 +486,7 @@ contains
       foutput = "probabilities_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>1) write(LOGfile,"(90(F15.5,1X))") abs(pure_prob(iii))
+         if(ed_verbose>1) write(LOGfile,"(*(F20.16,1X))") abs(pure_prob(iii))
          write(unit,*) abs(pure_prob(iii)) !Machine zero could be negative.
       enddo
       close(unit)
@@ -496,7 +496,7 @@ contains
       foutput = "pure-states_"//str(Nsites)//"sites"//".dat"
       open(unit,file=foutput,action="write",position="rewind",status='unknown')
       do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>3) write(LOGfile,"(90(F15.5,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
+         if(ed_verbose>3) write(LOGfile,"(*(F20.16,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
          write(unit,*) (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb)) !Our states should be real.
       enddo
       close(unit)
@@ -524,7 +524,7 @@ contains
          p = abs(pure_prob(iii)) !Machine zero could be negative.
          entropy = entropy - p*log(p)/log(2d0)
       enddo
-      if(ed_verbose>0) write(LOGfile,"(90(F15.5,1X))") entropy
+      if(ed_verbose>0) write(LOGfile,"(*(F20.16,1X))") entropy
       write(append_unit,*) entropy
       write(rewind_unit,*) entropy
       close(append_unit)
