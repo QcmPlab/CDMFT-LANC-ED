@@ -947,9 +947,13 @@ contains
 
   !+------------------------------------------------------------------+
   ! Reorder a binary decomposition so to have a state of the form:
-  ! default: |(1:Norb),([1:Nbath]_1, [1:Nbath]_2, ... ,[1:Nbath]_Norb)>_spin
-  ! hybrid:  |(1:Norb),([1:Nbath])>_spin
+  !
+  ! BATH_TYPE: |binary layout of the spin states>_spin
+  !
+  ! normal:  |(1:Norb),([1:Nbath]_1, [1:Nbath]_2, ... ,[1:Nbath]_Norb)>_spin !> NOT IMPLEMENTED HERE <!
+  ! hybrid:  |(1:Norb),([1:Nbath])>_spin                                     !> NOT IMPLEMENTED HERE <!
   ! replica: |(1:Norb),([1:Norb]_1, [1:Norb]_2, ...  , [1:Norb]_Nbath)>_spin
+  ! general: |(1:Norb),([1:Norb]_1, [1:Norb]_2, ...  , [1:Norb]_Nbath)>_spin
   !
   !> case (ed_total_ud):
   !   (T): Ns_Ud=1, Ns_Orb=Ns.

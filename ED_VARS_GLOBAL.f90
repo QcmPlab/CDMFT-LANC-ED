@@ -10,7 +10,7 @@ MODULE ED_VARS_GLOBAL
   implicit none
   !-------------------- H EXPANSION STRUCTURE ----------------------!
   type H_operator
-     complex(8),dimension(:,:,:,:,:,:),allocatable   :: O  !Replica hamiltonian
+     complex(8),dimension(:,:,:,:,:,:),allocatable   :: O  !Bath hamiltonian (replica/general)
   end type H_operator
 
   type(H_operator),dimension(:),allocatable             :: Hbath_basis  ![Nsym]
@@ -21,12 +21,12 @@ MODULE ED_VARS_GLOBAL
   !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
   type effective_bath_component
      integer                          :: N_dec
-     real(8)                          :: v          !spin-keep hyb.
+     real(8),dimension(:),allocatable :: v ![1] for "replica" bath; [Nbath] for "general" bath
      real(8),dimension(:),allocatable :: lambda
   end type effective_bath_component
 
   type effective_bath
-     type(effective_bath_component),dimension(:),allocatable :: item
+     type(effective_bath_component),dimension(:),allocatable :: item ![Nbath]
      logical                                                 :: status=.false.
   end type effective_bath
 
@@ -268,7 +268,7 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
   !real(8),dimension(:,:,:,:),allocatable,save       :: phisc_ineq
   real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
-  real(8),dimension(:,:,:),allocatable               :: Hbath_lambda_ineq ![Nsites,Nbath,Nsym]
+  real(8),dimension(:,:,:),allocatable               :: Hbath_lambda_ineq ![Nineq,Nbath,Nsym]
 #endif
 
 

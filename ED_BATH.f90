@@ -205,9 +205,9 @@ contains
   !     H_REPLICA ROUTINES:
   !
   !##################################################################
-  include 'ED_BATH/Hbath_setup.f90'
+  include 'ED_BATH/hbath_setup.f90'
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-  include 'ED_BATH/Hbath_setup_lattice.f90'
+  include 'ED_BATH/hbath_setup_lattice.f90'
 #endif
 
 
