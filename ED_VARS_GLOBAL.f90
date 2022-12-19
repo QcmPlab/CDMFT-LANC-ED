@@ -13,9 +13,9 @@ MODULE ED_VARS_GLOBAL
      complex(8),dimension(:,:,:,:,:,:),allocatable   :: O  !Replica hamiltonian
   end type H_operator
 
-  type(H_operator),dimension(:),allocatable             :: Hreplica_basis  ![Nsym]
-  real(8),dimension(:,:),allocatable                    :: Hreplica_lambda ![Nbath,Nsym]
-  logical                                               :: Hreplica_status=.false.
+  type(H_operator),dimension(:),allocatable             :: Hbath_basis  ![Nsym]
+  real(8),dimension(:,:),allocatable                    :: Hbath_lambda ![Nbath,Nsym]
+  logical                                               :: Hbath_status=.false.
   
 
   !-------------------- EFFECTIVE BATH STRUCTURE ----------------------!
@@ -268,7 +268,7 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:,:),allocatable,save          :: mag_ineq
   !real(8),dimension(:,:,:,:),allocatable,save       :: phisc_ineq
   real(8),dimension(:,:),allocatable,save            :: dd_ineq,e_ineq
-  real(8),dimension(:,:,:),allocatable               :: Hreplica_lambda_ineq ![Nsites,Nbath,Nsym]
+  real(8),dimension(:,:,:),allocatable               :: Hbath_lambda_ineq ![Nsites,Nbath,Nsym]
 #endif
 
 

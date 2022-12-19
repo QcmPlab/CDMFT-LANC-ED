@@ -53,7 +53,7 @@ contains
     !
     invH_k=zero
     do ibath=1,Nbath
-       invH_knn=Hreplica_build(dmft_Bath%item(ibath)%lambda)
+       invH_knn=Hbath_build(dmft_Bath%item(ibath)%lambda)
        invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
        invH_k = zeye(Nlat*Nspin*Norb)*(x+xmu) - invH_k
        call inv(invH_k)
@@ -83,7 +83,7 @@ contains
     invH_k=zero
     do i=1,L
        do ibath=1,Nbath
-          invH_knn=Hreplica_build(dmft_Bath%item(ibath)%lambda)
+          invH_knn=Hbath_build(dmft_Bath%item(ibath)%lambda)
           invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
           invH_k = zeye(Nlat*Nspin*Norb)*(x(i)+xmu) - invH_k
           call inv(invH_k)

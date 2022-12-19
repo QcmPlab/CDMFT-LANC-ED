@@ -326,7 +326,7 @@ contains
                             jup = binary_search(H(1)%map,k2)
                             j   = jup + (idw-1)*iDimUp
                             ed_Eknot = ed_Eknot + &
-                                 impHloc(ilat,jlat,1,1,iorb,jorb)*sg1*sg2*state_cvec(i)*(state_cvec(j))
+                                 impHloc(ilat,jlat,1,1,iorb,jorb)*sg1*sg2*state_cvec(i)*conjg(state_cvec(j))*peso
                          endif
                          !
                          !DW
@@ -339,7 +339,7 @@ contains
                             jdw = binary_search(H(2)%map,k2)
                             j   = iup + (jdw-1)*iDimUp
                             ed_Eknot = ed_Eknot + &
-                                 impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)*sg1*sg2*state_cvec(i)*(state_cvec(j))
+                                 impHloc(ilat,jlat,Nspin,Nspin,iorb,jorb)*sg1*sg2*state_cvec(i)*conjg(state_cvec(j))*peso
                          endif
                       enddo
                    enddo

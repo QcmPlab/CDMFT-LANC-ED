@@ -447,31 +447,37 @@ contains
   !+------------------------------------------------------------------+
   !                      PRINT DENSITY MATRICES
   !+------------------------------------------------------------------+
-  subroutine ed_print_dm(dm,N,ineq)
-   integer                  ,intent(in)            :: N
-   complex(8),dimension(N,N),intent(in)            :: dm
+  subroutine ed_print_dm(dm,Nrdm,ineq)
+   integer                  ,intent(in)            :: Nrdm
+   complex(8),dimension(:,:),intent(in)            :: dm
    integer                  ,intent(in),optional   :: ineq
-   integer                                         :: unit
+   integer                                         :: unit,Nsites
    character(len=64)                               :: suffix
    integer                                         :: io,jo
    !
+   if(size(dm,1)/=Nrdm.OR.size(dm,2)/=Nrdm)then
+      stop "ERROR: actual dm argument has incogruent size wrt explicitly passed Nrdm"
+   endif
+   !
+   Nsites = nint( 1/Norb * log(real(Nrdm,kind=8)) / log(4d0) ) !Nrdm = 4**(Nsites*Norb)
+   !
    if(present(ineq))then
-     suffix = "reduced_density_matrix"//"_rank"//reg(str(N))//"_ineq"//reg(str(ineq))//".dat"
+     suffix = "reduced_density_matrix_"//reg(str(Nsites))//"sites_ineq"//reg(str(ineq))//".dat"
    else
-     suffix = "reduced_density_matrix"//"_rank"//reg(str(N))//".dat"
+     suffix = "reduced_density_matrix_"//reg(str(Nsites))//"sites.dat"
    endif
    !
    unit = free_unit()
    open(unit,file=suffix,action="write",position="rewind",status='unknown')
    !
-   do io=1,N
-      write(unit,"(90(F15.9,1X))") (dreal(dm(io,jo)),jo=1,N)
+   do io=1,Nrdm
+      write(unit,"(*(F20.16,1X))") (dreal(dm(io,jo)),jo=1,Nrdm)
    enddo
    write(unit,*)
    !
    if(any(dimag(dm)/=0d0))then
-      do io=1,N
-         write(unit,"(90(F15.9,1X))") (dimag(dm(io,jo)),jo=1,N)
+      do io=1,Nrdm
+         write(unit,"(*(F20.16,1X))") (dimag(dm(io,jo)),jo=1,Nrdm)
       enddo
       write(unit,*)
    endif

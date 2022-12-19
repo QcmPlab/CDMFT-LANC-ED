@@ -102,7 +102,7 @@ program cdn_bhz_2d
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(hloc_model(Nlso,0.d0,0.d0,1.d0))
    !
    !setup solver
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   call ed_set_Hbath(Hsym_basis,lambdasym_vector)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_fitted(Nb))

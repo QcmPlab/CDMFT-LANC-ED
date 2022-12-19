@@ -38,15 +38,15 @@ MODULE ED_BATH
      module procedure ::  get_bath_dimension_symmetries
   end interface get_bath_dimension
   
-  interface set_Hreplica
-     module procedure init_Hreplica_direct_lso
-     module procedure init_Hreplica_direct_nnn
-     module procedure init_Hreplica_symmetries_site
-     module procedure init_Hreplica_symmetries_LEGACY ! (deprecation-cycle)
+  interface set_Hbath
+     module procedure init_Hbath_direct_lso
+     module procedure init_Hbath_direct_nnn
+     module procedure init_Hbath_symmetries_site
+     module procedure init_Hbath_symmetries_LEGACY ! (deprecation-cycle)
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-     module procedure init_Hreplica_symmetries_lattice
+     module procedure init_Hbath_symmetries_lattice
 #endif
-  end interface set_Hreplica
+  end interface set_Hbath
   
   
   public :: get_bath_dimension
@@ -55,7 +55,7 @@ MODULE ED_BATH
   public :: impose_equal_lambda
   public :: impose_bath_offset
   !
-  public :: set_Hreplica
+  public :: set_Hbath
 
 
 
@@ -78,10 +78,10 @@ MODULE ED_BATH
   public :: get_dmft_bath                    !INTERNAL (for effective_bath)
   !
 
-  public :: hreplica_build                   !INTERNAL (for effective_bath)
-  public :: hreplica_mask                    !INTERNAL (for effective_bath)
+  public :: Hbath_build                   !INTERNAL (for effective_bath)
+  public :: Hbath_mask                    !INTERNAL (for effective_bath)
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-  public :: hreplica_site                    !INTERNAL (for effective_bath)
+  public :: Hbath_site                    !INTERNAL (for effective_bath)
 #endif
 
 
@@ -205,9 +205,9 @@ contains
   !     H_REPLICA ROUTINES:
   !
   !##################################################################
-  include 'ED_BATH/hreplica_setup.f90'
+  include 'ED_BATH/Hbath_setup.f90'
 #if __GFORTRAN__ &&  __GNUC__ > 8     
-  include 'ED_BATH/hreplica_setup_lattice.f90'
+  include 'ED_BATH/Hbath_setup_lattice.f90'
 #endif
 
 

@@ -87,7 +87,7 @@ program cdn_ssh
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(zeye(Nlso))
    !
    !SETUP BATH STEP 2 and SETUP SOLVER
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   call ed_set_Hbath(Hsym_basis,lambdasym_vector)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))

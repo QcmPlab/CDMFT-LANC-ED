@@ -129,7 +129,7 @@ contains
     !
     !
     Nineq = size(bath,1)
-    if(.not.allocated(Hreplica_lambda_ineq))stop "ERROR ed_init_solver: replica parameters lambda not defined for all sites"
+    if(.not.allocated(Hbath_lambda_ineq))stop "ERROR ed_init_solver: replica parameters lambda not defined for all sites"
     !
     if(allocated(dens_ineq))deallocate(dens_ineq)
     if(allocated(docc_ineq))deallocate(docc_ineq)
@@ -165,7 +165,7 @@ contains
     do iineq=1,Nineq             !all nodes check the bath, u never know...
       !
       ed_file_suffix=reg(ineq_site_suffix)//str(iineq,site_indx_padding)
-      call Hreplica_site(iineq)
+      call Hbath_site(iineq)
       call ed_init_solver_single(bath(iineq,:)) !Here we init the solver using impHloc, whatever its origin.
       !
    end do

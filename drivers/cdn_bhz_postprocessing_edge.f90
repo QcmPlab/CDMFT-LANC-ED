@@ -137,7 +137,7 @@ program cdn_bhz_postprocessing_edge
    Hsym_basis(:,:,:,:,:,:,3)=lso2nnn(zeye(Nlso))
    !
    !setup solver
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vectors)
+   call ed_set_Hbath(Hsym_basis,lambdasym_vectors)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nineq,Nb))
    allocate(bath_prev(Nineq,Nb))

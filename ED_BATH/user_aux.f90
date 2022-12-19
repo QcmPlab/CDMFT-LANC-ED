@@ -68,17 +68,17 @@ function check_bath_dimension(bath_) result(bool)
   real(8),dimension(:)           :: bath_
   integer                        :: Ntrue,i
   logical                        :: bool
-  complex(8),allocatable         :: Hreplica(:,:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:][Nsym]
+  complex(8),allocatable         :: Hbath(:,:,:,:,:,:,:)![Nlat][:][Nspin][:][Norb][:][Nsym]
   !
-  if(.not.allocated(Hreplica_basis))STOP "check_bath_dimension: Hbasis not allocated"
+  if(.not.allocated(Hbath_basis))STOP "check_bath_dimension: Hbasis not allocated"
   !
-  if(.not.allocated(Hreplica))allocate(Hreplica(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(Hreplica_basis)))
+  if(.not.allocated(Hbath))allocate(Hbath(Nlat,Nlat,Nspin,Nspin,Norb,Norb,size(Hbath_basis)))
   !
-  do i=1,size(Hreplica_basis)
-    Hreplica(:,:,:,:,:,:,i)=Hreplica_basis(i)%O
+  do i=1,size(Hbath_basis)
+    Hbath(:,:,:,:,:,:,i)=Hbath_basis(i)%O
   enddo
   !
-  Ntrue = get_bath_dimension(Hreplica)
+  Ntrue = get_bath_dimension(Hbath)
   bool  = ( size(bath_) == Ntrue )
 end function check_bath_dimension
 
@@ -131,11 +131,11 @@ subroutine impose_bath_offset(bath_,ibath,offset)
   call allocate_dmft_bath()
   call set_dmft_bath(bath_)
   !
-  if(size(Hreplica_lambda) .ne. dmft_bath%item(ibath)%N_dec)then
+  if(size(Hbath_lambda) .ne. dmft_bath%item(ibath)%N_dec)then
     dmft_bath%item(ibath)%lambda(dmft_bath%item(ibath)%N_dec)=offset
   else
-    do isym=1,size(Hreplica_lambda)
-      if(is_identity(Hreplica_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym)=offset
+    do isym=1,size(Hbath_lambda)
+      if(is_identity(Hbath_basis(isym)%O)) dmft_bath%item(ibath)%lambda(isym)=offset
       return
     enddo
   endif

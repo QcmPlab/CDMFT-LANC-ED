@@ -21,20 +21,20 @@ end subroutine deallocate_dmft_bath
 subroutine allocate_dmft_bath()
    integer :: ibath,isym,Nsym
    !
-   if(.not.allocated(Hreplica_lambda))stop "Hreplica_lambda not allocated in allocate_dmft_bath" !FIXME
+   if(.not.allocated(Hbath_lambda))stop "Hbath_lambda not allocated in allocate_dmft_bath" !FIXME
 
    call deallocate_dmft_bath()
    !
    allocate(dmft_bath%item(Nbath))
    !
    !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   !Nsym=size(Hreplica_lambda)+1
+   !Nsym=size(Hbath_lambda)+1
    !
-   !do isym=1,size(Hreplica_lambda)
-   !   if(is_identity(Hreplica_basis(isym)%O)) Nsym=Nsym-1
+   !do isym=1,size(Hbath_lambda)
+   !   if(is_identity(Hbath_basis(isym)%O)) Nsym=Nsym-1
    !   exit
    !enddo
-   Nsym=size(Hreplica_lambda(Nbath,:))
+   Nsym=size(Hbath_lambda(Nbath,:))
    !
    !ALLOCATE coefficients vectors
    !
@@ -79,12 +79,12 @@ subroutine init_dmft_bath()
    do ibath=1,Nbath
      Nsym = dmft_bath%item(ibath)%N_dec
      do isym=1,Nsym
-        diagonal_hsym = is_diagonal(Hreplica_basis(isym)%O)
-        one_lambdaval = Hreplica_lambda(ibath,isym)
-        all_are_equal = all(Hreplica_lambda(:,isym)==one_lambdaval)
+        diagonal_hsym = is_diagonal(Hbath_basis(isym)%O)
+        one_lambdaval = Hbath_lambda(ibath,isym)
+        all_are_equal = all(Hbath_lambda(:,isym)==one_lambdaval)
         if(diagonal_hsym.AND.all_are_equal)then
          !> BACK-COMPATIBILITY PATCH: Nbath /degenerate/ lambdas, rescaled internally
-            dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hreplica_lambda(ibath,isym)
+            dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hbath_lambda(ibath,isym)
             write(*,*) "                                                                    "
             write(*,*) "WARNING: some of your lambdasym values have been internally changed "
             write(*,*) "         while calling ed_init_solver. This happens whenever the    "
@@ -100,7 +100,7 @@ subroutine init_dmft_bath()
             write(*,*) "                                                                    "
         else
          !> NEW INTENDED BEHAVIOR: Nbath /different/ lambdas passed to dmft_bath
-            dmft_bath%item(ibath)%lambda(isym) = Hreplica_lambda(ibath,isym)
+            dmft_bath%item(ibath)%lambda(isym) = Hbath_lambda(ibath,isym)
         endif
      enddo
    enddo
@@ -162,7 +162,7 @@ subroutine write_dmft_bath(unit)
          do ibath=1,Nbath
             write(unit_,"(A1)")" "
             hrep_aux=zero
-            hrep_aux_nnn=Hreplica_build(dmft_bath%item(ibath)%lambda)
+            hrep_aux_nnn=Hbath_build(dmft_bath%item(ibath)%lambda)
             Hrep_aux=nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb)
             write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&        
                                                                  "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)

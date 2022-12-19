@@ -1,7 +1,7 @@
 MODULE ED_GF_NORMAL
   USE ED_GF_SHARED
   USE ED_AUX_FUNX
-  USE ED_BATH, only:Hreplica_mask
+  USE ED_BATH, only:Hbath_mask
   implicit none
   private
 
@@ -50,7 +50,7 @@ contains
     !
     if(allocated(impGmatrix))deallocate(impGmatrix)
     allocate(impGmatrix(Nlat,Nlat,Nspin,Nspin,Norb,Norb))
-    Hmask=Hreplica_mask(wdiag=.true.,uplo=.false.)
+    Hmask=Hbath_mask(wdiag=.true.,uplo=.false.)
     !
     ! 
     Nstates = state_list%size
