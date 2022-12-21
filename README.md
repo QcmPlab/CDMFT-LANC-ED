@@ -14,8 +14,8 @@ The code structure is as follow:
 * The actual implementation of the DMFT equations is case by case performed in a driver program, usually placed in the directory `drivers`. 
 * In the driver code the user must includes the `CDMFT_ED`, `SCIFOR` and `DMFT_TOOLS` modules and call the necessary procedures to solve the DMFT equations.
 
- The only bath type implemented to date is the 'replica' one, in which the bath consists of multiple, noninteracting copies of the original interacting cluster. 
- The bath can be initialized in two ways, through the unified `ed_set_Hbath` interface: one can directly pass the local hamiltonian of the cluster (going with strict semantics for 'replicas') or a symmetry-informed expansion in the form $H^\mathrm{bath} = \sum \lambda^\mathrm{sym}H^\mathrm{sym}$, where the $H^\mathrm{sym}$ terms are arrays isomorphic with $H^\mathrm{loc}$, describing a well defined symmetry of the model, and the $\lambda^\mathrm{sym}$ coefficients are contained in a `([Nineq])x[Nbath]x[Nsym]`-sized array, so to allow each replica to have a different expansion on the same unique basis.    
+ The only two bath types implemented to date are the 'replica' and 'general' ones, in which the bath consists of multiple, noninteracting copies of the original interacting cluster, with different hybridization schemes: a unique $V$ for each replica in the former case, meaning that the i-th site in the cluster hybridizes with the j-th site in the replica, with an amplitude $V_{ij} = V\delta_{ij}$; a more general $V_{ij} = V_i \delta_{ij}$ for the latter.
+ For both cases the bath can be initialized in two ways, through the unified `ed_set_Hbath` interface: one can directly pass the local hamiltonian of the cluster (going with strict semantics for 'replicas') or a symmetry-informed expansion in the form $H^\mathrm{bath} = \sum \lambda^\mathrm{sym}H^\mathrm{sym}$, where the $H^\mathrm{sym}$ terms are arrays isomorphic with $H^\mathrm{loc}$, describing a well defined symmetry of the model, and the $\lambda^\mathrm{sym}$ coefficients are contained in a `([Nineq])x[Nbath]x[Nsym]`-sized array, so to allow each replica to have a different expansion on the same unique basis. No control over the initial guess of the $V_{ij}$ values is given to the user, at the moment.   
 
  > An example, solving the Hubbard model on the square lattice, is contained in the file `drivers/cdn_hm_2dsquare.f90`.
 
@@ -53,7 +53,7 @@ The code structure is as follow:
 --
 
 ***COPYRIGHT & LICENSING***  
-Copyright 2012 -  (c) Adriano Amaricci, Lorenzo Crippa, Gabriele Bellomia, Massimo Capone.  
+Copyright 2012 -  (c) Adriano Amaricci, Lorenzo Crippa, Gabriele Bellomia, Samuele Giuli, Massimo Capone.  
 All rights reserved. 
 
 The software is provided with no license, as such it is protected by copyright. The software is provided as it is and can be read and copied, in agreement with the Terms of Service of GITHUB. 
