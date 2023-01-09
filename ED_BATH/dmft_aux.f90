@@ -5,9 +5,9 @@ subroutine deallocate_dmft_bath()
    integer :: ibath,isym
    if(.not.dmft_bath%status)return
    do ibath=1,Nbath
-      dmft_bath%item(ibath)%v = 0d0
       dmft_bath%item(ibath)%N_dec=0
       deallocate(dmft_bath%item(ibath)%lambda)
+      deallocate(dmft_bath%item(ibath)%v)
    enddo
    deallocate(dmft_bath%item)
    dmft_bath%status=.false.
@@ -21,35 +21,30 @@ end subroutine deallocate_dmft_bath
 subroutine allocate_dmft_bath()
    integer :: ibath,isym,Nsym
    !
-   if(.not.allocated(Hreplica_lambda))stop "Hreplica_lambda not allocated in allocate_dmft_bath" !FIXME
+   if(.not.allocated(Hbath_lambda))stop "Hbath_lambda not allocated in allocate_dmft_bath" !FIXME
 
    call deallocate_dmft_bath()
    !
    allocate(dmft_bath%item(Nbath))
    !
-   !CHECK IF IDENDITY IS ONE OF THE SYMMETRIES, IF NOT ADD IT
-   !Nsym=size(Hreplica_lambda)+1
-   !
-   !do isym=1,size(Hreplica_lambda)
-   !   if(is_identity(Hreplica_basis(isym)%O)) Nsym=Nsym-1
-   !   exit
-   !enddo
-   Nsym=size(Hreplica_lambda(Nbath,:))
+   Nsym=size(Hbath_lambda(Nbath,:))
    !
    !ALLOCATE coefficients vectors
    !
    do ibath=1,Nbath
       dmft_Bath%item(ibath)%N_dec=Nsym
       allocate(dmft_bath%item(ibath)%lambda(Nsym))
+      allocate(dmft_bath%item(ibath)%v(Nlat*Norb*Nspin))
    enddo
    !
    dmft_bath%status=.true.
+   !
 end subroutine allocate_dmft_bath
 
 
 !+------------------------------------------------------------------+
-!PURPOSE  : Initialize the DMFT loop, builindg H parameters and/or 
-!reading previous (converged) solution
+!PURPOSE  : Initialize the DMFT loop, building H parameters and/or
+!           reading previous (converged) solution
 !+------------------------------------------------------------------+
 subroutine init_dmft_bath()
    real(8)                  :: re,im
@@ -61,7 +56,7 @@ subroutine init_dmft_bath()
    real(8)                  :: rescale(Nbath),offset_b(Nbath)
    real(8),dimension(Nbath) :: one_lambdaval
    character(len=21)        :: space
-   !  
+   !
    if(.not.dmft_bath%status)stop "init_dmft_bath error: bath not allocated"
    !
    if(Nbath>1)then
@@ -72,19 +67,19 @@ subroutine init_dmft_bath()
    !
    !BATH V INITIALIZATION
    do ibath=1,Nbath
-      dmft_bath%item(ibath)%v=max(0.1d0,1.d0/sqrt(dble(Nbath)))
+      dmft_bath%item(ibath)%v(:)=max(0.1d0,1.d0/sqrt(dble(Nbath)))
    enddo
    !
    !BATH LAMBDAS INITIALIZATION
    do ibath=1,Nbath
-     Nsym = dmft_bath%item(ibath)%N_dec
-     do isym=1,Nsym
-        diagonal_hsym = is_diagonal(Hreplica_basis(isym)%O)
-        one_lambdaval = Hreplica_lambda(ibath,isym)
-        all_are_equal = all(Hreplica_lambda(:,isym)==one_lambdaval)
-        if(diagonal_hsym.AND.all_are_equal)then
-         !> BACK-COMPATIBILITY PATCH: Nbath /degenerate/ lambdas, rescaled internally
-            dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hreplica_lambda(ibath,isym)
+      Nsym = dmft_bath%item(ibath)%N_dec
+      do isym=1,Nsym
+         diagonal_hsym = is_diagonal(Hbath_basis(isym)%O)
+         one_lambdaval = Hbath_lambda(ibath,isym)
+         all_are_equal = all(Hbath_lambda(:,isym)==one_lambdaval)
+         if(diagonal_hsym.AND.all_are_equal)then
+            !> BACK-COMPATIBILITY PATCH: Nbath /degenerate/ lambdas, rescaled internally
+            dmft_bath%item(ibath)%lambda(isym) = rescale(ibath) * Hbath_lambda(ibath,isym)
             write(*,*) "                                                                    "
             write(*,*) "WARNING: some of your lambdasym values have been internally changed "
             write(*,*) "         while calling ed_init_solver. This happens whenever the    "
@@ -96,13 +91,13 @@ subroutine init_dmft_bath()
             write(*,*) "             in the bath you can define a suitable restart file.    "
             write(*,*) "         >>> If instead this is what you expected please consider to"
             write(*,*) "             move the desired rescaling in your driver, since this  "
-            write(*,*) "             funcionality might be removed in a future update.      "
+            write(*,*) "             functionality might be removed in a future update.     "
             write(*,*) "                                                                    "
-        else
-         !> NEW INTENDED BEHAVIOR: Nbath /different/ lambdas passed to dmft_bath
-            dmft_bath%item(ibath)%lambda(isym) = Hreplica_lambda(ibath,isym)
-        endif
-     enddo
+         else
+            !> NEW INTENDED BEHAVIOR: Nbath /different/ lambdas passed to dmft_bath
+            dmft_bath%item(ibath)%lambda(isym) = Hbath_lambda(ibath,isym)
+         endif
+      enddo
    enddo
    !
    !Read from file if exist:
@@ -120,7 +115,13 @@ subroutine init_dmft_bath()
       enddo
       do ibath=1,Nbath
          !read V
-         read(unit,"(F21.12,1X)")dmft_bath%item(ibath)%v
+         select case(bath_type) ! THIS IS DEEPLY UNSAFE, FIX IT
+          case('replica')
+            read(unit,"(*(F21.12,1X))")dmft_bath%item(ibath)%v(1)
+            dmft_bath%item(ibath)%v(2:Nlat*Nspin*Norb) = dmft_bath%item(ibath)%v(1)
+          case('general')
+            read(unit,"(*(F21.12,1X))")(dmft_bath%item(ibath)%v(io), io=1,Nlat*Nspin*Norb)
+         end select
          !read lambdas
          read(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,Nlambdas(ibath))
       enddo
@@ -136,11 +137,66 @@ end subroutine init_dmft_bath
 
 
 !+-------------------------------------------------------------------+
-!PURPOSE  : write out the bath to a given unit with 
-! the following column formatting: 
-! [(Ek_iorb,Vk_iorb)_iorb=1,Norb]_ispin=1,Nspin
+!PURPOSE  : write out the bath to a given unit [temporary format]
 !+-------------------------------------------------------------------+
 subroutine write_dmft_bath(unit)
+   integer,optional     :: unit
+   integer              :: unit_
+   integer              :: ibath
+   integer              :: io,jo,iorb,ispin,isym
+   complex(8)           :: hrep_aux_nnn(Nlat,Nlat,Nspin,Nspin,Norb,Norb)
+   complex(8)           :: hrep_aux(Nlat*Nspin*Norb,Nlat*Nspin*Norb)
+   character(len=64)    :: string_fmt,string_fmt_first
+   !
+   unit_=LOGfile;if(present(unit))unit_=unit
+   if(.not.dmft_bath%status)stop "write_dmft_bath error: bath not allocated"
+   !
+   string_fmt = "(F8.4,a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X),a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X))"
+   !string_fmt      ="(A8,a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X),a5,"//str(Nlat*Nspin*Norb)//"(F8.4,1X))"
+   !
+   if(unit_==LOGfile)then
+      if(Nlat*Nspin*Norb.le.8)then
+         write(unit_,"(A1)")" "
+         write(unit_,"(A8,a3,a5,90(A15,1X))")"V","||"," ","Re(H) | Im(H)"
+         do ibath=1,Nbath
+            write(unit_,"(A1)")" "
+            hrep_aux=zero
+            hrep_aux_nnn=Hbath_build(dmft_bath%item(ibath)%lambda)
+            Hrep_aux=nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb)
+            !write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&
+            !   "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)
+            !do io=2,Nlat*Nspin*Norb
+            do io=1,Nlat*Nspin*Norb
+               write(unit_,string_fmt) dmft_bath%item(ibath)%v(io)  ,"||  ",(DREAL(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb),&
+                  "|  ",(DIMAG(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
+            enddo
+         enddo
+         write(unit_,"(A1)")" "
+      else
+         write(LOGfile,"(A)")"Bath matrix too large to print: printing the parameters."
+         write(unit_,"(A9,a5,90(A9,1X))")"V"," ","lambdas"
+         do ibath=1,Nbath
+            write(unit_,"(*(F9.4),a5,90(F9.4,1X))")(dmft_bath%item(ibath)%v(io), io=1,Nlat*Nspin*Norb),"|   ",&
+               (dmft_bath%item(ibath)%lambda(io),io=1,dmft_bath%item(ibath)%N_dec)
+         enddo
+      endif
+   else
+      do ibath=1,Nbath
+         !write number of lambdas
+         write(unit,"(I3)")dmft_bath%item(ibath)%N_dec
+      enddo
+      do ibath=1,Nbath
+         !write Vs
+         write(unit,"(*(F21.12,1X))")(dmft_bath%item(ibath)%v(io), io=1,Nlat*Nspin*Norb)
+         !write lambdas
+         write(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,dmft_bath%item(ibath)%N_dec)
+      enddo
+   endif
+   !
+end subroutine write_dmft_bath
+
+
+subroutine LEGACY_write_dmft_bath(unit)
    integer,optional     :: unit
    integer              :: unit_
    integer              :: ibath
@@ -158,50 +214,47 @@ subroutine write_dmft_bath(unit)
    if(unit_==LOGfile)then
       if(Nlat*Nspin*Norb.le.8)then
          write(unit_,"(A1)")" "
-         write(unit_,"(A8,a3,a5,90(A15,1X))")"V","||"," ","Re(H) | Im(H)"        
+         write(unit_,"(A8,a3,a5,90(A15,1X))")"V","||"," ","Re(H) | Im(H)"
          do ibath=1,Nbath
             write(unit_,"(A1)")" "
             hrep_aux=zero
-            hrep_aux_nnn=Hreplica_build(dmft_bath%item(ibath)%lambda)
+            hrep_aux_nnn=Hbath_build(dmft_bath%item(ibath)%lambda)
             Hrep_aux=nnn2lso_reshape(hrep_aux_nnn,Nlat,Nspin,Norb)
-            write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&        
-                                                                 "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)
+            write(unit_,string_fmt_first)dmft_bath%item(ibath)%v,"||  ",(DREAL(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb),&
+               "|  ",(DIMAG(hrep_aux(1,jo)),jo=1,Nlat*Nspin*Norb)
             do io=2,Nlat*Nspin*Norb
                write(unit_,string_fmt) "  "  ,"||  ",(DREAL(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb),&
-                                              "|  ",(DIMAG(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
+                  "|  ",(DIMAG(hrep_aux(io,jo)),jo=1,Nlat*Nspin*Norb)
             enddo
          enddo
          write(unit_,"(A1)")" "
       else
          write(LOGfile,"(A)")"Bath matrix too large to print: printing the parameters."
-         write(unit_,"(A9,a5,90(A9,1X))")"V"," ","lambdas"        
+         write(unit_,"(A9,a5,90(A9,1X))")"V"," ","lambdas"
          do ibath=1,Nbath
             write(unit_,"(F9.4,a5,90(F9.4,1X))")dmft_bath%item(ibath)%v,"|   ",&
-                                                (dmft_bath%item(ibath)%lambda(io),io=1,dmft_bath%item(ibath)%N_dec)
+               (dmft_bath%item(ibath)%lambda(io),io=1,dmft_bath%item(ibath)%N_dec)
          enddo
       endif
    else
       do ibath=1,Nbath
-        !write number of lambdas
-        write(unit,"(I3)")dmft_bath%item(ibath)%N_dec
+         !write number of lambdas
+         write(unit,"(I3)")dmft_bath%item(ibath)%N_dec
       enddo
       do ibath=1,Nbath
-        !write Vs
-        write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
-        !write lambdas
+         !write Vs
+         write(unit,"(90(F21.12,1X))")dmft_bath%item(ibath)%v
+         !write lambdas
          write(unit,*)(dmft_bath%item(ibath)%lambda(jo),jo=1,dmft_bath%item(ibath)%N_dec)
       enddo
    endif
    !
-end subroutine write_dmft_bath
-
-
-
+end subroutine LEGACY_write_dmft_bath
 
 
 !+-------------------------------------------------------------------+
 !PURPOSE  : save the bath to a given file using the write bath
-! procedure and formatting: 
+!           procedure and formatting
 !+-------------------------------------------------------------------+
 subroutine save_dmft_bath(file,used)
    character(len=*),optional :: file
@@ -225,7 +278,7 @@ end subroutine save_dmft_bath
 
 
 !+-------------------------------------------------------------------+
-!PURPOSE  : copy the bath components back to a 1-dim array 
+!PURPOSE  : copy the bath components back to a 1-dim array
 !+-------------------------------------------------------------------+
 subroutine set_dmft_bath(bath_)
    real(8),dimension(:)                                  :: bath_
@@ -251,11 +304,17 @@ subroutine set_dmft_bath(bath_)
    enddo
    do ibath=1,Nbath
       !Get Vs
-      stride = stride + 1
-      dmft_bath%item(ibath)%v = bath_(stride)
+      select case(bath_type)
+       case('replica')
+         dmft_bath%item(ibath)%v(:) = bath_(stride+1)
+         stride = stride + 1
+       case('general')
+         dmft_bath%item(ibath)%v(:) = bath_(stride+1:stride+Nlat*Nspin*Norb)
+         stride = stride + Nlat*Nspin*Norb
+      end select
       !get Lambdas
       dmft_bath%item(ibath)%lambda=bath_(stride+1:stride+dmft_bath%item(ibath)%N_dec)
-      stride=stride+dmft_bath%item(ibath)%N_dec
+      stride = stride + dmft_bath%item(ibath)%N_dec
    enddo
    !
 end subroutine set_dmft_bath
@@ -265,8 +324,8 @@ end subroutine set_dmft_bath
 
 
 !+-------------------------------------------------------------------+
-!PURPOSE  : set the bath components from a given user provided 
-! bath-array 
+!PURPOSE  : set the bath components from a given user provided
+!           bath-array
 !+-------------------------------------------------------------------+
 subroutine get_dmft_bath(bath_)
    real(8),dimension(:)   :: bath_
@@ -288,11 +347,17 @@ subroutine get_dmft_bath(bath_)
    enddo
    do ibath=1,Nbath
       !Get Vs
-      stride = stride + 1
-      bath_(stride)=dmft_bath%item(ibath)%v
+      select case(bath_type)
+       case('replica')
+         bath_(stride+1)=dmft_bath%item(ibath)%v(1)
+         stride = stride + 1
+       case('general')
+         bath_(stride+1:stride+Nlat*Nspin*Norb)=dmft_bath%item(ibath)%v(:)
+         stride = stride + Nlat*Nspin*Norb
+      end select
       !get Lambdas
-      bath_(stride+1:stride+dmft_bath%item(ibath)%N_dec)=dmft_bath%item(ibath)%lambda      
-      stride=stride+dmft_bath%item(ibath)%N_dec
+      bath_(stride+1:stride+dmft_bath%item(ibath)%N_dec)=dmft_bath%item(ibath)%lambda
+      stride = stride + dmft_bath%item(ibath)%N_dec
    enddo
 end subroutine get_dmft_bath
 

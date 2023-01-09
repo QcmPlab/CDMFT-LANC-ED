@@ -14,6 +14,7 @@ MODULE ED_INPUT_VARS
   integer              :: Norb                !# of lattice orbitals per site
   integer              :: Nspin               !# spin degeneracy (max 2)
   integer              :: Nbath               !# of bath sites (per orbital or not depending on bath_type)
+  character(len=7)     :: bath_type           !bath representation choice (here either "replica" or "general")
   integer              :: nloop               !max dmft loop variables
   real(8),dimension(5) :: Uloc                !local interactions
   real(8)              :: Ust                 !intra-orbitals interactions
@@ -33,7 +34,7 @@ MODULE ED_INPUT_VARS
   real(8)              :: gs_threshold        !Energy threshold for ground state degeneracy loop up
   real(8)              :: dmft_error          !dmft convergence threshold
   real(8)              :: sb_field            !symmetry breaking field
-  real(8)              :: hwband              !half-bandwidth for the bath initialization (diagonal part in Hreplica)
+  real(8)              :: hwband              !half-bandwidth for the bath initialization (diagonal part in Hbath)
   !
   integer              :: ed_verbose          !
   logical              :: ed_sparse_H         !flag to select  storage of sparse matrix H (mem--, cpu++) if TRUE, or direct on-the-fly H*v product (mem++, cpu--
@@ -122,8 +123,9 @@ contains
     !DEFAULT VALUES OF THE PARAMETERS:
     call parse_input_variable(Nlat,"NLAT",INPUTunit,default=1,comment="Number of cluster sites")
     call parse_input_variable(Norb,"NORB",INPUTunit,default=1,comment="Number of impurity orbitals (max 5).")
-    call parse_input_variable(Nbath,"NBATH",INPUTunit,default=6,comment="Number of bath sites:(normal=>Nbath per orb)(hybrid=>Nbath total)(replica=>Nbath=Nreplica)")
     call parse_input_variable(Nspin,"NSPIN",INPUTunit,default=1,comment="Number of spin degeneracy (max 2)")
+    call parse_input_variable(Nbath,"NBATH",INPUTunit,default=6,comment="Number of bath clusters (replicas or generalizations)")
+    call parse_input_variable(bath_type,"BATH_TYPE",INPUTunit,default='replica',comment="flag to set bath type: 'replica' or 'general'")
     call parse_input_variable(uloc,"ULOC",INPUTunit,default=[2d0,0d0,0d0,0d0,0d0],comment="Values of the local interaction per orbital (max 5)")
     call parse_input_variable(ust,"UST",INPUTunit,default=0.d0,comment="Value of the inter-orbital interaction term")
     call parse_input_variable(Jh,"JH",INPUTunit,default=0.d0,comment="Hunds coupling")
@@ -163,7 +165,7 @@ contains
     call parse_input_variable(eps,"EPS",INPUTunit,default=0.01d0,comment="Broadening on the real-axis.")
     call parse_input_variable(cutoff,"CUTOFF",INPUTunit,default=1.d-9,comment="Spectrum cut-off, used to determine the number states to be retained.")
     call parse_input_variable(gs_threshold,"GS_THRESHOLD",INPUTunit,default=1.d-9,comment="Energy threshold for ground state degeneracy loop up")
-    call parse_input_variable(hwband,"HWBAND",INPUTunit,default=2d0,comment="half-bandwidth for the bath initialization (diagonal part in Hreplica)")
+    call parse_input_variable(hwband,"HWBAND",INPUTunit,default=2d0,comment="half-bandwidth for the bath initialization (diagonal part in Hbath)")
     !    
     call parse_input_variable(lanc_method,"LANC_METHOD",INPUTunit,default="arpack",comment="select the lanczos method to be used in the determination of the spectrum. ARPACK (default), LANCZOS (T=0 only), DVDSON (no MPI)")
     call parse_input_variable(lanc_nstates_sector,"LANC_NSTATES_SECTOR",INPUTunit,default=2,comment="Initial number of states per sector to be determined.")

@@ -72,7 +72,7 @@ program cdn_sg77
   Hsym_basis(:,:,:,:,:,:,1)=lso2nnn(hloc_model(Nlso,1.d0))
   !
   !SETUP BATH STEP 2 and SETUP SOLVER
-  call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+  call ed_set_Hbath(Hsym_basis,lambdasym_vector)
   Nb=ed_get_bath_dimension(Hsym_basis)
   allocate(bath(Nb))
   allocate(bath_prev(Nb))

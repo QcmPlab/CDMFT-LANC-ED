@@ -30,9 +30,9 @@ MODULE CDMFT_ED
        ed_get_mag
 
   USE ED_BATH, only:                            &
-       ed_set_Hreplica                 => set_Hreplica            ,&
-       ed_get_bath_dimension           => get_bath_dimension      ,&
-       ed_impose_bath_offset           => impose_bath_offset      ,&
+       ed_set_Hbath                    => set_Hbath            ,&
+       ed_get_bath_dimension           => get_bath_dimension   ,&
+       ed_impose_bath_offset           => impose_bath_offset   ,&
        ed_impose_equal_lambda          => impose_equal_lambda
 
 

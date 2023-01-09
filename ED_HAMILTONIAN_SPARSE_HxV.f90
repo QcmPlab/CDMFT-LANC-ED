@@ -2,6 +2,7 @@
 MODULE ED_HAMILTONIAN_SPARSE_HxV
   USE ED_HAMILTONIAN_COMMON
   USE ED_SETUP
+  USE ED_AUX_FUNX
   implicit none
   private
 
@@ -62,11 +63,11 @@ contains
     diag_hybr=0d0
     bath_diag=0d0
     do ibath=1,Nbath
-      Hbath_reconstructed(:,:,:,:,:,:,ibath)=Hreplica_build(dmft_bath%item(ibath)%lambda)
+      Hbath_reconstructed(:,:,:,:,:,:,ibath)=Hbath_build(dmft_bath%item(ibath)%lambda)
       do ilat=1,Nlat
         do ispin=1,Nspin
           do iorb=1,Norb
-            diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v
+            diag_hybr(ilat,ispin,iorb,ibath)=dmft_bath%item(ibath)%v(index_stride_lso(ilat,ispin,iorb))
             bath_diag(ilat,ispin,iorb,ibath)=DREAL(Hbath_Reconstructed(ilat,ilat,ispin,ispin,iorb,iorb,ibath))
           enddo
         enddo

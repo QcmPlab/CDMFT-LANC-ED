@@ -107,7 +107,7 @@ program cdn_hm_2dsquare
    endif
 
    !SETUP BATH & SOLVER
-   call ed_set_Hreplica(Hsym_basis,lambdasym_vectors)
+   call ed_set_Hbath(Hsym_basis,lambdasym_vectors)
    Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
    allocate(bath_prev(Nb))
