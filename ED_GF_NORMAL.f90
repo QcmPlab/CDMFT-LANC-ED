@@ -130,6 +130,7 @@ contains
     integer,dimension(2)        :: Iud,Jud
     integer                     :: is
     type(sector_map)            :: HI(2*Ns_Ud),HJ(2*Ns_Ud)
+    type(sector)                :: sectorI, sectorJ
     !
     ialfa = 1
     ibeta  = ialfa + (ispin-1)*Ns_Ud
@@ -158,7 +159,8 @@ contains
        call get_DimDw(isector,iDimDws)
        iDimUp = product(iDimUps)
        iDimDw = product(iDimDws)
-       call build_sector(isector,HI)
+       call build_sector(isector,sectorI)
+       HI = sectorI%H
        !
        !
        !ADD ONE PARTICLE:
@@ -176,7 +178,8 @@ contains
              !
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -192,7 +195,7 @@ contains
                 !
                 vvinit(j) = sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
@@ -243,7 +246,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I6)")' del particle:',jsector
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -259,7 +263,7 @@ contains
                 !
                 vvinit(j) = sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Remove particle - Norm vvinit: ',norm2
@@ -299,7 +303,7 @@ contains
        !
        if(allocated(state_cvec))deallocate(state_cvec)
        !
-       call delete_sector(isector,HI)
+       call delete_sector(sectorI)
        !
     enddo
     return
@@ -321,6 +325,7 @@ contains
     integer,dimension(2,Ns_Orb) :: Nud
     integer,dimension(2)        :: iud,jud
     type(sector_map)            :: HI(2*Ns_Ud),HJ(2*Ns_Ud)
+    type(sector)                :: sectorI, sectorJ
     !
     ialfa = 1
     jalfa = 1
@@ -351,7 +356,8 @@ contains
        idim  = getdim(isector)
        call get_DimUp(isector,iDimUps)
        call get_DimDw(isector,iDimDws)
-       call build_sector(isector,HI)
+       call build_sector(isector,sectorI)
+       HI = sectorI%H
        !
        !
        !EVALUATE (c^+_is + c^+_js)|gs>
@@ -366,7 +372,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' add particle cdg_is+cdg_js:',jsector
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -399,7 +406,7 @@ contains
                 !
                 vvinit(j) = vvinit(j) + sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
@@ -448,7 +455,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' del particle c_is+c_js:',jsector
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -481,7 +489,7 @@ contains
                 !
                 vvinit(j) = vvinit(j) + sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Del particle - Norm vvinit: ',norm2
@@ -519,7 +527,7 @@ contains
        endif
        !
        if(allocated(state_cvec))deallocate(state_cvec)
-       call delete_sector(isector,HI)
+       call delete_sector(sectorI)
        !
     enddo
     return
@@ -537,6 +545,7 @@ contains
     integer,dimension(2,Ns_Orb) :: Nud
     integer,dimension(2)        :: iud,jud
     type(sector_map)            :: HI(2*Ns_Ud),HJ(2*Ns_Ud)
+    type(sector)                :: sectorI,sectorJ
     !
     ialfa = 1
     jalfa = 1
@@ -567,7 +576,8 @@ contains
        idim  = getdim(isector)
        call get_DimUp(isector,iDimUps)
        call get_DimDw(isector,iDimDws)
-       call build_sector(isector,HI)
+       call build_sector(isector,sectorI)
+       HI = sectorI%H
        !
        !
        !EVALUATE (c^+_is + c^+_js)|gs>
@@ -582,7 +592,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' add particle cdg_is+cdg_js:',jsector
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -615,7 +626,7 @@ contains
                 !
                 vvinit(j) = vvinit(j) + sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Add particle - Norm vvinit: ',norm2
@@ -664,7 +675,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' del particle c_is+c_js:',jsector
              allocate(vvinit(jdim)) ; vvinit=zero
              !
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -697,7 +709,7 @@ contains
                 !
                 vvinit(j) = vvinit(j) + sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(vvinit,vvinit)
              if(ed_verbose==3)write(LOGfile,"(A,F6.4)")' Del particle - Norm vvinit: ',norm2
@@ -746,7 +758,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' add particle cdg_is+xi*cdg_js:',jsector
              allocate(cvinit(jdim)) ; cvinit=zero
 
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -779,7 +792,7 @@ contains
 
                 cvinit(j) = cvinit(j) + xi*sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(cvinit,cvinit)
              cvinit=cvinit/sqrt(norm2)
@@ -827,7 +840,8 @@ contains
              if(ed_verbose==3)write(LOGfile,"(A,I15)")' del particle c_is-xi*c_js:',jsector
              allocate(cvinit(jdim)) ; cvinit=zero
 
-             call build_sector(jsector,HJ)
+             call build_sector(jsector,sectorJ)
+             HJ = sectorJ%H
              do i=1,iDim
                 call state2indices(i,[iDimUps,iDimDws],Indices)
                 iud(1)   = HI(ialfa)%map(Indices(ialfa))
@@ -860,7 +874,7 @@ contains
 
                 cvinit(j) = cvinit(j) - xi*sgn*state_cvec(i)
              enddo
-             call delete_sector(jsector,HJ)
+             call delete_sector(sectorJ)
              !
              norm2=dot_product(cvinit,cvinit)
              cvinit=cvinit/sqrt(norm2)
@@ -896,7 +910,7 @@ contains
           call GFmatrix_allocate(impGmatrix(isite,jsite,ispin,ispin,iorb,jorb),istate=istate,ichan=4,Nexc=0)
        endif
        if(allocated(state_cvec))deallocate(state_cvec)
-       call delete_sector(isector,HI)
+       call delete_sector(sectorI)
        !
     enddo
     return

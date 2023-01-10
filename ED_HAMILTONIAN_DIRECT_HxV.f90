@@ -48,8 +48,8 @@ contains
     complex(8),dimension(Nlat,Nlat,Nspin,Nspin,Norb,Norb,Nbath) :: Hbath_reconstructed
 
     !
-    if(.not.Hstatus)stop "directMatVec_cc ERROR: Hsector NOT set"
-    isector=Hsector
+    if(.not.global_sector%status)stop "directMatVec_cc ERROR: global_sector NOT set"
+    isector=global_sector%index
     !
     if(Nloc/=getdim(isector))stop "directMatVec_cc ERROR: Nloc != dim(isector)"
     !
@@ -109,8 +109,8 @@ contains
     integer,allocatable,dimension(:)         :: Counts
     integer,allocatable,dimension(:)         :: Offset
     !
-    if(.not.Hstatus)stop "directMatVec_cc ERROR: Hsector NOT set"
-    isector=Hsector
+    if(.not.global_sector%status)stop "directMatVec_cc ERROR: global_sector NOT set"
+    isector=global_sector%index
     !
     !
     if(MpiComm==MPI_UNDEFINED.OR.MpiComm==Mpi_Comm_Null)&

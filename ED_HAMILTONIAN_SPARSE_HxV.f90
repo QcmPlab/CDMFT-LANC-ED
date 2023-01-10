@@ -54,8 +54,8 @@ contains
     if(Mpistatus .AND. MpiComm == MPI_COMM_NULL)return
 #endif
     !
-    if(.not.Hstatus)stop "ed_buildh_main ERROR: Hsector NOT set"
-    isector=Hsector
+    if(.not.global_sector%status)stop "ed_buildh_main ERROR: Hsector NOT set"
+    isector=global_sector%index
     !
     if(present(Hmat))&
          call assert_shape(Hmat,[getdim(isector), getdim(isector)],"ed_buildh_main","Hmat")

@@ -26,16 +26,6 @@ MODULE ED_SETUP
      module procedure :: set_Himpurity_nnn_c
   end interface set_Himpurity
 
-  ! interface build_sector
-  !    module procedure :: build_sector_full !A unique map for the full sector, separating spins
-  !    module procedure :: build_sector_spin !Two spin-resolved maps, separating imp and bath states
-  ! end interface build_sector
-
-  ! interface delete_sector
-  !    module procedure :: delete_sector_full
-  !    module procedure :: delete_sector_spin
-  ! end interface delete_sector
-
   public :: init_ed_structure
   public :: setup_global
   !
@@ -717,8 +707,9 @@ contains
   !######################################################################
   !######################################################################
   !
-  subroutine build_sector(isector,H,Itrace)
+  subroutine build_sector(isector,self,Itrace)
     integer                             :: isector
+    type(sector)                        :: self
     type(sector_map),dimension(2*Ns_Ud) :: H
     logical,optional                    :: itrace
     logical                             :: itrace_
@@ -730,9 +721,13 @@ contains
     integer                             :: imap,iud
     integer                             :: iIMP,iBATH
     !
+    if(self%status) call delete_sector(self)
+    !
     itrace_=.false. ; if(present(itrace))itrace_=itrace
     !
     impDIM = 2**(Nimp/Ns_ud)
+    !
+    H = self%H
     !
     call get_Nup(isector,Nups)
     call get_Ndw(isector,Ndws)
@@ -772,13 +767,40 @@ contains
        enddo
     enddo
     !
+    ! Fill back all ther fields of the sector object
+    self % index  = isector
+    self % H      = H
+    self % DimUps = DimUps
+    self % DimDws = DimDws
+    self % DimUp  = DimUp
+    self % DimDw  = DimDw
+    self % Dim    = DimUp*DimDw
+    self % Nups   = Nups
+    self % Ndws   = Ndws
+    self % Nup    = sum(Nups)
+    self % Ndw    = sum(Ndws)
+    self % Nlanc  = min(self%Dim,lanc_nGFiter)
+    self % status = .true.
+    !
   end subroutine build_sector
 
 
-  subroutine delete_sector(isector,H)
-    integer                   :: isector
-    type(sector_map)          :: H(:)
-    call map_deallocate(H)
+  subroutine delete_sector(self)
+    type(sector)              :: self
+    call map_deallocate(self%H)
+    if(allocated(self%H))deallocate(self%H)
+    if(allocated(self%DimUps))deallocate(self%DimUps)
+    if(allocated(self%DimDws))deallocate(self%DimDws)
+    if(allocated(self%Nups))deallocate(self%Nups)
+    if(allocated(self%Ndws))deallocate(self%Ndws)
+    self%index=0
+    self%DimUp=0
+    self%DimDw=0
+    self%Dim=0
+    self%Nup=0
+    self%Ndw=0
+    self%Nlanc=0
+    self%status=.false.
   end subroutine delete_sector
 
   ! subroutine delete_sector_spin(isector,HUP,HDW)
@@ -855,6 +877,7 @@ contains
     integer                             :: isector
     integer,dimension(:)                :: order
     type(sector_map),dimension(2*Ns_Ud) :: H
+    type(sector)                        :: Hsector
     integer,dimension(2*Ns_Ud)          :: Indices,Istates
     integer,dimension(Ns_Ud)            :: DimUps,DimDws
     integer                             :: Dim
@@ -865,13 +888,14 @@ contains
     call get_DimUp(isector,DimUps)
     call get_DimDw(isector,DimDws)
     !
-    call build_sector(isector,H)
+    call build_sector(isector,Hsector)
+    H = Hsector%H
     do i=1,Dim
        call state2indices(i,[DimUps,DimDws],Indices)
        forall(iud=1:2*Ns_Ud)Istates(iud) = H(iud)%map(Indices(iud))
        Order(i) = flip_state( Istates )
     enddo
-    call delete_sector(isector,H)
+    call delete_sector(Hsector)
     !
     call sort_array(Order)
     !
@@ -1147,156 +1171,3 @@ contains
 
 
 end MODULE ED_SETUP
-
-
-
-
-
-
-
-
-
-
-
-
-
-!   ! SPIN-RESOLVED ALGORITHM: two map objects Hsigma, with a *sparse* 
-!   !                          structure capable to store separately
-!   !                          the impurity and the bath spin-states
-!   subroutine build_sector_spin(isector,Hup,Hdw)
-!     integer                            :: isector
-!     type(sector_map)                   :: HUP !Map for the UPs
-!     type(sector_map)                   :: HDW !Map for the Dws
-!     integer,dimension(Ns_Ud)           :: Nups,Ndws
-!     integer,dimension(Ns_Ud)           :: DimUps,DimDws
-!     integer                            :: DimUp,DimDw,impDIM
-!     integer                            :: iup,idw
-!     integer                            :: nup_,ndw_
-!     integer                            :: imap,iud
-!     integer                            :: iIMP,iBATH
-!     !
-!     impDIM = 2**(Nimp/Ns_ud) !Number of states for the impurity
-!     !
-!     !Init UP sub-sector:
-!     ! > allocate UP-map to binomial(Ns_Orb Nup)
-!     call get_Nup(isector,Nups)
-!     call get_DimUp(isector,DimUps); DimUp = product(DimUps)
-!     call map_allocate(HUP,DimUp,impDIM)
-!     !
-!     !Init DW sub-sector:
-!     ! > allocate DW-map to binomial(Ns_Orb Ndw)
-!     call get_Ndw(isector,Ndws)
-!     call get_DimDw(isector,DimDws); DimDw = product(DimDws)
-!     call map_allocate(HDW,DimDw,impDIM)
-!     !
-!     !Formally dealing with ed_total_ud == .false.
-!     !->iud=1:Ns_Ud (formally because Ns_Ud = 1 in CDMFT code...)
-!     ![STILL PROBLEMS WITH Ns_Ud, don't know how to deal with it in density_matrix_impurity()] 
-!     do iud=1,Ns_Ud 
-! #ifdef _DEBUG
-!        if(ed_verbose>3)write(Logfile,"(A)")&
-!             "  DEBUG build_sector_spin(): working UP sub-sector"
-! #endif
-!        imap=0
-!        do iup=0,2**Ns_Orb-1
-!           nup_ = popcnt(iup) !equivalent to sum(binary_decomposition(iup))
-!           if(nup_ /= Nups(iud))cycle !the state does not have the required number of UPs
-!           imap = imap+1
-!           !HUP(iud)%map(imap) = iup
-!           HUP%map(imap) = iup
-!           !
-!           iIMP  = ibits(iup,0,Nimp)
-!           iBATH = ibits(iup,Nimp,Nimp*Nbath) !check: Nimp+Nimp*Nbath=Nimp(1*Nbath)=Ns
-!           !call sp_insert_state(HUP(iud)%sp,iIMP,iBATH,imap)
-! #ifdef _DEBUG
-!           if(ed_verbose>4)then 
-!              write(Logfile,"(A)")&
-!                   "    DEBUG build_sector_spin(): inserting UP state"
-!              write(Logfile,"(A)")&
-!                   "      Iup: "//str(iup)//" | IimpUp: "//str(iIMP)//" | IbathUp: "//str(iBATH)
-!           endif
-! #endif
-!           call sp_insert_state(HUP%sp,iIMP,iBATH,imap) 
-!           !
-!        enddo
-!        !
-! #ifdef _DEBUG
-!        if(ed_verbose>3)write(Logfile,"(A)")&
-!             "  DEBUG build_sector_spin(): working DW sub-sector"
-! #endif
-!        imap=0
-!        do idw=0,2**Ns_Orb-1
-!           ndw_=popcnt(idw)   !equivalent to sum(binary_decomposition(idw))
-!           if(ndw_ /= Ndws(iud))cycle !the state does not have the required number of DWs
-!           imap = imap+1
-!           !HDW(iud)%map(imap) = idw
-!           HDW%map(imap) = idw
-!           !
-!           iIMP  = ibits(idw,0,Nimp)
-!           iBATH = ibits(idw,Nimp,Nimp*Nbath) !check: Nimp+Nimp*Nbath=Nimp(1*Nbath)=Ns
-!           !call sp_insert_state(HDW(iud)%sp,iIMP,iBATH,imap)
-! #ifdef _DEBUG
-!           if(ed_verbose>4)then 
-!              write(LOGfile,"(A)")&
-!                   "    DEBUG build_sector_spin(): inserting DW state"
-!              write(LOGfile,"(A)")&
-!                   "      Idw: "//str(idw)//" | IimpDw: "//str(iIMP)//" | IbathDw: "//str(iBATH)
-!           endif
-! #endif
-!           call sp_insert_state(HDW%sp,iIMP,iBATH,imap)
-!           !
-!        enddo
-!     enddo
-!     !
-!   end subroutine build_sector_spin
-
-
-
-
-! getCsector=0
-! do isector=1,Nsectors
-!    call get_Nup(isector,Nup)
-!    call get_Ndw(isector,Ndw)
-!    !
-!    jup=nup-1; jdw=ndw; if(jup < 0)cycle
-!    !
-!    call get_Sector([jup,jdw],Ns,jsector)
-!    getCsector(1,1,isector)=jsector
-! enddo
-! !
-! !
-! !
-! do isector=1,Nsectors
-!    call get_Nup(isector,Nup)
-!    call get_Ndw(isector,Ndw)
-!    !
-!    jup=nup;jdw=ndw-1;if(jdw < 0)cycle
-!    !
-!    call get_Sector([jup,jdw],Ns,jsector)
-!    getCsector(1,2,isector)=jsector
-! enddo
-! !
-! !
-! !
-! getCDGsector=0
-! do isector=1,Nsectors
-!    call get_Nup(isector,Nup)
-!    call get_Ndw(isector,Ndw)
-!    !
-!    jup=nup+1;jdw=ndw;if(jup > Ns)cycle
-!    !
-!    call get_Sector([jup,jdw],Ns,jsector)
-!    getCDGsector(1,1,isector)=jsector
-! enddo
-! !
-! !
-! !
-! do isector=1,Nsectors
-!    call get_Nup(isector,Nup)
-!    call get_Ndw(isector,Ndw)
-!    !
-!    jup=nup;jdw=ndw+1;if(jdw > Ns)cycle
-!    !
-!    call get_Sector([jup,jdw],Ns,jsector)
-!    getCDGsector(1,2,isector)=jsector
-! enddo

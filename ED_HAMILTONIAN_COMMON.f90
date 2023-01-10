@@ -14,9 +14,8 @@ MODULE ED_HAMILTONIAN_COMMON
   integer,allocatable,dimension(:)          :: DimUps
   integer,allocatable,dimension(:)          :: DimDws
   !
-  integer                                   :: Hsector=0
-  logical                                   :: Hstatus=.false.
   type(sector_map),dimension(:),allocatable :: Hs
+  type(sector)                              :: global_sector
   integer,save,public                       :: iter=0
   !
 contains

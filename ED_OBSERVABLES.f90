@@ -99,6 +99,7 @@ contains
     integer,dimension(Ns)               :: IbUp,IbDw  ![Ns]
     real(8),dimension(Nlat,Norb)        :: nup,ndw,Sz,nt
     type(sector_map),dimension(2*Ns_Ud) :: HI
+    type(sector)                        :: sectorI
 
     !
     !LOCAL OBSERVABLES:
@@ -141,7 +142,8 @@ contains
        iDimDw = product(iDimDws)
        !
        if(MpiMaster)then
-          call build_sector(isector,HI)
+          call build_sector(isector,sectorI)
+          HI = sectorI%H
           do i = 1,iDim
              call state2indices(i,[iDimUps,iDimDws],Indices)
              do ii=1,Ns_Ud
@@ -195,7 +197,7 @@ contains
                 enddo
              enddo
           enddo
-          call delete_sector(isector,HI)
+          call delete_sector(sectorI)
        endif
        !
        !
@@ -250,6 +252,7 @@ contains
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws  ![1,Ns]-[Norb,1+Nbath]
     real(8),dimension(Ns)               :: Nup,Ndw
     type(sector_map),dimension(2*Ns_Ud) :: H
+    type(sector)                        :: sectorI
     !
     Egs     = state_list%emin
     ed_Ehartree= 0.d0
@@ -285,7 +288,8 @@ contains
        !
        !Master:
        if(MpiMaster)then
-          call build_sector(isector,H)
+          call build_sector(isector,sectorI)
+          H = sectorI%H
           do i=1,iDim
              call state2indices(i,[iDimUps,iDimDws],Indices)
              do ii=1,Ns_Ud
@@ -413,7 +417,7 @@ contains
                 endif
              endif
           enddo
-          call delete_sector(isector,H)         
+          call delete_sector(sectorI)         
        endif
        !
        if(allocated(state_cvec))deallocate(state_cvec)
@@ -473,6 +477,7 @@ contains
     integer,dimension(Ns_Ud,Ns_Orb)     :: Nups,Ndws         ![1,Ns]-[Norb,1+Nbath]
     integer,dimension(Ns_Ud)            :: iDimUps,iDimDws   ![1]-[Norb]
     integer,dimension(Ns)               :: IbUp,IbDw         ![Ns]
+    type(sector)                        :: sectorI
     type(sector_map),dimension(2*Ns_Ud) :: HI                ![2]-[2*Norb]
     integer,dimension(2*Ns_Ud)          :: Indices,Jndices   ![2]-[2*Norb]
     integer                             :: Nud(2,Ns),iud(2),jud(2),is,js,io,jo
@@ -509,7 +514,8 @@ contains
        iDimDw = product(iDimDws)
        !
        if(MpiMaster)then
-          call build_sector(isector,HI,itrace=.true.)
+          call build_sector(isector,sectorI,itrace=.true.)
+          HI = sectorI%H
           !
           do IimpUp=0,2**Nimp-1
              do JimpUp=0,2**Nimp-1
@@ -574,7 +580,7 @@ contains
              enddo
           enddo
           !
-          call delete_sector(isector,HI)       
+          call delete_sector(sectorI)       
        endif
        !
        if(allocated(state_cvec))deallocate(state_cvec)
@@ -616,7 +622,8 @@ contains
        iDimDw = product(iDimDws)
        !
        if(MpiMaster)then
-          call build_sector(isector,HI)
+          call build_sector(isector,sectorI)
+          HI = sectorI%H
           do i=1,iDim
              call state2indices(i,[iDimUps,iDimDws],Indices)
              do ii=1,Ns_Ud
@@ -671,7 +678,7 @@ contains
              !
              !
           enddo
-          call delete_sector(isector,HI)         
+          call delete_sector(sectorI)         
        endif
        !
        if(allocated(state_cvec))deallocate(state_cvec)
