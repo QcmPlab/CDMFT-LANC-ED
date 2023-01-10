@@ -61,9 +61,9 @@ MODULE ED_VARS_GLOBAL
       integer,dimension(:),allocatable          :: DimDws
       integer                                   :: DimUp
       integer                                   :: DimDw
-      !integer                                  :: DimEl ![no phonons here
-      !integer                                  :: DimPh ! hence Dim==DimEl]
-      integer                                   :: Dim
+      integer                                   :: DimEl ![no phonons here
+      integer                                   :: DimPh ! hence we must
+      integer                                   :: Dim   ! have Dim==DimEl]
       integer,dimension(:),allocatable          :: Nups
       integer,dimension(:),allocatable          :: Ndws
       integer                                   :: Nup
@@ -210,30 +210,30 @@ MODULE ED_VARS_GLOBAL
 #endif
 
 
-   ! !Spin Susceptibilities
-   ! !=========================================================
-   ! real(8),allocatable,dimension(:,:)                 :: spinChi_tau
-   ! complex(8),allocatable,dimension(:,:)              :: spinChi_w
-   ! complex(8),allocatable,dimension(:,:)              :: spinChi_iv
+   !Spin Susceptibilities
+   !=========================================================
+   real(8),allocatable,dimension(:,:,:)                :: spinChi_tau
+   complex(8),allocatable,dimension(:,:,:)             :: spinChi_w
+   complex(8),allocatable,dimension(:,:,:)             :: spinChi_iv
 
 
-   ! !Diagonal/Off-diagonal charge-charge Susceptibilities
-   ! !=========================================================
-   ! real(8),allocatable,dimension(:,:,:)               :: densChi_tau
-   ! complex(8),allocatable,dimension(:,:,:)            :: densChi_w
-   ! complex(8),allocatable,dimension(:,:,:)            :: densChi_iv
+   !Diagonal/Off-diagonal charge-charge Susceptibilities
+   !=========================================================
+   real(8),allocatable,dimension(:,:,:)               :: densChi_tau
+   complex(8),allocatable,dimension(:,:,:)            :: densChi_w
+   complex(8),allocatable,dimension(:,:,:)            :: densChi_iv
 
-   ! !Mixed inter-orbital charge-charge Susceptibilities
-   ! !=========================================================
-   ! real(8),allocatable,dimension(:,:,:)               :: densChi_mix_tau
-   ! complex(8),allocatable,dimension(:,:,:)            :: densChi_mix_w
-   ! complex(8),allocatable,dimension(:,:,:)            :: densChi_mix_iv
+   !Mixed inter-orbital charge-charge Susceptibilities
+   !=========================================================
+   real(8),allocatable,dimension(:,:,:)               :: densChi_mix_tau
+   complex(8),allocatable,dimension(:,:,:)            :: densChi_mix_w
+   complex(8),allocatable,dimension(:,:,:)            :: densChi_mix_iv
 
-   ! !Total (orbital-sum) Density-density Susceptibilities
-   ! !=========================================================
-   ! real(8),allocatable,dimension(:)                   :: densChi_tot_tau
-   ! complex(8),allocatable,dimension(:)                :: densChi_tot_w
-   ! complex(8),allocatable,dimension(:)                :: densChi_tot_iv
+   !Total (orbital-sum) Density-density Susceptibilities
+   !=========================================================
+   real(8),allocatable,dimension(:)                   :: densChi_tot_tau
+   complex(8),allocatable,dimension(:)                :: densChi_tot_w
+   complex(8),allocatable,dimension(:)                :: densChi_tot_iv
 
    ! !Pair-Pair Susceptibilities
    ! !=========================================================
@@ -263,7 +263,9 @@ MODULE ED_VARS_GLOBAL
    real(8),dimension(:,:),allocatable,save            :: ddii,eii
 
 
-
+   !Frequency and time arrays:
+   !=========================================================
+   real(8),dimension(:),allocatable                   :: wm,tau,wr,vm,vr
 
    ! !Impurity operators
    ! !PRIVATE (now public but accessible thru routine)

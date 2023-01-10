@@ -7,6 +7,8 @@ module ED_MAIN
   USE ED_BATH
   USE ED_HAMILTONIAN
   USE ED_GREENS_FUNCTIONS
+  USE ED_CHI_DENS
+  USE ED_CHI_SPIN
   USE ED_OBSERVABLES
   USE ED_DIAG
   USE SF_IOTOOLS, only: str,reg
@@ -222,7 +224,8 @@ contains
     !
     !OPTIONAL (HEAVY) CALCULATIONS 
     if(dm_flag) call density_matrix_impurity()    !build the cluster density matrix (\rho_IMP = Tr_BATH(\rho))
-    !if(chiflag) call buildchi_impurity()         !build the local susceptibilities (todo)
+    if(chispin_flag) call build_chispin_impurity()!build the local spin susceptibilities (todo)
+    if(chidens_flag) call build_chidens_impurity()!build the local charge susceptibilities (todo)
     !
     !
     call deallocate_dmft_bath()

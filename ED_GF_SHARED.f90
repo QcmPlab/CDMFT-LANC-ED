@@ -23,10 +23,6 @@ MODULE ED_GF_SHARED
   complex(8),dimension(:),allocatable   :: state_cvec
   real(8)                               :: state_e
 
-  !Frequency and time arrays:
-  !=========================================================
-  real(8),dimension(:),allocatable      :: wm,tau,wr,vm
-
 
   !AUX GF
   !=========================================================
