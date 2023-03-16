@@ -90,14 +90,10 @@ program cdn_hm_1dchain
    call add_custom_observable("test",observable_matrix)
    
    !setup solver
-   call set_Hloc(Hsym_basis,lambdasym_vector)
-   Nb=get_bath_dimension(Hsym_basis)
-   !Nb=get_bath_dimension(lso2nnn(Hloc))
+   call ed_set_Hreplica(Hsym_basis,lambdasym_vector)
+   Nb=ed_get_bath_dimension(Hsym_basis)
    allocate(bath(Nb))
-   allocate(bathold(Nb))
-   !call set_Hloc(lso2nnn(Hloc))
    call ed_init_solver(comm,bath)
-   Weiss_old=zero
 
    !DMFT loop
    iloop=0;converged=.false.
@@ -106,17 +102,17 @@ program cdn_hm_1dchain
       if(master)call start_loop(iloop,nloop,"DMFT-loop")
 
       !Solve the EFFECTIVE IMPURITY PROBLEM (first w/ a guess for the bath)
-      call ed_solve(comm,bath) 
+      call ed_solve(comm,bath,lso2nnn(Hloc))
       call ed_get_sigma_matsubara(Smats)
       call ed_get_sigma_realaxis(Sreal)
 
 
       !Compute the local gfs:
-      call dmft_gloc_matsubara(comm,Hk,Wt,Gmats,Smats)
+      call dmft_gloc_matsubara(Hk,Gmats,Smats)
       if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
       !
       !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(comm,Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+      call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
       call Bcast_MPI(comm,Weiss)
       !
       !MIXING:
@@ -141,14 +137,14 @@ program cdn_hm_1dchain
    enddo
 
    !Compute the local gfs:
-   call dmft_gloc_realaxis(comm,Hk,Wt,Greal,Sreal)
+   call dmft_gloc_realaxis(Hk,Greal,Sreal)
    if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
       Smats_lso(:,:,iw)=nnn2lso(Smats(:,:,:,:,:,:,iw))
    enddo
-   call dmft_kinetic_energy(comm,Hk(:,:,:),Wt,Smats_lso)
+   call dmft_kinetic_energy(Hk(:,:,:),Smats_lso)
 
 
    call finalize_MPI()

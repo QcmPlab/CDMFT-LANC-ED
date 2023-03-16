@@ -1,0 +1,5 @@
+/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/cdmft_ed.dir
+/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/completion.dir
+/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/distclean.dir
+/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/edit_cache.dir
+/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/rebuild_cache.dir

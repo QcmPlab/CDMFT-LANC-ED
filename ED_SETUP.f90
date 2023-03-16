@@ -235,6 +235,10 @@ contains
     impG0mats=zero
     impG0real=zero
     !
+    allocate(spinChi_tau(Nlat,Nlat,Norb,Norb,0:Ltau))
+    allocate(spinChi_w(Nlat,Nlat,Norb,Norb,Lreal))
+    allocate(spinChi_iv(Nlat,Nlat,Norb,Norb,0:Lmats))
+    !
     !allocate observables
     allocate(ed_dens(Nlat,Norb),ed_docc(Nlat,Norb),ed_mag(Nlat,Norb),ed_dens_up(Nlat,Norb),ed_dens_dw(Nlat,Norb))
     ed_dens=0d0

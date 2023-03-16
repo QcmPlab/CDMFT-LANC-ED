@@ -1,0 +1,19 @@
+Determining if the Fortran sgemm exists failed with the following output:
+Change Dir: /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-VW39Do
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_969db/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_969db.dir/build.make CMakeFiles/cmTC_969db.dir/build
+gmake[1]: Entering directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-VW39Do'
+Building Fortran object CMakeFiles/cmTC_969db.dir/testFortranCompiler.f.o
+/usr/bin/mpif90    -c /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-VW39Do/testFortranCompiler.f -o CMakeFiles/cmTC_969db.dir/testFortranCompiler.f.o
+Linking Fortran executable cmTC_969db
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_969db.dir/link.txt --verbose=1
+/usr/bin/mpif90 CMakeFiles/cmTC_969db.dir/testFortranCompiler.f.o -o cmTC_969db 
+/usr/bin/ld: CMakeFiles/cmTC_969db.dir/testFortranCompiler.f.o: in function `MAIN__':
+testFortranCompiler.f:(.text+0xa): undefined reference to `sgemm_'
+collect2: error: ld returned 1 exit status
+gmake[1]: *** [CMakeFiles/cmTC_969db.dir/build.make:99: cmTC_969db] Error 1
+gmake[1]: Leaving directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-VW39Do'
+gmake: *** [Makefile:127: cmTC_969db/fast] Error 2
+
+
+

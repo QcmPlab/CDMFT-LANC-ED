@@ -1,0 +1,355 @@
+The system is: Linux - 6.1.0-6-amd64 - x86_64
+Compiling the Fortran compiler identification source file "CMakeFortranCompilerId.F" succeeded.
+Compiler: /usr/bin/mpif90 
+Build flags: 
+Id flags: -v 
+
+The output was:
+0
+Driving: /usr/bin/gfortran -v CMakeFortranCompilerId.F -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -l gfortran -lm -lz -l gfortran -l m -shared-libgcc
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gfortran
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper
+OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Debian 12.2.0-14' --with-bugurl=file:///usr/share/doc/gcc-12/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-12 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 12.2.0 (Debian 12.2.0-14) 
+COLLECT_GCC_OPTIONS='-v' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'a-'
+ /usr/lib/gcc/x86_64-linux-gnu/12/f951 CMakeFortranCompilerId.F -ffixed-form -cpp=/tmp/ccTUz92v.f90 -quiet -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib -imultiarch x86_64-linux-gnu CMakeFortranCompilerId.F -quiet -dumpdir a- -dumpbase CMakeFortranCompilerId.F -dumpbase-ext .F -mtune=generic -march=x86-64 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/12/finclude -fpre-include=/usr/include/finclude/x86_64-linux-gnu/math-vector-fortran.h -o /tmp/cc53KcHk.s
+GNU Fortran (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)
+	compiled by GNU C version 12.2.0, GMP version 6.2.1, MPFR version 4.1.1-p1, MPC version 1.3.1, isl version isl-0.25-GMP
+
+warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/12/include-fixed"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi
+ /usr/lib/x86_64-linux-gnu/openmpi/lib
+ /usr/lib/gcc/x86_64-linux-gnu/12/finclude
+ /usr/lib/gcc/x86_64-linux-gnu/12/include
+ /usr/local/include
+ /usr/x86_64-linux-gnu/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+GNU Fortran2008 (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)
+	compiled by GNU C version 12.2.0, GMP version 6.2.1, MPFR version 4.1.1-p1, MPC version 1.3.1, isl version isl-0.25-GMP
+
+warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+COLLECT_GCC_OPTIONS='-v' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'a-'
+ as -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib --64 -o /tmp/ccSYlNVr.o /tmp/cc53KcHk.s
+GNU assembler version 2.40 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.40
+Reading specs from /usr/lib/gcc/x86_64-linux-gnu/12/libgfortran.spec
+rename spec lib to liborig
+COLLECT_GCC_OPTIONS='-v' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'a-'
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/home/lorenzo/opt/edlat/gnu/2.6.0/lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'a.'
+ /usr/lib/gcc/x86_64-linux-gnu/12/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/12/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper -plugin-opt=-fresolution=/tmp/ccoT8qAC.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/12 -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib -L/usr/lib/gcc/x86_64-linux-gnu/12/../../.. /tmp/ccSYlNVr.o -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lgfortran -lm -lz -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'a.'
+
+
+Compilation of the Fortran compiler identification source "CMakeFortranCompilerId.F" produced "a.out"
+
+The Fortran compiler identification is GNU, found in "/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/3.25.1/CompilerIdFortran/a.out"
+
+Detecting Fortran compiler ABI info compiled with the following output:
+Change Dir: /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-Ummuka
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_90739/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_90739.dir/build.make CMakeFiles/cmTC_90739.dir/build
+gmake[1]: Entering directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-Ummuka'
+Building Fortran object CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o
+/usr/bin/mpif90   -v -c /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -o CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gfortran
+OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Debian 12.2.0-14' --with-bugurl=file:///usr/share/doc/gcc-12/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-12 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 12.2.0 (Debian 12.2.0-14) 
+COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/'
+ /usr/lib/gcc/x86_64-linux-gnu/12/f951 /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -cpp=/tmp/ccoB3zyj.f90 -quiet -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib -imultiarch x86_64-linux-gnu /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -quiet -dumpdir CMakeFiles/cmTC_90739.dir/ -dumpbase CMakeFortranCompilerABI.F90.F90 -dumpbase-ext .F90 -mtune=generic -march=x86-64 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/12/finclude -fpre-include=/usr/include/finclude/x86_64-linux-gnu/math-vector-fortran.h -o /tmp/cc1BHH5E.s
+GNU Fortran (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)
+	compiled by GNU C version 12.2.0, GMP version 6.2.1, MPFR version 4.1.1-p1, MPC version 1.3.1, isl version isl-0.25-GMP
+
+warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/12/include-fixed"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi
+ /usr/lib/x86_64-linux-gnu/openmpi/lib
+ /usr/lib/gcc/x86_64-linux-gnu/12/finclude
+ /usr/lib/gcc/x86_64-linux-gnu/12/include
+ /usr/local/include
+ /usr/x86_64-linux-gnu/include
+ /usr/include/x86_64-linux-gnu
+ /usr/include
+End of search list.
+GNU Fortran2008 (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)
+	compiled by GNU C version 12.2.0, GMP version 6.2.1, MPFR version 4.1.1-p1, MPC version 1.3.1, isl version isl-0.25-GMP
+
+warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/'
+ as -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib --64 -o CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o /tmp/cc1BHH5E.s
+GNU assembler version 2.40 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.40
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/home/lorenzo/opt/edlat/gnu/2.6.0/lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.'
+Linking Fortran executable cmTC_90739
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_90739.dir/link.txt --verbose=1
+/usr/bin/mpif90  -v CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -o cmTC_90739 
+Driving: /usr/bin/gfortran -v CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -o cmTC_90739 -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -l gfortran -lm -lz -l gfortran -l m -shared-libgcc
+Using built-in specs.
+COLLECT_GCC=/usr/bin/gfortran
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper
+OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa
+OFFLOAD_TARGET_DEFAULT=1
+Target: x86_64-linux-gnu
+Configured with: ../src/configure -v --with-pkgversion='Debian 12.2.0-14' --with-bugurl=file:///usr/share/doc/gcc-12/README.Bugs --enable-languages=c,ada,c++,go,d,fortran,objc,obj-c++,m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-12 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32,m64,mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-nvptx/usr,amdgcn-amdhsa=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 12.2.0 (Debian 12.2.0-14) 
+Reading specs from /usr/lib/gcc/x86_64-linux-gnu/12/libgfortran.spec
+rename spec lib to liborig
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90739' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90739-'
+COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/
+LIBRARY_PATH=/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/home/lorenzo/opt/edlat/gnu/2.6.0/lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90739' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90739.'
+ /usr/lib/gcc/x86_64-linux-gnu/12/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/12/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper -plugin-opt=-fresolution=/tmp/cciXnQg4.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_90739 /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/12 -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib -L/usr/lib/gcc/x86_64-linux-gnu/12/../../.. CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lgfortran -lm -lz -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90739' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90739.'
+gmake[1]: Leaving directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-Ummuka'
+
+
+
+Parsed Fortran implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi]
+    add: [/usr/lib/x86_64-linux-gnu/openmpi/lib]
+    add: [/usr/lib/gcc/x86_64-linux-gnu/12/finclude]
+    add: [/usr/lib/gcc/x86_64-linux-gnu/12/include]
+    add: [/usr/local/include]
+    add: [/usr/x86_64-linux-gnu/include]
+    add: [/usr/include/x86_64-linux-gnu]
+    add: [/usr/include]
+  end of search list found
+  collapse include dir [/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi] ==> [/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi]
+  collapse include dir [/usr/lib/x86_64-linux-gnu/openmpi/lib] ==> [/usr/lib/x86_64-linux-gnu/openmpi/lib]
+  collapse include dir [/usr/lib/gcc/x86_64-linux-gnu/12/finclude] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/finclude]
+  collapse include dir [/usr/lib/gcc/x86_64-linux-gnu/12/include] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/include]
+  collapse include dir [/usr/local/include] ==> [/usr/local/include]
+  collapse include dir [/usr/x86_64-linux-gnu/include] ==> [/usr/x86_64-linux-gnu/include]
+  collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+  collapse include dir [/usr/include] ==> [/usr/include]
+  implicit include dirs: [/usr/lib/x86_64-linux-gnu/fortran/gfortran-mod-15/openmpi;/usr/lib/x86_64-linux-gnu/openmpi/lib;/usr/lib/gcc/x86_64-linux-gnu/12/finclude;/usr/lib/gcc/x86_64-linux-gnu/12/include;/usr/local/include;/usr/x86_64-linux-gnu/include;/usr/include/x86_64-linux-gnu;/usr/include]
+
+
+Parsed Fortran implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-Ummuka]
+  ignore line: []
+  ignore line: [Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_90739/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_90739.dir/build.make CMakeFiles/cmTC_90739.dir/build]
+  ignore line: [gmake[1]: Entering directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-Ummuka']
+  ignore line: [Building Fortran object CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o]
+  ignore line: [/usr/bin/mpif90   -v -c /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -o CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/gfortran]
+  ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+  ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+  ignore line: [Target: x86_64-linux-gnu]
+  ignore line: [Configured with: ../src/configure -v --with-pkgversion='Debian 12.2.0-14' --with-bugurl=file:///usr/share/doc/gcc-12/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-12 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib zstd]
+  ignore line: [gcc version 12.2.0 (Debian 12.2.0-14) ]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/']
+  ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/12/f951 /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -cpp=/tmp/ccoB3zyj.f90 -quiet -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib -imultiarch x86_64-linux-gnu /usr/share/cmake-3.25/Modules/CMakeFortranCompilerABI.F90 -quiet -dumpdir CMakeFiles/cmTC_90739.dir/ -dumpbase CMakeFortranCompilerABI.F90.F90 -dumpbase-ext .F90 -mtune=generic -march=x86-64 -version -fintrinsic-modules-path /usr/lib/gcc/x86_64-linux-gnu/12/finclude -fpre-include=/usr/include/finclude/x86_64-linux-gnu/math-vector-fortran.h -o /tmp/cc1BHH5E.s]
+  ignore line: [GNU Fortran (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)]
+  ignore line: [	compiled by GNU C version 12.2.0  GMP version 6.2.1  MPFR version 4.1.1-p1  MPC version 1.3.1  isl version isl-0.25-GMP]
+  ignore line: []
+  ignore line: [warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [ignoring nonexistent directory "/usr/local/include/x86_64-linux-gnu"]
+  ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-linux-gnu/12/include-fixed"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi]
+  ignore line: [ /usr/lib/x86_64-linux-gnu/openmpi/lib]
+  ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/12/finclude]
+  ignore line: [ /usr/lib/gcc/x86_64-linux-gnu/12/include]
+  ignore line: [ /usr/local/include]
+  ignore line: [ /usr/x86_64-linux-gnu/include]
+  ignore line: [ /usr/include/x86_64-linux-gnu]
+  ignore line: [ /usr/include]
+  ignore line: [End of search list.]
+  ignore line: [GNU Fortran2008 (Debian 12.2.0-14) version 12.2.0 (x86_64-linux-gnu)]
+  ignore line: [	compiled by GNU C version 12.2.0  GMP version 6.2.1  MPFR version 4.1.1-p1  MPC version 1.3.1  isl version isl-0.25-GMP]
+  ignore line: []
+  ignore line: [warning: MPFR header version 4.1.1-p1 differs from library version 4.2.0.]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/']
+  ignore line: [ as -v -I /usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I /usr/lib/x86_64-linux-gnu/openmpi/lib --64 -o CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o /tmp/cc1BHH5E.s]
+  ignore line: [GNU assembler version 2.40 (x86_64-linux-gnu) using BFD version (GNU Binutils for Debian) 2.40]
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/home/lorenzo/opt/edlat/gnu/2.6.0/lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-c' '-o' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.']
+  ignore line: [Linking Fortran executable cmTC_90739]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_90739.dir/link.txt --verbose=1]
+  ignore line: [/usr/bin/mpif90  -v CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -o cmTC_90739 ]
+  ignore line: [Driving: /usr/bin/gfortran -v CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -o cmTC_90739 -I/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi -I/usr/lib/x86_64-linux-gnu/openmpi/lib -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -l gfortran -lm -lz -l gfortran -l m -shared-libgcc]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/bin/gfortran]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper]
+  ignore line: [OFFLOAD_TARGET_NAMES=nvptx-none:amdgcn-amdhsa]
+  ignore line: [OFFLOAD_TARGET_DEFAULT=1]
+  ignore line: [Target: x86_64-linux-gnu]
+  ignore line: [Configured with: ../src/configure -v --with-pkgversion='Debian 12.2.0-14' --with-bugurl=file:///usr/share/doc/gcc-12/README.Bugs --enable-languages=c ada c++ go d fortran objc obj-c++ m2 --prefix=/usr --with-gcc-major-version-only --program-suffix=-12 --program-prefix=x86_64-linux-gnu- --enable-shared --enable-linker-build-id --libexecdir=/usr/lib --without-included-gettext --enable-threads=posix --libdir=/usr/lib --enable-nls --enable-clocale=gnu --enable-libstdcxx-debug --enable-libstdcxx-time=yes --with-default-libstdcxx-abi=new --enable-gnu-unique-object --disable-vtable-verify --enable-plugin --enable-default-pie --with-system-zlib --enable-libphobos-checking=release --with-target-system-zlib=auto --enable-objc-gc=auto --enable-multiarch --disable-werror --enable-cet --with-arch-32=i686 --with-abi=m64 --with-multilib-list=m32 m64 mx32 --enable-multilib --with-tune=generic --enable-offload-targets=nvptx-none=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-nvptx/usr amdgcn-amdhsa=/build/gcc-12-bTRWOB/gcc-12-12.2.0/debian/tmp-gcn/usr --enable-offload-defaulted --without-cuda-driver --enable-checking=release --build=x86_64-linux-gnu --host=x86_64-linux-gnu --target=x86_64-linux-gnu]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib zstd]
+  ignore line: [gcc version 12.2.0 (Debian 12.2.0-14) ]
+  ignore line: [Reading specs from /usr/lib/gcc/x86_64-linux-gnu/12/libgfortran.spec]
+  ignore line: [rename spec lib to liborig]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90739' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90739-']
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib/:/usr/lib/gcc/x86_64-linux-gnu/12/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib/:/lib/x86_64-linux-gnu/:/lib/../lib/:/usr/lib/x86_64-linux-gnu/:/usr/lib/../lib/:/home/lorenzo/opt/edlat/gnu/2.6.0/lib/:/home/lorenzo/opt/edipack/gnu/3.1.2/lib/:/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/:/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/:/home/lorenzo/opt/scifor/gnu/4.10.7/lib/:/usr/lib/gcc/x86_64-linux-gnu/12/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_90739' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib/../../fortran/gfortran-mod-15/openmpi' '-I' '/usr/lib/x86_64-linux-gnu/openmpi/lib' '-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_90739.']
+  link line: [ /usr/lib/gcc/x86_64-linux-gnu/12/collect2 -plugin /usr/lib/gcc/x86_64-linux-gnu/12/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper -plugin-opt=-fresolution=/tmp/cciXnQg4.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lquadmath -plugin-opt=-pass-through=-lm -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr -m elf_x86_64 --hash-style=gnu --as-needed -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_90739 /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o /usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib -L/usr/lib/gcc/x86_64-linux-gnu/12 -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu -L/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib -L/lib/x86_64-linux-gnu -L/lib/../lib -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib -L/home/lorenzo/opt/edlat/gnu/2.6.0/lib -L/home/lorenzo/opt/edipack/gnu/3.1.2/lib -L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib -L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib -L/home/lorenzo/opt/scifor/gnu/4.10.7/lib -L/usr/lib/gcc/x86_64-linux-gnu/12/../../.. CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o -lmpi_usempif08 -lmpi_usempi_ignore_tkr -lmpi_mpifh -lmpi -lopen-rte -lopen-pal -lhwloc -levent_core -levent_pthreads -lgfortran -lm -lz -lgfortran -lm -lgcc_s -lgcc -lquadmath -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o /usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/usr/lib/gcc/x86_64-linux-gnu/12/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/cciXnQg4.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lquadmath] ==> ignore
+    arg [-plugin-opt=-pass-through=-lm] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_x86_64] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [--as-needed] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+    arg [-pie] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_90739] ==> ignore
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o]
+    arg [-L/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran] ==> dir [/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran]
+    arg [-L/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib] ==> dir [/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib]
+    arg [-L/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib] ==> dir [/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib]
+    arg [-L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib] ==> dir [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib]
+    arg [-L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib] ==> dir [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib]
+    arg [-L/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib] ==> dir [/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/12] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/12]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib]
+    arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+    arg [-L/lib/../lib] ==> dir [/lib/../lib]
+    arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+    arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+    arg [-L/home/lorenzo/opt/edlat/gnu/2.6.0/lib] ==> dir [/home/lorenzo/opt/edlat/gnu/2.6.0/lib]
+    arg [-L/home/lorenzo/opt/edipack/gnu/3.1.2/lib] ==> dir [/home/lorenzo/opt/edipack/gnu/3.1.2/lib]
+    arg [-L/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib] ==> dir [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib]
+    arg [-L/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib] ==> dir [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib]
+    arg [-L/home/lorenzo/opt/scifor/gnu/4.10.7/lib] ==> dir [/home/lorenzo/opt/scifor/gnu/4.10.7/lib]
+    arg [-L/usr/lib/gcc/x86_64-linux-gnu/12/../../..] ==> dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../..]
+    arg [CMakeFiles/cmTC_90739.dir/CMakeFortranCompilerABI.F90.o] ==> ignore
+    arg [-lmpi_usempif08] ==> lib [mpi_usempif08]
+    arg [-lmpi_usempi_ignore_tkr] ==> lib [mpi_usempi_ignore_tkr]
+    arg [-lmpi_mpifh] ==> lib [mpi_mpifh]
+    arg [-lmpi] ==> lib [mpi]
+    arg [-lopen-rte] ==> lib [open-rte]
+    arg [-lopen-pal] ==> lib [open-pal]
+    arg [-lhwloc] ==> lib [hwloc]
+    arg [-levent_core] ==> lib [event_core]
+    arg [-levent_pthreads] ==> lib [event_pthreads]
+    arg [-lgfortran] ==> lib [gfortran]
+    arg [-lm] ==> lib [m]
+    arg [-lz] ==> lib [z]
+    arg [-lgfortran] ==> lib [gfortran]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lquadmath] ==> lib [quadmath]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lc] ==> lib [c]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o]
+    arg [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o] ==> obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o]
+  collapse obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/Scrt1.o] ==> [/usr/lib/x86_64-linux-gnu/Scrt1.o]
+  collapse obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crti.o] ==> [/usr/lib/x86_64-linux-gnu/crti.o]
+  collapse obj [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu/crtn.o] ==> [/usr/lib/x86_64-linux-gnu/crtn.o]
+  collapse library dir [/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran] ==> [/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran]
+  collapse library dir [/home/lorenzo/opt/edlat/gnu/2.6.0/lib/../lib] ==> [/home/lorenzo/opt/edlat/gnu/2.6.0/lib]
+  collapse library dir [/home/lorenzo/opt/edipack/gnu/3.1.2/lib/../lib] ==> [/home/lorenzo/opt/edipack/gnu/3.1.2/lib]
+  collapse library dir [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib/../lib] ==> [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib]
+  collapse library dir [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib/../lib] ==> [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib]
+  collapse library dir [/home/lorenzo/opt/scifor/gnu/4.10.7/lib/../lib] ==> [/home/lorenzo/opt/scifor/gnu/4.10.7/lib]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/12] ==> [/usr/lib/gcc/x86_64-linux-gnu/12]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../../x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../../../lib] ==> [/usr/lib]
+  collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+  collapse library dir [/lib/../lib] ==> [/lib]
+  collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+  collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+  collapse library dir [/home/lorenzo/opt/edlat/gnu/2.6.0/lib] ==> [/home/lorenzo/opt/edlat/gnu/2.6.0/lib]
+  collapse library dir [/home/lorenzo/opt/edipack/gnu/3.1.2/lib] ==> [/home/lorenzo/opt/edipack/gnu/3.1.2/lib]
+  collapse library dir [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib] ==> [/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib]
+  collapse library dir [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib] ==> [/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib]
+  collapse library dir [/home/lorenzo/opt/scifor/gnu/4.10.7/lib] ==> [/home/lorenzo/opt/scifor/gnu/4.10.7/lib]
+  collapse library dir [/usr/lib/gcc/x86_64-linux-gnu/12/../../..] ==> [/usr/lib]
+  implicit libs: [mpi_usempif08;mpi_usempi_ignore_tkr;mpi_mpifh;mpi;open-rte;open-pal;hwloc;event_core;event_pthreads;gfortran;m;z;gfortran;m;gcc_s;gcc;quadmath;m;gcc_s;gcc;c;gcc_s;gcc]
+  implicit objs: [/usr/lib/x86_64-linux-gnu/Scrt1.o;/usr/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o;/usr/lib/x86_64-linux-gnu/crtn.o]
+  implicit dirs: [/usr/lib/x86_64-linux-gnu/openmpi/lib/fortran/gfortran;/home/lorenzo/opt/edlat/gnu/2.6.0/lib;/home/lorenzo/opt/edipack/gnu/3.1.2/lib;/home/lorenzo/opt/dmft_ed/gnu/0.6.0-2-g81f11cf/lib;/home/lorenzo/opt/dmft_tools/gnu/2.6.4-1-gd57796b/lib;/home/lorenzo/opt/scifor/gnu/4.10.7/lib;/usr/lib/gcc/x86_64-linux-gnu/12;/usr/lib/x86_64-linux-gnu;/usr/lib;/lib/x86_64-linux-gnu;/lib]
+  implicit fwks: []
+
+
+Determining if the Fortran sgemm exists passed with the following output:
+Change Dir: /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-5Vdjhm
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_79a4f/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_79a4f.dir/build.make CMakeFiles/cmTC_79a4f.dir/build
+gmake[1]: Entering directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-5Vdjhm'
+Building Fortran object CMakeFiles/cmTC_79a4f.dir/testFortranCompiler.f.o
+/usr/bin/mpif90    -c /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-5Vdjhm/testFortranCompiler.f -o CMakeFiles/cmTC_79a4f.dir/testFortranCompiler.f.o
+Linking Fortran executable cmTC_79a4f
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_79a4f.dir/link.txt --verbose=1
+/usr/bin/mpif90 CMakeFiles/cmTC_79a4f.dir/testFortranCompiler.f.o -o cmTC_79a4f  /usr/lib/x86_64-linux-gnu/libblas.so 
+gmake[1]: Leaving directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-5Vdjhm'
+
+
+
+Determining if the Fortran cheev exists passed with the following output:
+Change Dir: /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-aVU23Z
+
+Run Build Command(s):/usr/bin/gmake -f Makefile cmTC_ff979/fast && /usr/bin/gmake  -f CMakeFiles/cmTC_ff979.dir/build.make CMakeFiles/cmTC_ff979.dir/build
+gmake[1]: Entering directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-aVU23Z'
+Building Fortran object CMakeFiles/cmTC_ff979.dir/testFortranCompiler.f.o
+/usr/bin/mpif90    -c /home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-aVU23Z/testFortranCompiler.f -o CMakeFiles/cmTC_ff979.dir/testFortranCompiler.f.o
+Linking Fortran executable cmTC_ff979
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_ff979.dir/link.txt --verbose=1
+/usr/bin/mpif90 CMakeFiles/cmTC_ff979.dir/testFortranCompiler.f.o -o cmTC_ff979  /usr/lib/x86_64-linux-gnu/liblapack.so /usr/lib/x86_64-linux-gnu/libblas.so 
+gmake[1]: Leaving directory '/home/lorenzo/tools/CDMFT-LANC-ED/drivers/CMakeFiles/CMakeScratch/TryCompile-aVU23Z'
+
+
+

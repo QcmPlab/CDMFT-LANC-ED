@@ -280,7 +280,7 @@ MODULE ED_IO
   public :: ed_print_impG
   public :: ed_print_impG0
   public :: ed_print_dm
-  ! public :: ed_print_impChi
+  public :: ed_print_impChi
 
 
   !****************************************************************************************!
@@ -288,9 +288,7 @@ MODULE ED_IO
 
 
 
-  !Frequency and time arrays:
-  !=========================================================
-  real(8),dimension(:),allocatable :: wm,tau,wr,vm
+
   character(len=64)                :: suffix
 
 
@@ -489,30 +487,29 @@ contains
   !+------------------------------------------------------------------+
   ! !                         PRINT CHI:
   ! !+------------------------------------------------------------------+  
-  ! subroutine ed_print_impChi
-  !   call print_chi_spin
+   subroutine ed_print_impChi
+     call print_chi_spin
   !   call print_chi_dens
   !   call print_chi_dens_mix
   !   call print_chi_dens_tot
   !   call print_chi_pair
-  ! end subroutine ed_print_impChi
+   end subroutine ed_print_impChi
 
   ! !                         SPIN-SPIN
-  ! subroutine print_chi_spin
-  !   integer                               :: i,iorb
-  !   integer                               :: unit(3)
-  !   do iorb=1,Norb
-  !      call splot("spinChi_l"//str(iorb)//"_tau"//reg(ed_file_suffix)//".ed",tau,spinChi_tau(iorb,0:))
-  !      call splot("spinChi_l"//str(iorb)//"_realw"//reg(ed_file_suffix)//".ed",wr,spinChi_w(iorb,:))
-  !      call splot("spinChi_l"//str(iorb)//"_iw"//reg(ed_file_suffix)//".ed",vm,spinChi_iv(iorb,:))
-  !   enddo
-  !   if(Norb>1)then
-  !      iorb=Norb+1
-  !      call splot("spinChi_tot"//str(iorb)//"_tau"//reg(ed_file_suffix)//".ed",tau,spinChi_tau(iorb,0:))
-  !      call splot("spinChi_tot"//str(iorb)//"_realw"//reg(ed_file_suffix)//".ed",wr,spinChi_w(iorb,:))
-  !      call splot("spinChi_tot"//str(iorb)//"_iw"//reg(ed_file_suffix)//".ed",vm,spinChi_iv(iorb,:))
-  !   endif
-  ! end subroutine print_chi_spin
+  subroutine print_chi_spin
+    integer                               :: ilat,jlat,iorb,jorb
+    do ilat=1,Nlat
+      do jlat=1,Nlat
+        do iorb=1,Norb
+           do jorb=1,Norb
+              call splot("spinChi_i"//str(ilat)//str(jlat)//"_l"//str(iorb)//str(jorb)//"_tau"//reg(ed_file_suffix)//".ed",tau,spinChi_tau(ilat,jlat,iorb,jorb,0:))
+              call splot("spinChi_i"//str(ilat)//str(jlat)//"_l"//str(iorb)//str(jorb)//"_realw"//reg(ed_file_suffix)//".ed",vr,spinChi_w(ilat,jlat,iorb,jorb,:))
+              call splot("spinChi_i"//str(ilat)//str(jlat)//"_l"//str(iorb)//str(jorb)//"_iw"//reg(ed_file_suffix)//".ed",vm,spinChi_iv(ilat,jlat,iorb,jorb,:))
+           enddo
+        enddo
+      enddo
+    enddo
+  end subroutine print_chi_spin
 
   ! !                     DENSITY-DENSITY
   ! subroutine print_chi_dens

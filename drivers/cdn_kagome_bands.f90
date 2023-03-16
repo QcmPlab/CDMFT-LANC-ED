@@ -39,8 +39,6 @@ program cdn_kanemele
    call add_ctrl_var(eps,"eps")
 
    !set global variables
-   if (Norb/=1) stop "You are using too many orbitals. Only 1 allowed"
-   if (Nspin/=2) stop "You are using too many spin-orbitals. Only 2 allowed"
    Nlat=3
    Nlso=Nlat*Nspin*Norb
 
@@ -234,7 +232,7 @@ contains
       KPath(1,:)=[0d0,0d0]
       KPath(2,:)=pointK
       Kpath(3,:)=pointM
-      KPath(5,:)=[0d0,0d0]
+      KPath(4,:)=[0d0,0d0]
       write(LOGFile,*) KPath
       call TB_set_bk(bkx=bk1,bky=bk2)
       call TB_Solve_model(hk_model,Nlso,KPath,Nkpath,&

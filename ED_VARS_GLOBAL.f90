@@ -190,11 +190,11 @@ MODULE ED_VARS_GLOBAL
 #endif
 
 
-  ! !Spin Susceptibilities
+   !Spin Susceptibilities
   ! !=========================================================
-  ! real(8),allocatable,dimension(:,:)                 :: spinChi_tau
-  ! complex(8),allocatable,dimension(:,:)              :: spinChi_w
-  ! complex(8),allocatable,dimension(:,:)              :: spinChi_iv
+      real(8),allocatable,dimension(:,:,:,:,:)               :: spinChi_tau
+      complex(8),allocatable,dimension(:,:,:,:,:)            :: spinChi_w
+      complex(8),allocatable,dimension(:,:,:,:,:)            :: spinChi_iv
 
 
   ! !Diagonal/Off-diagonal charge-charge Susceptibilities
@@ -230,6 +230,12 @@ MODULE ED_VARS_GLOBAL
   real(8),dimension(:,:),allocatable                   ::  ed_docc,ed_mag
   !--------------- LATTICE WRAP VARIABLES -----------------!
   type(custom_observables)                             ::  custom_o
+
+  !Frequency and time arrays:
+  !=========================================================
+  real(8),dimension(:),allocatable                   :: wm,tau,wr,vm,vr
+
+
 
 
   !Local energies and generalized double occupancies

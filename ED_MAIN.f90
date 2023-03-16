@@ -7,6 +7,7 @@ module ED_MAIN
   USE ED_BATH
   USE ED_HAMILTONIAN
   USE ED_GREENS_FUNCTIONS
+  USE ED_CHI_FUNCTIONS
   USE ED_OBSERVABLES
   USE ED_DIAG
   USE SF_IOTOOLS, only: str,reg
@@ -215,6 +216,7 @@ contains
     !
     !GET IMPURITY GFs and RELATED QUANTITIES
     if(gf_flag)call buildgf_impurity()            !build the one-particle impurity Green's functions & Self-energy
+    if(gf_flag)call buildchi_impurity()           !build the response function
     if(gf_flag)call get_custom_observables()      !obtain custom user-defined observables (if initialized)
     !
     call observables_impurity()                   !obtain impurity observables as thermal averages.
@@ -261,6 +263,7 @@ contains
     !
     !GET IMPURITY GFs and RELATED QUANTITIES
     if(gf_flag)call buildgf_impurity()           !build the one-particle impurity Green's functions  & Self-energy
+    if(gf_flag)call buildchi_impurity()           !build the response function
     if(gf_flag)call get_custom_observables()      !obtain custom user-defined observables (if initialized)
     !
     call observables_impurity()                   !obtain impurity observables as thermal averages.
