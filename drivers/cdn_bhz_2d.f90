@@ -159,10 +159,11 @@ program cdn_bhz_2d
 
      !Compute the local gfs:
      call dmft_gloc_matsubara(Hk,Gmats,Smats)
-     if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+     if(master)call dmft_write_gf(Gmats,"Gloc",axis="matsubara",iprint=4)
      !
      !Get the Weiss field/Delta function to be fitted
-     call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+     call legacy_dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+     !call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
      call Bcast_MPI(comm,Weiss)
      !
      !MIXING:
@@ -191,7 +192,7 @@ program cdn_bhz_2d
 
   !Compute the local gfs:
   call dmft_gloc_realaxis(Hk,Greal,Sreal)
-  if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
+  if(master)call dmft_write_gf(Greal,"Gloc",axis="realaxis",iprint=4)
 
   !Compute the Kinetic Energy:
   do iw=1,Lmats
