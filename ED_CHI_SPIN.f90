@@ -321,6 +321,54 @@ contains
        iDimDw = product(iDimDws)
        call build_sector(isector,HI)
        !
+       !EVALUATE (Sz_jorb + Sz_iorb)|gs> = Sz_jorb|gs> + i*Sz_iorb|gs>
+       if(MpiMaster)then
+          if(ed_verbose>=3)write(LOGfile,"(A20,I6)")&
+               'From sector',isector
+          if(ed_verbose>=3)write(LOGfile,"(A20,I15)")'Apply (Sz_a + Sz_b)',isector
+          allocate(vvinit(idim)) ; vvinit=zero
+          do i=1,idim
+             sgn=0d0
+             call state2indices(i,[iDimUps,iDimDws],Indices)
+             iud(1)   = HI(ialfa)%map(Indices(ialfa))
+             iud(2)   = HI(ialfa+Ns_Ud)%map(Indices(ialfa+Ns_Ud))
+             nud(1,:) = Bdecomp(iud(1),Ns_Orb)
+             nud(2,:) = Bdecomp(iud(2),Ns_Orb)
+             Siorb = (dble(nud(1,ipos))-dble(nud(2,ipos)))/2d0
+             Sjorb = (dble(nud(1,jpos))-dble(nud(2,jpos)))/2d0
+             sgn       = Siorb + Sjorb
+             vvinit(i) = sgn*state_cvec(i)
+          enddo
+          norm2=dot_product(vvinit,vvinit)
+          vvinit=vvinit/sqrt(norm2)
+       else
+          allocate(vvinit(1));vvinit=0.d0
+       endif
+       nlanc=min(idim,lanc_nGFiter)
+       allocate(alfa_(nlanc),beta_(nlanc))
+       alfa_=0.d0
+       beta_=0.d0
+       call build_Hv_sector(isector)
+#ifdef _MPI
+       if(MpiStatus)then
+         if(MpiComm /= MPI_COMM_NULL)call Bcast_MPI(MpiComm,norm2)
+         vecDim = vecDim_Hv_sector(isector)
+         allocate(vvloc(vecDim))
+         if(MpiComm /= MPI_COMM_NULL) call scatter_vector_MPI(MpiComm,vvinit,vvloc)
+         call sp_lanc_tridiag(MpiComm,spHtimesV_p,vvloc,alfa_,beta_)
+       else
+         call sp_lanc_tridiag(spHtimesV_p,vvinit,alfa_,beta_)
+       endif
+#else
+       call sp_lanc_tridiag(spHtimesV_p,vvinit,alfa_,beta_)
+#endif
+       call delete_Hv_sector()
+       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,isite,iorb,iorb)
+          !
+       deallocate(alfa_,beta_)
+       if(allocated(vvinit))deallocate(vvinit)          
+       if(allocated(vvloc))deallocate(vvloc)
+       
        !EVALUATE (Sz_jorb + i*Sz_iorb)|gs> = Sz_jorb|gs> + i*Sz_iorb|gs>
        if(MpiMaster)then
           if(ed_verbose>=3)write(LOGfile,"(A20,I6)")&
