@@ -235,9 +235,7 @@ contains
     impG0mats=zero
     impG0real=zero
     !
-    allocate(spinChi_tau(Nlat,Nlat,Norb,Norb,0:Ltau))
-    allocate(spinChi_w(Nlat,Nlat,Norb,Norb,Lreal))
-    allocate(spinChi_iv(Nlat,Nlat,Norb,Norb,0:Lmats))
+
     !
     !allocate observables
     allocate(ed_dens(Nlat,Norb),ed_docc(Nlat,Norb),ed_mag(Nlat,Norb),ed_dens_up(Nlat,Norb),ed_dens_dw(Nlat,Norb))
@@ -247,10 +245,10 @@ contains
     ed_dens_up=0d0
     ed_dens_dw=0d0
     !
-    ! if(chiflag)then
-    !    allocate(spinChi_tau(Norb+1,0:Ltau))
-    !    allocate(spinChi_w(Norb+1,Lreal))
-    !    allocate(spinChi_iv(Norb+1,0:Lmats))
+     if(chiflag)then
+      allocate(spinChi_tau(Nlat,Nlat,Norb,Norb,0:Ltau))
+      allocate(spinChi_w(Nlat,Nlat,Norb,Norb,Lreal))
+      allocate(spinChi_iv(Nlat,Nlat,Norb,Norb,0:Lmats))
     !    !
     !    ! allocate(densChi_tau(Norb,Norb,0:Ltau))
     !    ! allocate(densChi_w(Norb,Norb,Lreal))
@@ -265,7 +263,7 @@ contains
     !    ! allocate(pairChi_tau(Norb,0:Ltau))
     !    ! allocate(pairChi_w(Norb,Lreal))
     !    ! allocate(pairChi_iv(Norb,0:Lmats))
-    ! endif
+     endif
     !
     !allocate density matrices
     !
