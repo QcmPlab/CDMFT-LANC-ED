@@ -88,6 +88,7 @@ contains
       do jsite=1,Nlat
         do iorb=1,Norb
           do jorb=1,Norb
+             if(isite==jsite .and. iorb==jorb)cycle
              spinChi_w(isite,jsite,iorb,jorb,:)   = 0.5d0*(spinChi_w(isite,jsite,iorb,jorb,:) & 
                                         - (one-chan4*xi)*spinChi_w(isite,isite,iorb,iorb,:) - (one-chan4*xi)*spinChi_w(jsite,jsite,jorb,jorb,:))
              spinChi_tau(isite,jsite,iorb,jorb,:) = 0.5d0*(spinChi_tau(isite,jsite,iorb,jorb,:) & 
