@@ -274,7 +274,7 @@ contains
        call sp_lanc_tridiag(spHtimesV_p,vvinit,alfa_,beta_)
 #endif
        call delete_Hv_sector()
-       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,isite,iorb,iorb)
+       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,jsite,iorb,jorb)
           !
        deallocate(alfa_,beta_)
        if(allocated(vvinit))deallocate(vvinit)          
@@ -363,7 +363,7 @@ contains
        call sp_lanc_tridiag(spHtimesV_p,vvinit,alfa_,beta_)
 #endif
        call delete_Hv_sector()
-       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,isite,iorb,iorb)
+       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,jsite,iorb,jorb)
           !
        deallocate(alfa_,beta_)
        if(allocated(vvinit))deallocate(vvinit)          
@@ -411,7 +411,7 @@ contains
        call sp_lanc_tridiag(spHtimesV_p,vvinit,alfa_,beta_)
 #endif
        call delete_Hv_sector()
-       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,isite,iorb,iorb)
+       call add_to_lanczos_spinChi(one*norm2,state_e,alfa_,beta_,isite,jsite,iorb,jorb)
           !
        deallocate(alfa_,beta_)
        if(allocated(vvinit))deallocate(vvinit)          
