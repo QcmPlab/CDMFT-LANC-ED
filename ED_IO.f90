@@ -447,7 +447,81 @@ contains
   !+------------------------------------------------------------------+
   !                      PRINT DENSITY MATRICES
   !+------------------------------------------------------------------+
-  subroutine ed_print_dm(dm,Nrdm,ineq)
+  subroutine ed_print_dm(dm,site1,site2,site3,site4,ineq)
+   complex(8),dimension(:,:),intent(in)            :: dm
+   integer,dimension(:),intent(in)                 :: site1
+   integer,dimension(:),intent(in),optional        :: site2
+   integer,dimension(:),intent(in),optional        :: site3
+   integer,dimension(:),intent(in),optional        :: site4
+   integer                  ,intent(in),optional   :: ineq
+   integer                                         :: unit,Nsites
+   character(len=64)                               :: suffix
+   integer                                         :: io,jo,Nrdm
+   integer,allocatable,dimension(:)                :: s1,s2,s3,s4
+   !
+   ! INPUT CHECKS (so freaking ugly, but for a good cause (shiny interface...)...)
+   if(any(site1>Norb).or.size(site1)>Norb)stop "ERROR: invalid orbital indices for site1"
+   Nrdm = size(site1)
+   s1 = site1
+   Nsites = 1
+   if(present(site2))then
+      if(any(site2>Norb).or.size(site2)>Norb)stop "ERROR: invalid orbital indices for site2"
+      Nrdm = Nrdm + size(site2)
+      s2 = site2
+      Nsites = Nsites + 1
+   else
+      allocate(s2(0))
+   endif
+   if(present(site3))then
+      if(any(site3>Norb).or.size(site3)>Norb)stop "ERROR: invalid orbital indices for site3"
+      Nrdm = Nrdm + size(site3)
+      s3 = site3
+      Nsites = Nsites + 1
+   else
+      allocate(s3(0))
+   endif
+   if(present(site4))then
+      if(any(site4>Norb).or.size(site4)>Norb)stop "ERROR: invalid orbital indices for site4"
+      Nrdm = Nrdm + size(site4)
+      s4 = site4
+      Nsites = Nsites + 1
+   else
+      allocate(s4(0))
+   endif
+   if(size(dm,1)/=Nrdm.OR.size(dm,2)/=Nrdm)then
+      stop "ERROR: actual dm argument has incogruent size wrt explicitly passed Nrdm"
+   endif
+   !
+   do io = 1,Nsites
+      do jo = 
+   if(present(ineq))then
+     suffix = "reduced_density_matrix_"//reg(str(Nsites))//"sites_ineq"//reg(str(ineq))//".dat"
+   else
+     suffix = "reduced_density_matrix_"//reg(str(Nsites))//"sites.dat"
+   endif
+   !
+   unit = free_unit()
+   open(unit,file=suffix,action="write",position="rewind",status='unknown')
+   !
+   do io=1,Nrdm
+      write(unit,"(*(F20.16,1X))") (dreal(dm(io,jo)),jo=1,Nrdm)
+   enddo
+   write(unit,*)
+   !
+   if(any(dimag(dm)/=0d0))then
+      do io=1,Nrdm
+         write(unit,"(*(F20.16,1X))") (dimag(dm(io,jo)),jo=1,Nrdm)
+      enddo
+      write(unit,*)
+   endif
+   !
+   close(unit)
+   !
+ end subroutine ed_print_dm
+ !
+ !
+ !
+  subroutine ed_print_dm_LEGACY(dm,Nrdm,ineq)
    integer                  ,intent(in)            :: Nrdm
    complex(8),dimension(:,:),intent(in)            :: dm
    integer                  ,intent(in),optional   :: ineq
@@ -484,7 +558,7 @@ contains
    !
    close(unit)
    !
- end subroutine ed_print_dm
+ end subroutine ed_print_dm_LEGACY
 
   !+------------------------------------------------------------------+
   ! !                         PRINT CHI:
