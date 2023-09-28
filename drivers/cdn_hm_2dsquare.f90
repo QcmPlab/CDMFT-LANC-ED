@@ -22,6 +22,7 @@ program cdn_hm_2dsquare
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !Density matrices:
    complex(8),allocatable,dimension(:,:)                                  :: reduced_density_matrix
+   logical,allocatable,dimension(:,:)                                     :: orbital_mask
    complex(8),allocatable,dimension(:,:)                                  :: pure_cvec
    real(8),allocatable,dimension(:)                                       :: pure_prob
    !Luttinger invariants:
@@ -127,6 +128,13 @@ program cdn_hm_2dsquare
 
       !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
       if(dm_flag.AND.master)then
+         ! All independent local rdms (to check they are all equal)
+         allocate(orbital_mask(Nlat,Norb))
+         do ilat=1,Nlat
+            orbital_mask = .false.
+            orbital_mask(ilat,:) = .true.
+            call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
+         enddo
          do Ntr=0,Nlat-1 ! Ntr: number of cluster sites we want to trace out
             call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
             !

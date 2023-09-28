@@ -112,10 +112,10 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
             do jorb=1,Norb
                if(orbital_mask(ilat,jorb))then
                   red_count = red_count + 1
-                  red_indices(red_count) = jorb + (ilat-1)*Nlat
+                  red_indices(red_count) = jorb + (ilat-1)*Norb
                else
                   trace_count = trace_count + 1
-                  trace_indices(trace_count) = jorb + (ilat-1)*Nlat
+                  trace_indices(trace_count) = jorb + (ilat-1)*Norb
                endif
             enddo
          enddo
@@ -125,21 +125,21 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
 
          ! Trace the cdm to the requested subsystem, and store into rdm
          do iUP = 1,2**Nimp
-            IbUP  = bdecomp(iUP,Nimp)
+            IbUP  = bdecomp(iUP-1,Nimp)
             call get_sign(IsignUP,IbUP,red_indices)
             call split_state(IbUp,red_indices,trace_indices,iREDup,iTrUP)
             do iDW = 1,2**Nimp
                i = iUP + (iDW-1)*2**Nimp
-               IbDW = bdecomp(iDW,Nimp)
+               IbDW = bdecomp(iDW-1,Nimp)
                call get_sign(IsignDW,IbDW,red_indices)
                call split_state(IbDw,red_indices,trace_indices,iREDdw,iTrDW)
                do JUP = 1,2**Nimp
-                  JbUP  = bdecomp(Jup,Nimp)
+                  JbUP  = bdecomp(Jup-1,Nimp)
                   call get_sign(JsignUP,JbUP,red_indices)
                   call split_state(JbUp,red_indices,trace_indices,jREDup,jTrUP)
                   do jDW = 1,2**Nimp
                      j = jUP + (jDW-1)*2**Nimp
-                     JbDW = bdecomp(jDW,Nimp)
+                     JbDW = bdecomp(jDW-1,Nimp)
                      call get_sign(JsignDW,JbDW,red_indices)
                      call split_state(JbDw,red_indices,trace_indices,jREDdw,jTrDW)
                      if(jTrUP/=iTrUP.or.jTrDW/=iTrDW)cycle

@@ -469,18 +469,18 @@ contains
          stop "ERROR: reduced density matrix and orbital mask have incompatible sizes"
       endif
       !
-      suffix = ""
+      suffix = "_"
       do io = 1,Nlat
         do jo = 1,Norb
          if(orbital_mask(io,jo))then
-            suffix = suffix//"i"//reg(str(io))//"l"//reg(str(jo))
+            suffix = trim(suffix)//"i"//reg(str(io))//"l"//reg(str(jo))
          endif
         enddo
       enddo
       if(present(ineq))then
-         fname = "reduced_density_matrix_"//suffix//"sites_ineq"//reg(str(ineq))//".dat"
+         fname = "reduced_density_matrix"//suffix//"_ineq"//reg(str(ineq))//".dat"
       else
-         fname = "reduced_density_matrix_"//suffix//"sites.dat"
+         fname = "reduced_density_matrix"//suffix//".dat"
       endif
       !
       unit = free_unit()
