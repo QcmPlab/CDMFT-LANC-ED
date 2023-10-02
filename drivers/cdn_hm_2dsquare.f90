@@ -129,7 +129,7 @@ program cdn_hm_2dsquare
       !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
       if(dm_flag.AND.master)then
          ! All independent local RDMs (to check they are all equal)
-         allocate(orbital_mask(Nlat,Norb))
+         if(.not.allocated(orbital_mask))allocate(orbital_mask(Nlat,Norb))
          do ilat=1,Nlat
             orbital_mask = .false.
             orbital_mask(ilat,:) = .true.
