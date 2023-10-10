@@ -86,7 +86,6 @@
               ialfa = getBathStride(ilat,iorb,ibath)
               htmp =htmp + bath_diag(ilat,1    ,iorb,ibath)*ibup(ialfa) !UP
               htmp =htmp + bath_diag(ilat,Nspin,iorb,ibath)*ibdw(ialfa) !DW
-              htmp = htmp - xmu*dble(ibup(ialfa)+ibdw(ialfa))
            enddo
         enddo
      enddo

@@ -56,7 +56,7 @@ contains
          Vk = dzdiag(dmft_bath%item(ibath)%v(:))
          invH_knn=Hbath_build(dmft_Bath%item(ibath)%lambda)
          invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
-         invH_k = zeye(Nlat*Nspin*Norb)*(x+xmu) - invH_k
+         invH_k = zeye(Nlat*Nspin*Norb)*x - invH_k
          call inv(invH_k)
          invH_k = matmul(matmul(Vk,invH_k),Vk)
          invH_knn = lso2nnn_reshape(invH_k,Nlat,Nspin,Norb)
@@ -88,7 +88,7 @@ contains
             Vk = dzdiag(dmft_bath%item(ibath)%v(:))
             invH_knn=Hbath_build(dmft_Bath%item(ibath)%lambda)
             invH_k = nnn2lso_reshape(invH_knn,Nlat,Nspin,Norb)
-            invH_k = zeye(Nlat*Nspin*Norb)*(x(i)+xmu) - invH_k
+            invH_k = zeye(Nlat*Nspin*Norb)*x(i) - invH_k
             call inv(invH_k)
             invH_k = matmul(matmul(Vk,invH_k),Vk)
             invH_knn = lso2nnn_reshape(invH_k,Nlat,Nspin,Norb)

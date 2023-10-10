@@ -831,7 +831,7 @@ contains
       !
       Delta=zero
       do i=1,Ldelta
-         iw = xi*Xdelta(i)+xmu
+         iw = xi*Xdelta(i)
          do ibath=1,Nbath
             V_k = dzdiag(dummy_Vbath(ibath,:))
             invH_knnn  = Hbath_build(dummy_lambda(ibath)%element)
@@ -912,7 +912,7 @@ contains
          V_k = dzdiag(dummy_Vbath(ibath,:))
          H_reconstructed = nnn2lso_reshape(Hbath_build(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
          do l=1,Ldelta
-            Haux(:,:,l) = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(l)+xmu) - H_reconstructed
+            Haux(:,:,l) = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(l)) - H_reconstructed
             call inv(Haux(:,:,l))
             !Derivate_Vp
             do k = 1,Nlat*Nspin*Norb
