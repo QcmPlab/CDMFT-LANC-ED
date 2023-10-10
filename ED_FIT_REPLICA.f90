@@ -831,7 +831,7 @@ contains
       !
       Delta=zero
       do i=1,Ldelta
-         iw = xi*Xdelta(i)+xmu
+         iw = xi*Xdelta(i)
          do ibath=1,Nbath
             invH_knnn  = Hbath_build(dummy_lambda(ibath)%element)
             Haux      = zeye(Nlat*Nspin*Norb)*iw - nnn2lso_reshape(invH_knnn,Nlat,Nspin,Norb)
@@ -912,7 +912,7 @@ contains
       do ibath=1,Nbath
          H_reconstructed = nnn2lso_reshape(Hbath_build(dummy_lambda(ibath)%element),Nlat,Nspin,Norb)
          do l=1,Ldelta
-            Haux(:,:,l) = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(l)+xmu) - H_reconstructed
+            Haux(:,:,l) = zeye(Nlat*Nspin*Norb)*(xi*Xdelta(l)) - H_reconstructed
             call inv(Haux(:,:,l))
             invH_knn(:,:,:,:,:,:,l) = lso2nnn_reshape(Haux(:,:,l),Nlat,Nspin,Norb)
          enddo
