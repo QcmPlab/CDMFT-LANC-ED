@@ -134,6 +134,8 @@ program cdn_hm_2dsquare
             orbital_mask = .false.
             orbital_mask(ilat,:) = .true.
             call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
+            !Semi-analytical crosscheck of the single-orbital density matrix            
+            call one_orb_benchmark(ilat,1,reduced_density_matrix)
          enddo
          ! All independent two-site RDMs (to check NN and NNN are equal)
          do ilat=1,Nlat-1
@@ -145,32 +147,13 @@ program cdn_hm_2dsquare
                call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
             enddo
          enddo
-         do Ntr=0,Nlat-1 ! Ntr: number of cluster sites we want to trace out
-            call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
-            !
-            !DIAGONALIZATION
-            write(LOGfile,*) " "
-            write(LOGfile,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
-            allocate(pure_prob(4**((Nlat-Ntr)*Norb)))
-            pure_cvec = reduced_density_matrix
-            call eigh(pure_cvec,pure_prob,jobz='V',uplo='U')
-            !
-            !PRINT-TO-FILE (and log)
-            call print_pure_states(pure_cvec,pure_prob,Nlat-Ntr)
-            call print_entropy(pure_prob,Nlat-Ntr)
-            !
-            deallocate(pure_cvec,pure_prob,reduced_density_matrix)
-         enddo
-         !
-         !Semi-analytical crosscheck of the local density matrix
-         if(Norb==1)call local_dm_benchmark()
          !
       endif
 
 
       !Compute the local gfs on the imaginary axis:
       call dmft_gloc_matsubara(Hk,Gmats,Smats)
-      if(master)call dmft_print_gf_matsubara(Gmats,"Gloc",iprint=4)
+      if(master)call dmft_write_gf(Gmats,"Gloc",axis='matsubara',iprint=4)
       !
       !Get the Weiss field/Delta function to be fitted
       call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
@@ -216,15 +199,7 @@ program cdn_hm_2dsquare
 
    !Compute the local gfs on the real axis:
    call dmft_gloc_realaxis(Hk,Greal,Sreal)
-   if(master)call dmft_print_gf_realaxis(Greal,"Gloc",iprint=4)
-
-   !Compute the Luttinger invariant:
-   if(master)then
-      allocate(luttinger(Nlat,Nspin,Norb))
-      call luttinger_integral(luttinger,Greal,Sreal)
-      call print_luttinger(luttinger)
-      deallocate(luttinger)
-   endif
+   if(master)call dmft_write_gf(Greal,"Gloc",axis='realaxis',iprint=4)
 
    !Compute the Kinetic Energy:
    do iw=1,Lmats
@@ -465,15 +440,13 @@ contains
    !+---------------------------------------------------------------------------+
    !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
    !+---------------------------------------------------------------------------+
-   subroutine local_dm_benchmark()
-      complex(8),allocatable,dimension(:,:)  :: local_density_matrix
+   subroutine one_orb_benchmark(ilat,iorb,one_orb_dm)
+      complex(8),allocatable,dimension(:,:)  :: one_orb_dm
+      integer                                :: ilat,iorb
       real(8),allocatable,dimension(:,:)     :: dens,dens_up,dens_dw,docc,mag
-      !
-      if(Norb>1) stop "ERROR: local_dm_benchmark available for Norb=1 only."
       !
       allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb),docc(Nlat,Norb),mag(Nlat,Norb))
       !
-      call ed_get_reduced_dm(local_density_matrix,1,doprint=.false.)
       call ed_get_mag(mag)
       call ed_get_dens(dens)
       call ed_get_docc(docc)
@@ -482,139 +455,13 @@ contains
       write(LOGfile,*)
       write(LOGfile,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
       write(LOGfile,*) "Semi-Analytical Estimate  |  Error"
-      write(LOGfile,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
-      write(LOGfile,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
-      write(LOGfile,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
-      write(LOGfile,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
+      write(LOGfile,*) 1-dens_up(ilat,iorb)-dens_dw(ilat,iorb)+docc(ilat,iorb), "|", abs(1-dens_up(ilat,iorb)-dens_dw(ilat,iorb)+docc(ilat,iorb)-one_orb_dm(1,1))
+      write(LOGfile,*) dens_up(ilat,iorb)-docc(ilat,iorb),                      "|", abs(dens_up(ilat,iorb)-docc(ilat,iorb)-one_orb_dm(2,2))
+      write(LOGfile,*) dens_dw(ilat,iorb)-docc(ilat,iorb),                      "|", abs(dens_dw(ilat,iorb)-docc(ilat,iorb)-one_orb_dm(3,3))
+      write(LOGfile,*) docc(ilat,iorb),                                         "|", abs(docc(ilat,iorb)-one_orb_dm(4,4))
       write(LOGfile,*)
       !
-   end subroutine local_dm_benchmark
-
-   !+---------------------------------------------------------------------------+
-   !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
-   !+---------------------------------------------------------------------------+
-   subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
-      complex(8),allocatable,dimension(:,:)     :: pure_cvec
-      real(8),allocatable,dimension(:)          :: pure_prob
-      integer                                   :: Nsites
-      integer                                   :: unit
-      !
-      if(ed_verbose>1) write(LOGfile,*) "> PURE-STATE probabilities:"
-      unit = free_unit()
-      foutput = "probabilities_"//str(Nsites)//"sites"//".dat"
-      open(unit,file=foutput,action="write",position="rewind",status='unknown')
-      do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>1) write(LOGfile,"(*(F20.16,1X))") abs(pure_prob(iii))
-         write(unit,*) abs(pure_prob(iii)) !Machine zero could be negative.
-      enddo
-      close(unit)
-      !
-      if(ed_verbose>3) write(LOGfile,*) "> PURE-STATE components:"
-      unit = free_unit()
-      foutput = "pure-states_"//str(Nsites)//"sites"//".dat"
-      open(unit,file=foutput,action="write",position="rewind",status='unknown')
-      do iii=1,4**(Nsites*Norb)
-         if(ed_verbose>3) write(LOGfile,"(*(F20.16,1X))") (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb))
-         write(unit,*) (dreal(pure_cvec(jjj,iii)), jjj=1,4**(Nsites*Norb)) !Our states should be real.
-      enddo
-      close(unit)
-      write(LOGfile,*) " "
-      !
-   end subroutine print_pure_states
-
-   !+---------------------------------------------------------------------------+
-   !PURPOSE : print to file (and stdout) the reduced entanglement entropy
-   !+---------------------------------------------------------------------------+
-   subroutine print_entropy(pure_prob,Nsites)
-      real(8),allocatable,dimension(:)          :: pure_prob
-      real(8)                                   :: entropy,p
-      integer                                   :: Nsites
-      integer                                   :: rewind_unit,append_unit
-      !
-      if(ed_verbose>0) write(LOGfile,*) "> ENTANGLEMENT ENTROPY:"
-      entropy = zero
-      foutput = "eentropy_"//str(Nsites)//"sites"//".dat"
-      append_unit = free_unit()
-      open(append_unit,file="all_"//foutput,action="write",position="append",status='unknown')
-      rewind_unit = free_unit()
-      open(rewind_unit,file=foutput,action="write",position="rewind",status='unknown')
-      do iii=1,4**(Nsites*Norb)
-         p = abs(pure_prob(iii)) !Machine zero could be negative.
-         entropy = entropy - p*log(p)/log(2d0)
-      enddo
-      if(ed_verbose>0) write(LOGfile,"(*(F20.16,1X))") entropy
-      write(append_unit,*) entropy
-      write(rewind_unit,*) entropy
-      close(append_unit)
-      close(rewind_unit)
-      !
-   end subroutine print_entropy
-
-   !+---------------------------------------------------------------------------+
-   !PURPOSE : Compute the Luttinger integral IL = 1/π * |Im(∫dw(Gloc*dSloc/dw)|
-   !          > Cfr. J. Phys. Cond. Mat. 28, 02560 and PRB B 102, 081110(R)
-   ! NB) At ph-symmetry IL should be zero, but only if the T->0 limit is taken
-   !     before the mu->0 limit, and here we apparently invert the order of the
-   !     limits because of the numerical discretization on the imaginary axis.
-   !     > Look at [53] (report of a private communication) in the Phys. Rev. B
-   !+---------------------------------------------------------------------------+
-   subroutine luttinger_integral(IL,Glso,Slso)
-      real(8),allocatable,dimension(:,:,:),intent(out)            :: IL
-      complex(8),allocatable,dimension(:,:,:,:,:,:,:),intent(in)  :: Glso,Slso
-      real(8),dimension(Lreal)                                    :: dSreal,dSimag,integrand
-      integer                                                     :: ilat,ispin,iorb,i
-      !
-      if(.not.allocated(IL)) allocate(IL(Nlat,Nspin,Norb))
-      !
-      do ilat=1,Nlat
-         do iorb=1,Norb
-            do ispin=1,Nspin
-               dSreal(:) = deriv(dreal(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !No need to include 1/dw if
-               dSimag(:) = deriv(dimag(Slso(ilat,ilat,ispin,ispin,iorb,iorb,:)),1d0)   !we are integrating in dw...
-               integrand = dimag(Glso(ilat,ilat,ispin,ispin,iorb,iorb,:)*cmplx(dSreal,dSimag))
-               IL(ilat,ispin,iorb) = sum(integrand) !Naive Riemann-sum (no need of trapezoidal-sums with typical Lreal)
-               IL(ilat,ispin,iorb) = 1/pi * abs(IL(ilat,ispin,iorb)) !The theoretical sign is determined by sign(mu)...
-            enddo
-         enddo
-      enddo
-      !
-   end subroutine luttinger_integral
-
-   !+---------------------------------------------------------------------------+
-   !PURPOSE : print to file (and stdout) the Luttinger invariants IL(:,:,:)
-   !+---------------------------------------------------------------------------+
-   subroutine print_luttinger(IL)
-      real(8),allocatable,dimension(:,:,:),intent(in)  :: IL
-      integer                                          :: ilat,ispin,iorb
-      integer                                          :: unit
-      !
-      if(ed_verbose>0)then
-         write(LOGfile,*) " "
-         write(LOGfile,*) "Luttinger invariants:"
-      endif
-      !
-      do ilat=1,Nlat
-         do iorb=1,Norb
-            do ispin=1,Nspin
-               if(ed_verbose>0) write(LOGfile,*) ilat, iorb, ispin, IL(ilat,ispin,iorb)
-               unit = free_unit()
-               foutput = "luttinger_site00"//str(ilat)//"_l"//str(iorb)//"_s"//str(ispin)//".dat"
-               open(unit,file=foutput,action="write",position="rewind",status='unknown')
-               write(unit,*) IL(ilat,ispin,iorb)
-               close(unit)
-            enddo
-         enddo
-      enddo
-      !
-      if(ed_verbose>0)then
-         write(LOGfile,*) "          ilat        iorb        ispin"
-         if(Nlat>1) write(LOGfile,*) "WARNING: not currently reliable for Nlat>1"
-         write(LOGfile,*) " "
-      endif
-      !
-   end subroutine print_luttinger
-
-
+   end subroutine one_orb_benchmark
 
 
 
