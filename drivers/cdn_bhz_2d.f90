@@ -1,12 +1,12 @@
 program cdn_bhz_2d
   USE CDMFT_ED !
-  USE SCIFOR
-  USE DMFT_TOOLS
+  USE SCIFOR !4.10.8
+  USE DMFT_TOOLS !2.6.5
   !
   USE MPI
   !
   implicit none
-  integer                                         :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,Ntr
+  integer                                         :: Nx,Ny,Nlso,iloop,Nb,Nkx,Nky,iw,iii,jjj,kkk,ilat,iorb,jlat,jorb
   integer,dimension(2)                            :: recover
   logical                                         :: converged
   real(8)                                         :: ts,Mh,lambda,wmixing,observable
@@ -21,6 +21,7 @@ program cdn_bhz_2d
   complex(8),allocatable                          :: Hk(:,:,:),Smats_lso(:,:,:)
   complex(8),dimension(:,:,:,:,:,:),allocatable   :: observable_matrix
   !Density matrices:
+  logical,allocatable,dimension(:,:)              :: orbital_mask
   complex(8),allocatable,dimension(:,:)           :: reduced_density_matrix
   complex(8),allocatable,dimension(:,:)           :: pure_cvec
   real(8),allocatable,dimension(:)                :: pure_prob
@@ -135,27 +136,25 @@ program cdn_bhz_2d
 
      !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
      if(dm_flag.AND.master)then
-        do Ntr=0,Nlat-1 ! Ntr: number of cluster sites we want to trace out
-           call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
-           !
-           !DIAGONALIZATION
-           write(*,*) " "
-           write(*,*) "Diagonalizing "//str(Nlat-Ntr)//"-site REDUCED DENSITY MATRIX"
-           allocate(pure_prob(4**((Nlat-Ntr)*Norb)))
-           pure_cvec = reduced_density_matrix
-           call eigh(pure_cvec,pure_prob,jobz='V',uplo='U')
-           !
-           !PRINT-TO-FILE (and log)
-           call print_pure_states(pure_cvec,pure_prob,Nlat-Ntr)
-           !
-           deallocate(pure_cvec,pure_prob,reduced_density_matrix)
-        enddo
-        !
-        ! !Semi-analytical crosscheck of the local density matrix TO BE DONE
-        ! if(Norb==1)call local_dm_benchmark() 
-        !
-        if(dmexit)stop "Got DM.. ciao"
+         if(.not.allocated(orbital_mask))allocate(orbital_mask(Nlat,Norb))
+         ! All independent single orbital + 2 orbitals entropies
+         do ilat=1,Nlat
+            do iorb=1,Norb
+               orbital_mask = .false.
+               orbital_mask(ilat,iorb) = .true.
+               do jlat=ilat,Nlat
+                  do jorb=iorb,Norb
+                     orbital_mask(jlat,jorb) = .true.
+                     call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
+                     call get_entropy(orbital_mask,reduced_density_matrix)
+                     if(ilat/=jlat.or.iorb/=jorb) orbital_mask(jlat,jorb) = .false.
+                  enddo
+               enddo
+            enddo
+         enddo
      endif
+     if(dmexit.AND.master)stop "Got DM... ciao, tutt'appost."
+
 
      !Compute the local gfs:
      call dmft_gloc_matsubara(Hk,Gmats,Smats)
@@ -445,71 +444,89 @@ contains
     enddo
     write(LOGfile,"(A)")" "
   end subroutine naming_convention
-  !
+  
 
-
-
-
-
-
-
-  ! !+---------------------------------------------------------------------------+
-  ! !PURPOSE : check the local-dm comparing to Eq.4 in Mod.Phys.Lett.B.2013.27:05
-  ! !+---------------------------------------------------------------------------+
-  ! subroutine local_dm_benchmark()
-  !   complex(8),allocatable,dimension(:,:)  :: local_density_matrix
-  !   real(8),allocatable,dimension(:,:)     :: dens,dens_up,dens_dw,docc,mag
-  !   !
-  !   if(Norb>1) stop "ERROR: local_dm_benchmark available for Norb=1 only."
-  !   !
-  !   allocate(dens(Nlat,Norb),dens_up(Nlat,Norb),dens_dw(Nlat,Norb),docc(Nlat,Norb),mag(Nlat,Norb))
-  !   !
-  !   call ed_get_reduced_dm(local_density_matrix,1,doprint=.false.)
-  !   call ed_get_mag(mag)
-  !   call ed_get_dens(dens)
-  !   call ed_get_docc(docc)
-  !   dens_up = 0.5d0*(dens + mag)
-  !   dens_dw = 0.5d0*(dens - mag)
-  !   write(*,*)
-  !   write(*,*) "LOCAL-DM BENCHMARK [Mod.Phys.Lett.B.2013.27:05]"
-  !   write(*,*) "Semi-Analytical Estimate  |  Error"
-  !   write(*,*) 1-dens_up(1,1)-dens_dw(1,1)+docc(1,1), "|", abs(1-dens_up(1,1)-dens_dw(1,1)+docc(1,1)-local_density_matrix(1,1))
-  !   write(*,*) dens_up(1,1)-docc(1,1),                "|", abs(dens_up(1,1)-docc(1,1)-local_density_matrix(2,2))
-  !   write(*,*) dens_dw(1,1)-docc(1,1),                "|", abs(dens_dw(1,1)-docc(1,1)-local_density_matrix(3,3))
-  !   write(*,*) docc(1,1),                             "|", abs(docc(1,1)-local_density_matrix(4,4))
-  !   write(*,*)
-  !   !
-  ! end subroutine local_dm_benchmark
 
   !+---------------------------------------------------------------------------+
   !PURPOSE : print to file (and stdout) the reduced-dm eigenstuff
   !+---------------------------------------------------------------------------+
-  subroutine print_pure_states(pure_cvec,pure_prob,Nsites)
+  subroutine print_rdm_stuff(pure_cvec,pure_prob,orbital_mask)  
     complex(8),allocatable,dimension(:,:)     :: pure_cvec
     real(8),allocatable,dimension(:)          :: pure_prob
-    integer                                   :: Nsites
-    integer                                   :: unit      
+    integer                                   :: N_rdm
+    integer                                   :: unit,rewind_unit,append_unit,io,jo  
+    logical,allocatable,dimension(:,:)        :: orbital_mask 
+    character(len=64)                         :: suffix,foutput 
+    real(8)                                   :: entropy,p      
+    !
+    N_rdm = size(pure_prob)
+    !
+    suffix = ""
+    print*,"DIAGONALIZING RDM FOR:"
+      do io = 1,Nlat
+        do jo = 1,Norb
+         if(orbital_mask(io,jo))then
+            suffix = trim(suffix)//"_i"//reg(str(io))//"l"//reg(str(jo))
+            print*, "     i="//reg(str(io))//" l="//reg(str(jo))
+         endif
+        enddo
+      enddo
+      write(*,*) " "
     !
     if(ed_verbose>3) write(*,*) "> PURE-STATE probabilities:"
-    open(free_unit(unit),file="probabilities_"//str(Nsites)//"sites"//".dat",action="write",position="rewind",status='unknown')
-    do iii=1,4**(Nsites*Norb)
+    open(free_unit(unit),file="probabilities_"//trim(suffix)//".dat",action="write",position="rewind",status='unknown')
+    do iii=1,N_rdm
        if(ed_verbose>3) write(*,"(90(F15.5,1X))") abs(pure_prob(iii))
        write(unit,*) abs(pure_prob(iii)) !Machine zero could be negative.
     enddo
     close(unit)
     !
     if(ed_verbose>4) write(*,*) "> PURE-STATE components:"
-    open(free_unit(unit),file="pure-states_"//str(Nsites)//"sites"//".dat",action="write",position="rewind",status='unknown')
-    do iii=1,4**(Nsites*Norb)
-       if(ed_verbose>4) write(*,"(180(F15.5,1X))") (pure_cvec(jjj,iii), jjj=1,4**(Nsites*Norb))
-       write(unit,*) (pure_cvec(jjj,iii), jjj=1,4**(Nsites*Norb))
+    open(free_unit(unit),file="pure-states_"//trim(suffix)//".dat",action="write",position="rewind",status='unknown')
+    do iii=1,N_rdm
+       if(ed_verbose>4) write(*,"(180(F15.5,1X))") (pure_cvec(jjj,iii), jjj=1,N_rdm)
+       write(unit,*) (pure_cvec(jjj,iii), jjj=1,N_rdm)
     enddo
     close(unit)
+    !
+    if(ed_verbose>0) write(LOGfile,*) "> ENTANGLEMENT ENTROPY:"
+      entropy = zero
+      foutput = "eentropy_"//trim(suffix)//".dat"
+      append_unit = free_unit()
+      open(append_unit,file="all_"//foutput,action="write",position="append",status='unknown')
+      rewind_unit = free_unit()
+      open(rewind_unit,file=foutput,action="write",position="rewind",status='unknown')
+      do iii=1,N_rdm
+         p = abs(pure_prob(iii)) !Machine zero could be negative.
+         if(p<1d-7)cycle !They can still be too small, if makes sense.
+         entropy = entropy - p*log(p)/log(2d0)
+      enddo
+      if(ed_verbose>0) write(LOGfile,"(*(F20.16,1X))") entropy
+      write(append_unit,*) entropy
+      write(rewind_unit,*) entropy
+      close(append_unit)
+      close(rewind_unit)
+    !
     write(*,*) " "
     !
-  end subroutine print_pure_states
-
-
+  end subroutine print_rdm_stuff
+  
+  
+  subroutine get_entropy(orbital_mask,rdm)  
+    complex(8),allocatable,dimension(:,:)     :: pure_cvec, rdm
+    real(8),allocatable,dimension(:)          :: pure_prob
+    logical,allocatable,dimension(:,:)        :: orbital_mask
+    !  
+    allocate(pure_prob(4**count(orbital_mask)))
+    pure_cvec = rdm
+    call eigh(pure_cvec,pure_prob,jobz='V',uplo='U')
+      !
+      !PRINT-TO-FILE (and log)
+      call print_rdm_stuff(pure_cvec,pure_prob,orbital_mask)
+      !
+      deallocate(pure_cvec,pure_prob,rdm)
+      !
+  end subroutine get_entropy  
 
 
 

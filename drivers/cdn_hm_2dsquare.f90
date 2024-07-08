@@ -7,7 +7,7 @@ program cdn_hm_2dsquare
    USE MPI
    !
    implicit none
-   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,irepl,iw,iii,jjj,kkk,Ntr
+   integer                                                                :: Nx,Ny,Nso,Nlo,Nlso,iloop,Nb,Nkx,Nky,ilat,jlat,irepl,iw,iii,jjj,kkk,Ntr
    logical                                                                :: converged
    real(8)                                                                :: ts,wmixing,delta,dens_average,onsite
    real(8),allocatable,dimension(:)                                       :: dens_mats
@@ -22,6 +22,7 @@ program cdn_hm_2dsquare
    complex(8),allocatable                                                 :: Hk(:,:,:),Smats_lso(:,:,:)
    !Density matrices:
    complex(8),allocatable,dimension(:,:)                                  :: reduced_density_matrix
+   logical,allocatable,dimension(:,:)                                     :: orbital_mask
    complex(8),allocatable,dimension(:,:)                                  :: pure_cvec
    real(8),allocatable,dimension(:)                                       :: pure_prob
    !Luttinger invariants:
@@ -127,6 +128,23 @@ program cdn_hm_2dsquare
 
       !Retrieve ALL REDUCED DENSITY MATRICES DOWN TO THE LOCAL one
       if(dm_flag.AND.master)then
+         ! All independent local RDMs (to check they are all equal)
+         if(.not.allocated(orbital_mask))allocate(orbital_mask(Nlat,Norb))
+         do ilat=1,Nlat
+            orbital_mask = .false.
+            orbital_mask(ilat,:) = .true.
+            call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
+         enddo
+         ! All independent two-site RDMs (to check NN and NNN are equal)
+         do ilat=1,Nlat-1
+            orbital_mask = .false.
+            orbital_mask(ilat,:) = .true.
+            do jlat=ilat+1,Nlat
+               orbital_mask(ilat+1:Nlat,:) = .false.
+               orbital_mask(jlat,:) = .true.
+               call ed_get_reduced_dm(reduced_density_matrix,orbital_mask,doprint=.true.)
+            enddo
+         enddo
          do Ntr=0,Nlat-1 ! Ntr: number of cluster sites we want to trace out
             call ed_get_reduced_dm(reduced_density_matrix,Nlat-Ntr,doprint=.true.)
             !
