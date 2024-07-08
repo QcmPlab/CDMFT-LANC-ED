@@ -156,7 +156,7 @@ program cdn_hm_2dsquare
       if(master)call dmft_write_gf(Gmats,"Gloc",axis='matsubara',iprint=4)
       !
       !Get the Weiss field/Delta function to be fitted
-      call dmft_self_consistency(Gmats,Smats,Weiss,lso2nnn(Hloc),cg_scheme)
+      call dmft_self_consistency(Gmats,Smats,Weiss)
       call Bcast_MPI(comm,Weiss)
       !
       !
