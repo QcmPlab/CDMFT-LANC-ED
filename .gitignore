@@ -4,3 +4,4 @@ test*/
 Makefile
 *.inc
 build*/
+../ED_VERSION.f90

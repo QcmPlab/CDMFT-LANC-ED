@@ -256,7 +256,7 @@ contains
        if(allocated(eig_basis))deallocate(eig_basis)
        !
     enddo sector
-    if(MPIMASTER)call stop_timer(unit=LOGfile)
+    if(MPIMASTER)call stop_timer()
   end subroutine ed_diag_d
 
 

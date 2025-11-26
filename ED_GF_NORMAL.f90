@@ -102,7 +102,7 @@ contains
           enddo
        enddo
     enddo
-    if(MPIMASTER)call stop_timer(unit=LOGfile)
+    if(MPIMASTER)call stop_timer()
   end subroutine build_gf_normal
 
 

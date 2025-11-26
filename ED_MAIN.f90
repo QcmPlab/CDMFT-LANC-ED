@@ -368,7 +368,7 @@ contains
        cluster_density_matrix_ineq(iineq,:,:) = cluster_density_matrix(:,:)
 
     enddo
-    if(MPI_MASTER)call stop_timer(unit=LOGfile)
+    if(MPI_MASTER)call stop_timer()
     ed_file_suffix=""
     !
   end subroutine ed_solve_lattice_mpi
