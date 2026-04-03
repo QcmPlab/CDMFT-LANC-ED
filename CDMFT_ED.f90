@@ -25,6 +25,7 @@ MODULE CDMFT_ED
        ed_get_reduced_dm                      , &
        ed_get_sp_dm                           , &
        ed_print_dm                            , &
+       ed_read_dm                             , &
        ed_get_dens                            , &
        ed_get_docc                            , &
        ed_get_mag

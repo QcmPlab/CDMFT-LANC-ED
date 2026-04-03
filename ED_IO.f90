@@ -287,6 +287,7 @@ MODULE ED_IO
    public :: ed_print_impG
    public :: ed_print_impG0
    public :: ed_print_dm
+   public :: ed_read_dm
    ! public :: ed_print_impChi
 
 
@@ -542,6 +543,51 @@ contains
       close(unit)
       !
    end subroutine ed_print_dm_LEGACY
+
+
+   !+------------------------------------------------------------------+
+   !                      READ DENSITY MATRICES
+   !+------------------------------------------------------------------+
+   subroutine ed_read_dm(fname,Nrdm,dm)
+      character(len=64),intent(in)          :: fname
+      integer,intent(in)                    :: Nrdm
+      complex(8),dimension(:,:),allocatable,intent(out) :: dm
+      !
+      real(8),dimension(:,:),allocatable    :: real_dm, imag_dm
+      integer                               :: unit
+      integer                               :: io,jo
+      !
+      if(allocated(real_dm))deallocate(real_dm)
+      if(allocated(imag_dm))deallocate(imag_dm)
+      if(allocated(dm))deallocate(dm)
+      allocate(real_dm(Nrdm,Nrdm))
+      allocate(imag_dm(Nrdm,Nrdm))
+      allocate(dm(Nrdm,Nrdm))
+      !
+      unit = free_unit()
+      open(unit,file=trim(fname),action="read",position="rewind",status='old')
+      !
+      do io=1,Nrdm
+         read(unit,"(*(F20.16,1X))") (real_dm(io,jo),jo=1,Nrdm)
+      enddo
+      read(unit,*)
+      !
+      do io=1,Nrdm
+         read(unit,"(*(F20.16,1X))") (imag_dm(io,jo),jo=1,Nrdm)
+      enddo
+      read(unit,*)
+      !
+      close(unit)
+      !
+      do io=1,Nrdm
+         do jo=1,Nrdm
+            dm(io,jo) = real_dm(io,jo) + (0.d0, 1.d0)*imag_dm(io,jo)
+         enddo
+      enddo
+      deallocate(real_dm)
+      deallocate(imag_dm)
+      !
+   end subroutine ed_read_dm
 
    !+------------------------------------------------------------------+
    ! !                         PRINT CHI:

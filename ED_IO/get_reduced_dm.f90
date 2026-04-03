@@ -65,11 +65,12 @@ subroutine ed_get_reduced_density_matrix_single_LEGACY(rdm,Nsites,doprint)
    !
 end subroutine ed_get_reduced_density_matrix_single_LEGACY
 
-subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
+subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint,source_dm)
    !! further reduce the cdm by tracing out selected orbitals (via mask)
    complex(8),dimension(:,:),allocatable,intent(out)          :: rdm
    logical,dimension(Nlat,Norb),intent(in)                    :: orbital_mask
    logical,intent(in),optional                                :: doprint
+   complex(8),dimension(:,:),intent(in),optional              :: source_dm
    logical                                                    :: doprint_
    logical                                                    :: dotrace_
    integer,dimension(:),allocatable                           :: red_indices
@@ -80,6 +81,18 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
    integer    :: iREDup,iREDdw,jREDup,jREDdw
    integer    :: iTrUP,iTrDW,jTrUP,jTrDW,Nred
    real(8)    :: IsignUP,IsignDW,JsignUP,JsignDW,sign
+
+   ! Retrieve cdm from the global scope or from the given source array
+   if(.not.allocated(cluster_density_matrix))then
+      if(present(source_dm))then
+         cluster_density_matrix = source_dm ! Automatic allocation from given source
+         Nimp = int(log(real(size(cluster_density_matrix,1)))/log(4.0)) 
+         write(*,*) "Initialized the cluster density matrix from given array"
+      else
+         stop "ERROR: cluster_density_matrix is not allocated"
+      endif
+   endif
+   
 
    ! Input handling and checks
    Nred = count(orbital_mask)
@@ -93,10 +106,6 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
    endif
    doprint_=.false.; if(present(doprint)) doprint_=doprint
 
-   ! Retrieve cdm from the global scope
-   if(.not.allocated(cluster_density_matrix))then
-      stop "ERROR: cluster_density_matrix is not allocated"
-   endif
    associate(cdm => cluster_density_matrix)
       
       if(.not.dotrace_)then
@@ -119,6 +128,7 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
                endif
             enddo
          enddo
+         write(*,*) "Orbital mask processed: ",red_count," orbitals in the reduced system",trace_count," orbitals traced out"
 
          allocate(rdm(4**Nred,4**Nred))
          rdm = zero
@@ -161,7 +171,9 @@ subroutine ed_get_reduced_density_matrix_single(rdm,orbital_mask,doprint)
    end associate
 
    !Print to file (if requested)
+   write(*,*) "Finished computing the reduced density matrix for indices: ",red_indices
    if(doprint_)then
+      write(*,*) "Now printing to file..."
       call ed_print_dm(rdm,orbital_mask)
    endif
 
