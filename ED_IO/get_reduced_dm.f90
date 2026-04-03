@@ -175,12 +175,15 @@ contains
       integer :: filtered(Nimp)
       integer :: N
       integer :: r
-      ! FILTER THE STATE TO CONSTRAIN THE SUM
+      ! FILTER THE STATE (avoid counting the swipes of the reduced orbitals themselves)
       filtered = state; filtered(indices)=0
       ! PERFORM THE SUM (count permutations)
       N = 0
       do r=1,size(indices)
-         N = N + sum(filtered(1:indices(r)))
+         if(state(indices(r))==1)then
+            ! Sum over swipes only if there's an electron in the orbital to be traced
+            N = N + sum(filtered(1:indices(r)))
+         endif
       enddo
       ! ASSIGN THE SIGN: (-1)^N
       if(mod(N,2)==0)then
